@@ -14,7 +14,7 @@
     <p class="text-center text-gray-600 mb-6">ลงชื่อเพื่อเข้าสู่ระบบของคุณ</p>
 
     <!-- ปิด autofill ระดับฟอร์ม -->
-    <form method="POST" action="{% url 'login' %}" autocomplete="off" novalidate>
+    <form method="POST" action="{% url 'dress:login' %}" autocomplete="off" novalidate>
       {% csrf_token %}
 
       {% if messages %}
@@ -73,7 +73,7 @@
 
     <p class="text-center text-sm mt-4">
       ฉันไม่มีบัญชีผู้ใช้งาน
-      <a href="{% url 'signup' %}" class="text-black font-semibold hover:underline">สมัครใช้งาน</a>
+      <a href="{% url 'dress:signup' %}" class="text-black font-semibold hover:underline">สมัครใช้งาน</a>
     </p>
   </div>
 

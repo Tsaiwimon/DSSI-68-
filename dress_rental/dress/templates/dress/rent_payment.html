@@ -1,0 +1,229 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>ชำระเงิน — {{ dress.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+  <!-- Header + Stepper -->
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+      <div class="flex items-center gap-3">
+        <button onclick="history.back()" class="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 hover:bg-white shadow">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-800">ชำระเงิน</h1>
+      </div>
+
+      <nav class="mt-4">
+        <ol class="max-w-6xl mx-auto flex items-center gap-2 text-xs sm:text-sm">
+          <li class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center bg-teal-600 text-white font-semibold">1</span>
+            <span class="text-gray-800">เลือกชุด</span>
+          </li>
+          <span class="h-px flex-1 bg-teal-300"></span>
+          <li class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center bg-teal-600 text-white font-semibold">2</span>
+            <span class="text-gray-800">ยืนยัน</span>
+          </li>
+          <span class="h-px flex-1 bg-teal-300"></span>
+          <li class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center ring-2 ring-teal-600 text-teal-700 bg-white font-semibold">3</span>
+            <span class="text-gray-900 font-semibold">ชำระเงิน</span>
+          </li>
+          <span class="h-px flex-1 bg-gray-300"></span>
+          <li class="flex items-center gap-2 opacity-70">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center bg-gray-200 text-gray-600 font-semibold">4</span>
+            <span>เสร็จสิ้น</span>
+          </li>
+        </ol>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main: กล่องเดียว มี 2 คอลัมน์ด้านใน -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+    <section class="bg-white rounded-xl shadow border">
+      <!-- แท็บวิธีชำระ (คงไว้แบบเดิม) -->
+      <div class="px-4 sm:px-6 pt-4">
+        <div class="inline-flex rounded-md bg-teal-50 p-1">
+          <button class="px-3 py-1.5 text-sm rounded-md bg-teal-600 text-white font-medium cursor-default">
+            พร้อมเพย์ / โอนเงิน
+          </button>
+        </div>
+      </div>
+
+      <div class="p-4 sm:p-6 grid md:grid-cols-2 gap-6">
+        <!-- ซ้าย: รายการที่สั่ง/รายละเอียด -->
+        <div>
+          <h2 class="text-base font-semibold text-gray-800">รายละเอียดคำสั่งซื้อ</h2>
+          <div class="mt-4 flex gap-3">
+            <img src="{{ dress.image.url }}" alt="{{ dress.name }}" class="w-16 h-16 rounded-lg object-cover border" />
+            <div class="min-w-0">
+              <div class="font-medium text-gray-800 truncate">{{ dress.name }}</div>
+              {% if start_date and end_date %}
+              <div class="text-xs text-gray-500">
+                {{ start_date|date:"Y-m-d" }} – {{ end_date|date:"Y-m-d" }}{% if days %} ({{ days }} วัน){% endif %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mt-4 space-y-2 text-sm max-w-md">
+            <div class="flex justify-between"><span>ค่าเช่า</span><span>฿{{ rental_fee|default:0|floatformat:2 }}</span></div>
+            <div class="flex justify-between"><span>ค่ามัดจำ</span><span>฿{{ deposit|default:0|floatformat:2 }}</span></div>
+            <div class="flex justify-between"><span>ค่าส่ง</span><span>฿{{ shipping|default:0|floatformat:2 }}</span></div>
+            <div class="border-t pt-2 font-semibold flex justify-between text-base">
+              <span>ยอดชำระ</span><span>฿{{ amount_baht|default:0|floatformat:2 }}</span>
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-500 mt-3">
+            * ระบบจะยืนยันการชำระโดยอัตโนมัติผ่าน Webhook ของ Omise
+          </p>
+        </div>
+
+        <!-- ขวา: ข้อมูลการชำระ + QR -->
+        <div>
+          <!-- ข้อมูลการชำระ (อยู่ด้านบนของ QR) -->
+          <div class="rounded-lg border p-4">
+            <h3 class="font-semibold text-gray-800">ข้อมูลการชำระ</h3>
+            <dl class="mt-3 space-y-2 text-sm">
+              <div class="flex justify-between">
+                <dt class="text-gray-600">ช่องทาง</dt>
+                <dd class="font-medium">PromptPay (Omise)</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">เลขที่คำสั่งซื้อ</dt>
+                <dd id="orderNo" class="font-medium">-</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">สถานะ</dt>
+                <dd id="payStatus" class="font-medium">กำลังสร้าง QR...</dd>
+              </div>
+              <div class="flex justify-between">
+                <dt class="text-gray-600">หมดอายุ</dt>
+                <dd id="expTime" class="font-medium">-</dd>
+              </div>
+            </dl>
+          </div>
+
+          <!-- QR -->
+          <div class="mt-4 rounded-lg border p-4">
+            <h3 class="font-semibold text-gray-800">สแกนเพื่อชำระ</h3>
+            <p class="text-xs text-gray-500 mt-1">เมื่อชำระเสร็จ ระบบจะอัปเดตอัตโนมัติผ่าน Webhook</p>
+
+            <div id="qrBox" class="mt-4 flex items-center justify-center">
+              <div class="w-64 h-64 rounded-lg bg-gray-100 border flex items-center justify-center">
+                <svg class="w-8 h-8 animate-spin text-gray-400" viewBox="0 0 24 24" fill="none">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- แถบเหลืองเด่น -->
+            <p id="expireHint"
+               class="mt-3 hidden text-sm rounded-md border border-amber-200 bg-amber-50 text-amber-900 px-3 py-2">
+              โปรดสแกนและชำระภายใน <span class="font-semibold">45 นาที</span>
+              <span id="countdown" class="ml-1 text-amber-700">(เหลือ -:-)</span>
+            </p>
+
+            <p id="expiredNote" class="mt-3 text-sm text-red-600 hidden">
+              QR นี้หมดเวลาแล้ว โปรดรีเฟรชหน้าเพื่อขอ QR ใหม่
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ===== ค่าที่ได้จาก server =====
+    const METHOD = "{{ method|default:'pickup' }}"; // 'delivery' | 'pickup'
+    const AMOUNT = Number(("{{ amount_baht|default:'0' }}").toString().replace(/,/g,'')) || 0;
+
+    // ===== URL สำหรับสร้าง PromptPay Charge / success =====
+    const CREATE_URL  = "{% url 'dress:create_promptpay_charge' dress.id %}";
+    const SUCCESS_URL = "{% url 'dress:rent_success' dress.id %}";
+
+    // ===== Refs =====
+    const qrBox       = document.getElementById('qrBox');
+    const orderNoNode = document.getElementById('orderNo');
+    const payStatus   = document.getElementById('payStatus');
+    const expNode     = document.getElementById('expTime');
+    const expireHint  = document.getElementById('expireHint');
+    const expiredNote = document.getElementById('expiredNote');
+    const countdown   = document.getElementById('countdown');
+
+    let expireAt = null; // unix sec
+    let tickId   = null;
+
+    function fmtTime(ts){
+      const d = new Date(ts * 1000);
+      return d.toLocaleString('th-TH', { hour12:false });
+    }
+    function fmtLeft(sec){
+      sec = Math.max(0, sec|0);
+      const m = String(Math.floor(sec/60)).padStart(2,'0');
+      const s = String(sec%60).padStart(2,'0');
+      return `${m}:${s}`;
+    }
+    function startCountdown(){
+      if(tickId) clearInterval(tickId);
+      if(!expireAt){ countdown.textContent='-:-'; return; }
+      tickId = setInterval(() => {
+        const left = expireAt - Math.floor(Date.now()/1000);
+        if(left <= 0){
+          clearInterval(tickId);
+          countdown.textContent = '00:00';
+          payStatus.textContent = 'หมดเวลา';
+          expiredNote.classList.remove('hidden');
+          return;
+        }
+        countdown.textContent = fmtLeft(left);
+      }, 1000);
+    }
+
+    async function createCharge(){
+      try{
+        payStatus.textContent = 'กำลังสร้าง QR...';
+        const res = await fetch(CREATE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ amount: AMOUNT, method: METHOD })
+        });
+        if(!res.ok) throw new Error('สร้างรายการชำระล้มเหลว');
+        const data = await res.json();
+
+        orderNoNode.textContent = data.order_no || '-';
+        payStatus.textContent   = (data.status || 'pending') === 'pending' ? 'รอสแกนชำระ' : data.status;
+        expireAt = data.expires_at || Math.floor(Date.now()/1000) + 45*60;
+        expNode.textContent     = fmtTime(expireAt);
+
+        // แสดง QR
+        const img = new Image();
+        img.className = 'w-64 h-64 rounded-lg border bg-white';
+        img.alt = 'PromptPay QR';
+        img.src = data.qr_image || "{% static 'img/mock-qr.png' %}";
+        qrBox.innerHTML = '';
+        qrBox.appendChild(img);
+
+        expireHint.classList.remove('hidden');
+        startCountdown();
+      }catch(err){
+        payStatus.textContent = 'เกิดข้อผิดพลาดในการสร้าง QR';
+        qrBox.innerHTML = '<div class="w-64 h-64 rounded-lg bg-red-50 border border-red-200 flex items-center justify-center text-red-600 text-sm">สร้าง QR ไม่สำเร็จ</div>';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', createCharge);
+  </script>
+</body>
+</html>

@@ -19,7 +19,7 @@
       </div>
 
       <!-- Search -->
-      <form method="get" action="{% url 'home' %}" class="flex w-1/2 max-w-2xl">
+      <form method="get" action="{% url 'dress:home' %}" class="flex w-1/2 max-w-2xl">
         <input type="text" name="q" placeholder="ค้นหาชุดที่ต้องการ"
                value="{{ request.GET.q|default_if_none:'' }}" 
                class="flex-grow px-3 py-2 border rounded-l-lg focus:outline-none">
@@ -31,10 +31,10 @@
       <!-- Menu -->
       <div class="flex items-center space-x-8">
         <nav class="flex space-x-6 font-medium">
-          <a href="{% url 'home' %}" class="hover:underline">หน้าหลัก</a>
-          <a href="{% url 'how_to_rent' %}" class="hover:underline">วิธีเช่า</a>
+          <a href="{% url 'dress:home' %}" class="hover:underline">หน้าหลัก</a>
+          <a href="{% url 'dress:how_to_rent' %}" class="hover:underline">วิธีเช่า</a>
         </nav>
-        <a href="{% url 'login' %}" class="font-medium hover:underline">เข้าสู่ระบบ</a>
+        <a href="{% url 'dress:login' %}" class="font-medium hover:underline">เข้าสู่ระบบ</a>
       </div>
     </div>
   </header>
@@ -65,7 +65,7 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
         {% for d in dresses %}
           <div class="relative bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition">
-            <a href="{% url 'dress_detail' d.id %}">
+            <a href="{% url 'dress:dress_detail' d.id %}">
               {% if d.image %}
                 <img src="{{ d.image.url }}" alt="{{ d.name }}" class="w-full h-72 object-cover">
               {% else %}

@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+app_name = "dress"
+
 urlpatterns = [
     # Home
     path("", views.home, name="home"),
@@ -69,4 +71,9 @@ urlpatterns = [
     # Shipping Rule APIs
     path("stores/<int:store_id>/shipping-rule/save/", views.api_save_shipping_rule, name="api_save_shipping_rule"),
     path("my-store/<int:store_id>/shipping-rule/save/", views.api_save_shipping_rule),
+
+
+    path("dress/<int:dress_id>/payment/", views.rent_payment, name="rent_payment"),
+    path("dress/<int:dress_id>/payment/create-charge/", views.create_promptpay_charge, name="create_promptpay_charge"),
+    path("dress/<int:dress_id>/success/",  views.rent_success,  name="rent_success"),
 ]

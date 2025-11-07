@@ -6,7 +6,8 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),  # ✅ เส้นทางสมัคร/ล็อกอิน
-    path("", include("dress.urls")),              
+    path("", include("dress.urls")),      
+    path("", include(("dress.urls", "dress"), namespace="dress")),        
 ]
 
 

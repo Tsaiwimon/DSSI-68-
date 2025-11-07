@@ -1,13 +1,16 @@
 from decimal import Decimal
 import json
+import time
+from datetime import datetime
 
+from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db import transaction, IntegrityError
 from django.db.models import Q, Avg
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -17,10 +20,9 @@ from .models import (
     PriceTemplate, PriceTemplateItem, ShippingRule, ShippingBracket
 )
 
-
-# -------------------------
-# หน้าแรก
-# -------------------------
+# =========================
+# หน้าแรก (สาธารณะ)
+# =========================
 def home(request):
     q = str(request.GET.get("q", "")).strip()
     category = str(request.GET.get("category", "")).strip()
@@ -40,10 +42,9 @@ def home(request):
     }
     return render(request, "dress/home.html", context)
 
-
-# -------------------------
+# =========================
 # Auth
-# -------------------------
+# =========================
 def signup_view(request):
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
@@ -53,60 +54,70 @@ def signup_view(request):
 
         if password != confirm_password:
             messages.error(request, "รหัสผ่านไม่ตรงกัน")
-            return redirect("signup")
+            return redirect("dress:signup")
 
         if User.objects.filter(username=username).exists():
             messages.error(request, "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว")
-            return redirect("signup")
+            return redirect("dress:signup")
 
         if User.objects.filter(email=email).exists():
             messages.error(request, "อีเมลนี้ถูกใช้งานแล้ว")
-            return redirect("signup")
+            return redirect("dress:signup")
 
         User.objects.create_user(username=username, email=email, password=password)
         messages.success(request, "สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ")
-        return redirect("login")
+        return redirect("dress:login")
 
     return render(request, "dress/signup.html")
 
 
 def login_view(request):
+    # ถ้าล็อกอินแล้ว ส่งต่อไปยัง next หรือหน้าแรก
+    if request.user.is_authenticated:
+        nxt = request.GET.get("next")
+        return redirect(nxt or reverse("dress:home"))
+
     if request.method == "POST":
         username_or_email = request.POST.get("username", "").strip()
         password = request.POST.get("password", "").strip()
+        next_url = request.POST.get("next") or request.GET.get("next")
 
         try:
             user_obj = User.objects.get(Q(username=username_or_email) | Q(email=username_or_email))
             username = user_obj.username
         except User.DoesNotExist:
             messages.error(request, "ไม่พบบัญชีผู้ใช้งานนี้")
-            return redirect("login")
+            return redirect("dress:login")
 
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect("login_redirect")
-        messages.error(request, "รหัสผ่านไม่ถูกต้อง")
-        return redirect("login")
+            return redirect(next_url or reverse("dress:login_redirect"))
 
-    return render(request, "dress/login.html")
+        messages.error(request, "รหัสผ่านไม่ถูกต้อง")
+        return redirect("dress:login")
+
+    return render(request, "dress/login.html", {"next": request.GET.get("next", "")})
 
 
 def logout_view(request):
     logout(request)
     messages.info(request, "ออกจากระบบเรียบร้อยแล้ว")
-    return redirect("login")
+    return redirect("dress:login")
 
 
-@login_required(login_url="login")
 def login_redirect(request):
+    if not request.user.is_authenticated:
+        return redirect("dress:login")
     shop = Shop.objects.filter(owner=request.user).first()
     if shop:
-        return redirect("my_store", store_id=shop.id)
-    return redirect("member_home")
+        return redirect("dress:my_store", store_id=shop.id)
+    return redirect("dress:member_home")
 
-
-@login_required(login_url="login")
+# =========================
+# Member
+# =========================
+@login_required(login_url="dress:login")
 def member_home(request):
     q = request.GET.get("q")
     category = request.GET.get("category")
@@ -124,11 +135,10 @@ def member_home(request):
         "selected_category": category,
     })
 
-
-# -------------------------
-# ร้านค้า
-# -------------------------
-@login_required(login_url="login")
+# =========================
+# ร้านค้า (เจ้าของร้าน)
+# =========================
+@login_required(login_url="dress:login")
 def open_store(request):
     if request.method == "POST":
         shop_name = request.POST.get("shop_name", "").strip()
@@ -139,7 +149,7 @@ def open_store(request):
 
         if not shop_name or not province:
             messages.error(request, "กรุณากรอกข้อมูลร้านให้ครบถ้วน")
-            return redirect("open_store")
+            return redirect("dress:open_store")
 
         shop = Shop.objects.create(
             owner=request.user,
@@ -150,19 +160,19 @@ def open_store(request):
             shop_logo=shop_logo,
         )
         messages.success(request, "เปิดร้านสำเร็จ")
-        return redirect("my_store", store_id=shop.id)
+        return redirect("dress:my_store", store_id=shop.id)
 
     return render(request, "dress/open_store.html")
 
 
-@login_required(login_url="login")
+@login_required(login_url="dress:login")
 def my_store(request, store_id):
     shop = get_object_or_404(Shop, id=store_id, owner=request.user)
     products = Dress.objects.filter(shop=shop)
     return render(request, "dress/my_store.html", {"store": shop, "products": products})
 
 
-@login_required(login_url="login")
+@login_required(login_url="dress:login")
 def store_dress(request, store_id):
     shop = get_object_or_404(Shop, id=store_id, owner=request.user)
     dresses = Dress.objects.filter(shop=shop)
@@ -183,10 +193,7 @@ def store_dress(request, store_id):
     })
 
 
-# -------------------------
-# สินค้าในร้าน
-# -------------------------
-@login_required(login_url="login")
+@login_required(login_url="dress:login")
 def add_dress(request, store_id):
     shop = get_object_or_404(Shop, id=store_id, owner=request.user)
 
@@ -234,13 +241,12 @@ def add_dress(request, store_id):
 
         dress.save()
         messages.success(request, "เพิ่มชุดใหม่เรียบร้อยแล้ว")
-        return redirect("store_dress", store_id=store_id)
+        return redirect("dress:store_dress", store_id=store_id)
 
-    # GET: ส่งข้อมูลให้เทมเพลตใช้เติม UI
+    # GET: ข้อมูลประกอบหน้า
     categories = Category.objects.all()
     price_templates = shop.price_templates.order_by("name")
 
-    # shipping init -> ใช้เติมตารางค่าส่งในหน้า
     rule = getattr(shop, "shipping_rule", None)
     if rule:
         shipping_init = {
@@ -264,12 +270,11 @@ def add_dress(request, store_id):
         },
     )
 
-
 def _assert_store_owner(store: Shop, user):
     return (store.owner_id == getattr(user, "id", None)) or getattr(user, "is_superuser", False)
 
 
-@login_required(login_url="login")
+@login_required(login_url="dress:login")
 def edit_dress(request, store_id, dress_id):
     shop = get_object_or_404(Shop, id=store_id, owner=request.user)
     dress = get_object_or_404(Dress, id=dress_id, shop=shop)
@@ -283,7 +288,7 @@ def edit_dress(request, store_id, dress_id):
         dress.shipping_fee = float(request.POST.get("shipping_fee") or 0)
         dress.stock = int(request.POST.get("stock") or 1)
 
-        # หมวดหมู่ (multi-select)
+        # หมวดหมู่
         selected_cats = request.POST.getlist("categories")
         if selected_cats:
             cats = [int(cid) for cid in selected_cats if str(cid).isdigit()]
@@ -297,7 +302,7 @@ def edit_dress(request, store_id, dress_id):
         elif request.FILES.get("image"):
             dress.image = request.FILES.get("image")
 
-        # ราคาแพ็ก: เลือกเทมเพลต/วันสูงสุดเฉพาะชุด
+        # ราคาแพ็ก
         tpl_id = request.POST.get("price_template_id")
         if tpl_id and tpl_id.isdigit():
             tpl = PriceTemplate.objects.filter(id=int(tpl_id), store=shop).first()
@@ -314,20 +319,18 @@ def edit_dress(request, store_id, dress_id):
 
         dress.save()
         messages.success(request, "แก้ไขชุดเรียบร้อยแล้ว")
-        return redirect("store_dress", store_id=store_id)
+        return redirect("dress:store_dress", store_id=store_id)
 
     # GET
     categories = Category.objects.all()
     price_templates = shop.price_templates.order_by("name")
 
-    # ใช้สำหรับ “แสดงรายการราคา” ของเทมเพลตที่ถูกเลือกตอนเปิดหน้า
     tpl_preview_items = []
     if dress.price_template:
         tpl_preview_items = list(
             dress.price_template.items.order_by("day_count").values("day_count", "total_price")
         )
 
-    # shipping init (โชว์/แก้ของร้าน)
     rule = getattr(shop, "shipping_rule", None)
     if rule:
         shipping_init = {
@@ -348,14 +351,13 @@ def edit_dress(request, store_id, dress_id):
             "dress": dress,
             "categories": categories,
             "price_templates": price_templates,
-            "tpl_preview_items": tpl_preview_items,  # <-- เพิ่มส่งเข้า template
+            "tpl_preview_items": tpl_preview_items,
             "shipping_init_json": json.dumps(shipping_init, ensure_ascii=False),
         },
     )
 
-
-# ============ API: อ่านรายละเอียดเทมเพลต (ใช้เติมตาราง/เปิด modal แก้ไข) ============
-@login_required
+# ---------- API: Price Template ----------
+@login_required(login_url="dress:login")
 def api_get_price_template(request, store_id: int, tpl_id: int):
     store = get_object_or_404(Shop, id=store_id)
     if not _assert_store_owner(store, request.user):
@@ -374,8 +376,7 @@ def api_get_price_template(request, store_id: int, tpl_id: int):
     return JsonResponse({"ok": True, "template": payload})
 
 
-# ============ API: อัปเดตเทมเพลตราคาเช่า ============
-@login_required
+@login_required(login_url="dress:login")
 @require_POST
 def api_update_price_template(request, store_id: int, tpl_id: int):
     store = get_object_or_404(Shop, id=store_id)
@@ -420,12 +421,9 @@ def api_update_price_template(request, store_id: int, tpl_id: int):
         normalized.append((day, price))
 
     with transaction.atomic():
-        # ชื่อ/จำนวนวันสูงสุด
         tpl.name = name
         tpl.max_days = max_days
         tpl.save()
-
-        # ลบรายการเดิมแล้วสร้างใหม่จาก input
         tpl.items.all().delete()
         PriceTemplateItem.objects.bulk_create([
             PriceTemplateItem(template=tpl, day_count=d, total_price=p) for d, p in normalized
@@ -436,10 +434,10 @@ def api_update_price_template(request, store_id: int, tpl_id: int):
         "template": {"id": tpl.id, "name": tpl.name, "max_days": tpl.max_days}
     })
 
-
-
-
-@login_required(login_url="login")
+# =========================
+# จัดการสินค้า
+# =========================
+@login_required(login_url="dress:login")
 def delete_dress(request, store_id, dress_id):
     shop = get_object_or_404(Shop, id=store_id, owner=request.user)
     dress = get_object_or_404(Dress, id=dress_id, shop=shop)
@@ -448,11 +446,11 @@ def delete_dress(request, store_id, dress_id):
             dress.image.delete(save=False)
         dress.delete()
         messages.success(request, "ลบชุดเรียบร้อยแล้ว")
-        return redirect("store_dress", store_id=store_id)
+        return redirect("dress:store_dress", store_id=store_id)
     return render(request, "dress/delete_dress.html", {"store": shop, "dress": dress})
 
 
-@login_required(login_url="login")
+@login_required(login_url="dress:login")
 def toggle_availability(request, store_id, dress_id):
     shop = get_object_or_404(Shop, id=store_id, owner=request.user)
     dress = get_object_or_404(Dress, id=dress_id, shop=shop)
@@ -462,12 +460,11 @@ def toggle_availability(request, store_id, dress_id):
         messages.success(request, f"{dress.name} เปิดให้เช่าแล้ว")
     else:
         messages.warning(request, f"{dress.name} ปิดการเช่าชั่วคราว")
-    return redirect("store_dress", store_id=store_id)
+    return redirect("dress:store_dress", store_id=store_id)
 
-
-# -------------------------
+# =========================
 # รายละเอียดสินค้า + รีวิว
-# -------------------------
+# =========================
 def review_list(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
     sort = request.GET.get('sort', 'newest')
@@ -538,7 +535,7 @@ def dress_detail(request, dress_id):
     })
 
 
-@login_required
+@login_required(login_url="dress:login")
 def review_create(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
     if request.method == 'POST':
@@ -557,12 +554,12 @@ def review_create(request, dress_id):
                 image=image
             )
             messages.success(request, "เพิ่มรีวิวเรียบร้อยแล้ว")
-            return redirect('review_list', dress_id=dress.id)
+            return redirect('dress:review_list', dress_id=dress.id)
 
     return render(request, 'dress/review_form.html', {'dress': dress})
 
 
-@login_required
+@login_required(login_url="dress:login")
 def review_edit(request, dress_id, review_id):
     dress = get_object_or_404(Dress, pk=dress_id)
     review = get_object_or_404(Review, pk=review_id, user=request.user)
@@ -574,12 +571,12 @@ def review_edit(request, dress_id, review_id):
             review.image = request.FILES['image']
         review.save()
         messages.success(request, "อัปเดตรีวิวเรียบร้อยแล้ว")
-        return redirect('review_list', dress_id=dress.id)
+        return redirect('dress:review_list', dress_id=dress.id)
 
     return render(request, 'dress/review_edit.html', {'dress': dress, 'review': review})
 
 
-@login_required
+@login_required(login_url="dress:login")
 def review_delete(request, dress_id, review_id):
     dress = get_object_or_404(Dress, pk=dress_id)
     review = get_object_or_404(Review, pk=review_id, user=request.user)
@@ -587,23 +584,22 @@ def review_delete(request, dress_id, review_id):
     if request.method == 'POST':
         review.delete()
         messages.success(request, "ลบรีวิวเรียบร้อยแล้ว")
-        return redirect('review_list', dress_id=dress.id)
+        return redirect('dress:review_list', dress_id=dress.id)
 
-    return redirect('review_list', dress_id=dress.id)
+    return redirect('dress:review_list', dress_id=dress.id)
 
-
-# -------------------------
-# Favorite
-# -------------------------
-@login_required
+# =========================
+# Favorites
+# =========================
+@login_required(login_url="dress:login")
 def add_to_favorite(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
     Favorite.objects.get_or_create(user=request.user, dress=dress)
     messages.success(request, "บันทึกชุดนี้ไว้ในรายการโปรดแล้ว")
-    return redirect('dress_detail', dress_id=dress.id)
+    return redirect('dress:dress_detail', dress_id=dress.id)
 
 
-@login_required
+@login_required(login_url="dress:login")
 def toggle_favorite(request, dress_id):
     dress = get_object_or_404(Dress, id=dress_id)
     favorite, created = Favorite.objects.get_or_create(user=request.user, dress=dress)
@@ -617,25 +613,24 @@ def toggle_favorite(request, dress_id):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return JsonResponse({'is_favorite': is_favorite})
 
-    return redirect('dress_detail', dress_id=dress.id)
+    return redirect('dress:dress_detail', dress_id=dress.id)
 
 
-@login_required
+@login_required(login_url="dress:login")
 def favorite_list(request):
     favorites = Favorite.objects.filter(user=request.user).select_related("dress")
     return render(request, "dress/favorite_list.html", {"favorites": favorites})
 
 
-@login_required
+@login_required(login_url="dress:login")
 def favorite_count_api(request):
     count = Favorite.objects.filter(user=request.user).count()
     return JsonResponse({'count': count})
 
-
-# -------------------------
-# ตะกร้า
-# -------------------------
-@login_required
+# =========================
+# Cart
+# =========================
+@login_required(login_url="dress:login")
 def cart_view(request):
     cart_items = CartItem.objects.filter(user=request.user).select_related("dress", "dress__shop")
 
@@ -660,7 +655,7 @@ def cart_view(request):
     })
 
 
-@login_required(login_url="login")
+@login_required(login_url="dress:login")
 def add_to_cart(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
     cart_item, created = CartItem.objects.get_or_create(user=request.user, dress=dress)
@@ -670,7 +665,7 @@ def add_to_cart(request, dress_id):
         messages.info(request, "เพิ่มจำนวนสินค้าในตะกร้าแล้ว")
     else:
         messages.success(request, "เพิ่มสินค้าในตะกร้าสำเร็จ")
-    return redirect('dress_detail', dress_id=dress.id)
+    return redirect('dress:dress_detail', dress_id=dress.id)
 
 
 def cart_item_count(request):
@@ -679,7 +674,7 @@ def cart_item_count(request):
 
 
 @csrf_exempt
-@login_required
+@login_required(login_url="dress:login")
 def remove_bulk(request):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
@@ -705,7 +700,7 @@ def remove_bulk(request):
 
 
 @csrf_exempt
-@login_required
+@login_required(login_url="dress:login")
 def move_to_favorite(request):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
@@ -734,7 +729,7 @@ def move_to_favorite(request):
 
 
 @csrf_exempt
-@login_required
+@login_required(login_url="dress:login")
 def update_quantity(request):
     if request.method == "POST":
         try:
@@ -763,35 +758,34 @@ def update_quantity(request):
 
     return JsonResponse({"status": "error", "message": "Invalid request"}, status=405)
 
-
-# -------------------------
+# =========================
 # ประวัติ/โปรไฟล์
-# -------------------------
-@login_required(login_url="login")
+# =========================
+@login_required(login_url="dress:login")
 def rental_history_view(request):
     rentals = Rental.objects.filter(user=request.user).select_related("dress", "dress__shop")
     return render(request, "dress/rental_history.html", {"rentals": rentals})
 
 
-@login_required(login_url="login")
+@login_required(login_url="dress:login")
 def notification_page(request):
     notifications = []
     return render(request, "dress/notification.html", {"notifications": notifications})
 
 
-@login_required(login_url="login")
+@login_required(login_url="dress:login")
 def rental_list_view(request):
     context = {"current_rentals": [], "upcoming_rentals": [], "completed_rentals": []}
     return render(request, "dress/rental_list.html", context)
 
 
-@login_required(login_url='login')
+@login_required(login_url='dress:login')
 def profile_page(request):
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     return render(request, 'dress/profile.html', {'profile': profile})
 
 
-@login_required(login_url='login')
+@login_required(login_url='dress:login')
 def update_profile(request):
     user = request.user
     profile, _ = UserProfile.objects.get_or_create(user=user)
@@ -811,16 +805,16 @@ def update_profile(request):
 
         profile.save()
         messages.success(request, "อัปเดตโปรไฟล์เรียบร้อยแล้ว")
-        return redirect("profile_page")
+        return redirect("dress:profile_page")
 
-    return redirect("profile_page")
+    return redirect("dress:profile_page")
 
 
 def how_to_rent(request):
     return render(request, "dress/how_to_rent.html")
 
 
-@login_required(login_url='login')
+@login_required(login_url='dress:login')
 def back_office(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
     return render(request, 'dress/back_office.html', {'store': store})
@@ -847,15 +841,8 @@ def public_store(request, store_id):
     }
     return render(request, "dress/public_store.html", context)
 
-
-# -------------------------
-# API ภายในร้าน: เทมเพลตราคาเช่า / ค่าส่ง
-# -------------------------
-def _assert_store_owner(store: Shop, user):
-    return (store.owner_id == getattr(user, "id", None)) or getattr(user, "is_superuser", False)
-
-
-@login_required
+# ---------- API: เทมเพลตราคาเช่า/ค่าส่ง (สร้างใหม่) ----------
+@login_required(login_url="dress:login")
 @require_POST
 def api_create_price_template(request, store_id: int):
     try:
@@ -878,7 +865,6 @@ def api_create_price_template(request, store_id: int):
     if not items:
         return JsonResponse({"ok": False, "error": "กรุณาใส่รายการราคาอย่างน้อย 1 แถว"}, status=400)
 
-    # ป้องกันชื่อซ้ำในร้านเดียวกัน
     if PriceTemplate.objects.filter(store=store, name=name).exists():
         return JsonResponse({"ok": False, "error": "มีชื่อเทมเพลตนี้ในร้านแล้ว กรุณาใช้ชื่ออื่น"}, status=400)
 
@@ -915,7 +901,7 @@ def api_create_price_template(request, store_id: int):
     }})
 
 
-@login_required
+@login_required(login_url="dress:login")
 @require_POST
 def api_save_shipping_rule(request, store_id: int):
     try:
@@ -961,10 +947,9 @@ def api_save_shipping_rule(request, store_id: int):
 
     return JsonResponse({"ok": True})
 
-
-# -------------------------
-# เช่า: หน้าเช็คเอาต์
-# -------------------------
+# =========================
+# Helper สำหรับเช็คเอาต์/ชำระเงิน
+# =========================
 def _parse_date(s):
     try:
         return datetime.strptime(s, "%Y-%m-%d").date()
@@ -990,20 +975,25 @@ def _calc_shipping_from_tiers(tiers, qty):
             fee = f  # clamp ไปช่วงบนสุด
     return fee
 
-@login_required(login_url="login")
+# =========================
+# เช็คเอาต์
+# =========================
+@login_required(login_url="dress:login")
 def rent_checkout(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
 
-    # --- รับค่าจากหน้า detail ---
-    start_s = (request.GET.get("start_date") or request.GET.get("start") or "").strip()
-    end_s   = (request.GET.get("end_date")   or request.GET.get("end")   or "").strip()
-    days_s  = (request.GET.get("days") or "").strip()
+    # รับค่าจากหน้า detail (POST มาก่อน ถ้าไม่มีค่อยใช้ GET)
+    start_s = (request.POST.get("start_date") or request.GET.get("start_date")
+               or request.GET.get("start") or "").strip()
+    end_s   = (request.POST.get("end_date") or request.GET.get("end_date")
+               or request.GET.get("end") or "").strip()
+    days_s  = (request.POST.get("days") or request.GET.get("days") or "").strip()
 
     start_date = _parse_date(start_s)
     end_date   = _parse_date(end_s)
     total_days = int(days_s) if days_s.isdigit() else _days_inclusive(start_date, end_date)
 
-    # --- ตารางแพ็ก ---
+    # ตารางแพ็ก
     pack_prices = []
     if getattr(dress, "price_template", None):
         for it in dress.price_template.items.order_by("day_count"):
@@ -1011,17 +1001,17 @@ def rent_checkout(request, dress_id):
     else:
         daily = float(getattr(dress, "daily_price", 0) or 0)
         if daily > 0:
-            for d in range(1, 8+1):
+            for d in range(1, 9):
                 pack_prices.append({"days": d, "price": daily * d})
 
-    # --- ค่ามัดจำ & ค่าเช่า ---
+    # ค่ามัดจำ & ค่าเช่า
     deposit = float(getattr(dress, "deposit", 0) or 0)
     rental_fee = 0.0
     if total_days > 0:
         match = next((p for p in pack_prices if int(p["days"]) == total_days), None)
         rental_fee = float(match["price"]) if match else float(getattr(dress, "daily_price", 0) or 0) * total_days
 
-    # --- ค่าส่ง: เอาจากกฎของร้าน ถ้าไม่มี → ตั้งค่า default ---
+    # ค่าส่ง: ใช้กฎของร้าน ถ้าไม่มี → default
     shipping_tiers = []
     shipping_clamp_note = None
     rule = getattr(dress.shop, "shipping_rule", None)
@@ -1038,10 +1028,45 @@ def rent_checkout(request, dress_id):
         ]
         shipping_clamp_note = "มากกว่า 5 ชุด คิดค่าส่ง 65.00 บาท"
 
-    # ปริยาย: ออเดอร์ 'เช่าทันที' = 1 ชุด → ถ้า POST ค่อยคิดจริงก่อนบันทึก
-    preview_qty = 1
-    preview_shipping = _calc_shipping_from_tiers(shipping_tiers, preview_qty)
+    preview_shipping = _calc_shipping_from_tiers(shipping_tiers, 1)
 
+    # ถ้า POST: เก็บ session แล้วไป /payment/
+    if request.method == "POST":
+        receive_method = (request.POST.get("receive_method") or "pickup").strip()  # pickup | delivery
+        address        = (request.POST.get("address") or "").strip()
+        pickup_slot    = (request.POST.get("pickup_slot") or "").strip()
+        return_slot    = (request.POST.get("return_slot") or "").strip()
+        delivery_slot  = (request.POST.get("delivery_slot") or "").strip()
+        renter_name    = (request.POST.get("renter_name") or "").strip()
+        renter_phone   = (request.POST.get("renter_phone") or "").strip()
+
+        shipping_fee = _calc_shipping_from_tiers(shipping_tiers, 1) if receive_method == "delivery" else 0.0
+        amount_baht  = float(rental_fee) + float(deposit) + float(shipping_fee)
+
+        request.session["checkout"] = {
+            "dress_id": dress.id,
+            "start_date": start_date.strftime("%Y-%m-%d") if start_date else "",
+            "end_date":   end_date.strftime("%Y-%m-%d")   if end_date else "",
+            "days": total_days,
+
+            "receive_method": receive_method,
+            "address": address,
+            "pickup_slot": pickup_slot,
+            "return_slot": return_slot,
+            "delivery_slot": delivery_slot,
+
+            "renter_name": renter_name,
+            "renter_phone": renter_phone,
+
+            "rental_fee": f"{rental_fee:.2f}",
+            "deposit":    f"{deposit:.2f}",
+            "shipping":   f"{shipping_fee:.2f}",
+            "amount_baht": f"{amount_baht:.2f}",
+        }
+        request.session.modified = True
+        return redirect("dress:rent_payment", dress_id=dress.id)
+
+    # GET: แสดงหน้าเช็คเอาต์
     ctx = {
         "dress": dress,
         "start_date": start_date,
@@ -1050,11 +1075,137 @@ def rent_checkout(request, dress_id):
         "rental_fee": rental_fee,
         "deposit": deposit,
         "pack_prices": pack_prices,
-
         "shipping_tiers": shipping_tiers,
         "shipping_clamp_note": shipping_clamp_note,
-
-        # ส่งไว้เผื่ออยากแสดงค่าส่งตัวอย่างสำหรับ 1 ชุด
         "preview_shipping_fee": preview_shipping,
     }
     return render(request, "dress/rent_checkout.html", ctx)
+
+# คำนวณราคาเช่าสำหรับ 1 ชุด
+def _quote_for(dress, start_date, end_date, method="pickup"):
+    days = _days_inclusive(start_date, end_date)
+
+    pack_prices = []
+    if getattr(dress, "price_template", None):
+        for it in dress.price_template.items.order_by("day_count"):
+            pack_prices.append({"days": int(it.day_count), "price": float(it.total_price)})
+    else:
+        daily = float(getattr(dress, "daily_price", 0) or 0)
+        if daily > 0:
+            for d in range(1, 9):
+                pack_prices.append({"days": d, "price": daily * d})
+
+    rental_fee = 0.0
+    if days > 0:
+        match = next((p for p in pack_prices if p["days"] == days), None)
+        rental_fee = float(match["price"]) if match else float(getattr(dress, "daily_price", 0) or 0) * days
+
+    deposit = float(getattr(dress, "deposit", 0) or 0)
+
+    shipping = 0.0
+    if (method or "").strip() == "delivery":
+        rule = getattr(dress.shop, "shipping_rule", None)
+        tiers = []
+        if rule and hasattr(rule, "brackets"):
+            for b in rule.brackets.all().order_by("min_qty"):
+                tiers.append({"min_qty": b.min_qty, "max_qty": b.max_qty, "fee": float(b.fee)})
+        else:
+            tiers = [
+                {"min_qty": 1, "max_qty": 2, "fee": 50},
+                {"min_qty": 3, "max_qty": 5, "fee": 65},
+            ]
+        shipping = _calc_shipping_from_tiers(tiers, 1)
+
+    amount = rental_fee + deposit + shipping
+    return {
+        "days": days,
+        "rental_fee": round(rental_fee, 2),
+        "deposit": round(deposit, 2),
+        "shipping": round(shipping, 2),
+        "amount_baht": round(amount, 2),
+    }
+
+# =========================
+# ชำระเงิน
+# =========================
+@login_required(login_url="dress:login")
+def rent_payment(request, dress_id):
+    dress = get_object_or_404(Dress, pk=dress_id)
+
+    # ลองอ่านจาก session (มาจาก POST ของ checkout) ก่อน
+    sess = request.session.get("checkout") or {}
+    if sess and int(sess.get("dress_id", 0)) == dress.id:
+        start_date = _parse_date(sess.get("start_date") or "")
+        end_date   = _parse_date(sess.get("end_date") or "")
+        method     = (sess.get("receive_method") or "pickup").strip()
+
+        rental_fee = float(sess.get("rental_fee") or 0)
+        deposit    = float(sess.get("deposit") or 0)
+        shipping   = float(sess.get("shipping") or 0)
+        amount     = float(sess.get("amount_baht") or 0)
+        days       = int(sess.get("days") or 0)
+        address    = sess.get("address")
+        pickup_slot = sess.get("pickup_slot")
+        return_slot = sess.get("return_slot")
+        delivery_slot = sess.get("delivery_slot")
+    else:
+        # fallback: อ่านจาก query string
+        start_date = _parse_date((request.GET.get("start_date") or request.GET.get("start") or "").strip())
+        end_date   = _parse_date((request.GET.get("end_date")   or request.GET.get("end")   or "").strip())
+        method     = (request.GET.get("method") or "pickup").strip()
+        q = _quote_for(dress, start_date, end_date, method)
+
+        days, rental_fee, deposit, shipping, amount = (
+            q["days"], q["rental_fee"], q["deposit"], q["shipping"], q["amount_baht"]
+        )
+        address = request.GET.get("address")
+        pickup_slot = request.GET.get("pickup_slot")
+        return_slot = request.GET.get("return_slot")
+        delivery_slot = request.GET.get("delivery_slot")
+
+    ctx = {
+        "dress": dress,
+        "start_date": start_date,
+        "end_date": end_date,
+        "days": days,
+        "method": method,
+        "rental_fee": rental_fee,
+        "deposit": deposit,
+        "shipping": shipping,
+        "amount_baht": amount,
+        "address": address,
+        "pickup_slot": pickup_slot,
+        "return_slot": return_slot,
+        "delivery_slot": delivery_slot,
+    }
+    return render(request, "dress/rent_payment.html", ctx)
+
+# สร้าง Omise PromptPay Charge (mock)
+@require_POST
+@csrf_exempt
+def create_promptpay_charge(request, dress_id):
+    amount = request.POST.get("amount")
+    method = request.POST.get("method")  # 'delivery' | 'pickup'
+    if not amount:
+        return HttpResponseBadRequest("Missing amount")
+
+    data = {
+        "order_no": f"ORD-{dress_id}-{int(time.time())}",
+        "status": "pending",
+        "qr_image": "/static/img/mock-qr.png",
+        "charge_id": "chrg_test_123",
+        "expires_at": int(time.time()) + 900,    # 15 นาที
+        "method": method,
+        "amount": int(float(amount)),
+    }
+    return JsonResponse(data)
+
+def rent_success(request, dress_id):
+    dress = get_object_or_404(Dress, pk=dress_id)
+    ctx = {
+        "dress": dress,
+        "start_date": request.GET.get("start_date"),
+        "end_date": request.GET.get("end_date"),
+        "days": request.GET.get("days"),
+    }
+    return render(request, "dress/rent_success.html", ctx)

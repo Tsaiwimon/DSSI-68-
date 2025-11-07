@@ -9,7 +9,6 @@
 </head>
 <body class="bg-gray-50">
 
-  <!-- Header -->
   <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
       <div class="flex items-center gap-3">
@@ -21,7 +20,6 @@
         <h1 class="text-lg sm:text-xl font-bold text-gray-800">ยืนยันการเช่า</h1>
       </div>
 
-      <!-- Stepper -->
       <nav class="mt-4">
         <ol class="max-w-6xl mx-auto flex items-center gap-2 text-xs sm:text-sm">
           <li class="flex items-center gap-2">
@@ -48,8 +46,9 @@
     </div>
   </header>
 
-  {% if not total_days %}
-  <!-- Banner เตือนยังไม่เลือกช่วงวันที่ -->
+  {% with sd=start_date|default:request.GET.start_date ed=end_date|default:request.GET.end_date td=total_days|default:request.GET.days %}
+
+  {% if not sd or not ed %}
   <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
     <div class="bg-amber-50 text-amber-900 border border-amber-200 rounded-lg p-3 text-sm flex items-start gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -57,23 +56,20 @@
       </svg>
       <div>
         <div class="font-medium">ยังไม่ได้เลือกช่วงวันที่เช่า</div>
-        <div>โปรดกลับไปหน้า <a href="{% url 'dress_detail' dress.id %}" class="underline font-medium">รายละเอียดชุด</a> เพื่อเลือกวันที่/แพ็กเกจก่อนทำการยืนยัน</div>
+        <div>โปรดกลับไปหน้า <a href="{% url 'dress:dress_detail' dress.id %}" class="underline font-medium">รายละเอียดชุด</a> เพื่อเลือกวันที่/แพ็กเกจก่อนทำการยืนยัน</div>
       </div>
     </div>
   </div>
   {% endif %}
 
-  <!-- Main -->
   <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-    <form id="rentForm" method="post" action="{% url 'rent_checkout' dress.id %}" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <form id="rentForm" method="post" action="{% url 'dress:rent_checkout' dress.id %}" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {% csrf_token %}
 
-      <!-- ค่าจากหน้ารายละเอียด -->
-      <input type="hidden" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
-      <input type="hidden" name="end_date"   value="{{ end_date|date:'Y-m-d' }}">
-      <input type="hidden" name="days"       value="{{ total_days|default:0 }}">
+      <input type="hidden" name="start_date" value="{% firstof start_date|date:'Y-m-d' sd %}">
+      <input type="hidden" name="end_date"   value="{% firstof end_date|date:'Y-m-d' ed %}">
+      <input type="hidden" name="days"       value="{% firstof total_days td '0' %}">
 
-      <!-- Left -->
       <section class="bg-white rounded-xl shadow border p-4 sm:p-6">
         <h2 class="text-base font-semibold text-gray-800">รายละเอียดสินค้า</h2>
 
@@ -83,30 +79,31 @@
             <p class="font-medium text-gray-900 leading-6">{{ dress.name }}</p>
             <p class="text-pink-600 font-bold text-xl mt-1">฿{{ dress.daily_price }}/วัน</p>
 
-            {% if total_days and start_date and end_date %}
+            {% if sd and ed %}
               <p class="text-gray-700 text-sm mt-2">
                 วันที่เช่า:
-                <span class="font-medium">{{ start_date|date:"d/m/Y" }}</span>
-                – <span class="font-medium">{{ end_date|date:"d/m/Y" }}</span>
-                <span class="ml-1 text-gray-500">({{ total_days }} วัน)</span>
+                <span class="font-medium">{% firstof start_date|date:"d/m/Y" sd %}</span>
+                – <span class="font-medium">{% firstof end_date|date:"d/m/Y" ed %}</span>
+                {% if td %}
+                  <span class="ml-1 text-gray-500">({{ td }} วัน)</span>
+                {% endif %}
               </p>
               {% if rental_fee %}
                 <p class="text-xs text-gray-500">ราคาเช่าคำนวณตามแพ็กเกจ/อัตรารายวันอัตโนมัติ</p>
               {% endif %}
               <div class="mt-2 flex items-center gap-3 text-xs">
-                <a href="{% url 'dress_detail' dress.id %}#date" class="text-blue-600 hover:underline">แก้ไขวันที่</a>
+                <a href="{% url 'dress:dress_detail' dress.id %}#date" class="text-blue-600 hover:underline">แก้ไขวันที่</a>
                 <span class="text-gray-300">|</span>
-                <a href="{% url 'dress_detail' dress.id %}#packages" class="text-blue-600 hover:underline">เปลี่ยนแพ็กเกจ</a>
+                <a href="{% url 'dress:dress_detail' dress.id %}#packages" class="text-blue-600 hover:underline">เปลี่ยนแพ็กเกจ</a>
               </div>
             {% else %}
               <p class="text-red-600 text-sm mt-2">
-                ยังไม่ได้เลือกช่วงวันที่ — <a href="{% url 'dress_detail' dress.id %}" class="underline">กลับไปเลือกวันที่</a>
+                ยังไม่ได้เลือกช่วงวันที่ — <a href="{% url 'dress:dress_detail' dress.id %}" class="underline">กลับไปเลือกวันที่</a>
               </p>
             {% endif %}
           </div>
         </div>
 
-        <!-- ช่องทางรับชุด -->
         <div class="mt-6">
           <p class="text-sm font-semibold text-gray-800">ช่องทางการรับชุด</p>
           <div class="mt-2 flex items-center gap-5">
@@ -122,35 +119,23 @@
             </label>
           </div>
 
-          <!-- มารับเอง: ปุ่มดูรายละเอียดร้าน + ข้อความบาง ๆ -->
           <div id="pickupWrap" class="mt-3 space-y-3">
             <div class="bg-gray-50 border rounded-lg p-3 flex items-center justify-between gap-3">
               <div class="min-w-0">
                 <div class="font-medium text-gray-800 truncate">ดูรายละเอียดร้านเพิ่มเติม</div>
-                <p class="text-xs text-gray-600 mt-0.5 truncate">
-                  ดูรายละเอียดร้านเพิ่มเติมและแชทกับร้านเพื่อรับชุด
-                </p>
+                <p class="text-xs text-gray-600 mt-0.5 truncate">ดูรายละเอียดร้านเพิ่มเติมและแชทกับร้านเพื่อรับชุด</p>
               </div>
-              <a href="{% url 'public_store' dress.shop.id %}"
-                class="shrink-0 inline-flex items-center justify-center rounded-lg bg-white border px-3 py-2 text-sm hover:bg-gray-100">
-                ดูรายละเอียดร้าน
-                </a>
-
+              <a href="{% url 'dress:public_store' dress.shop.id %}" class="shrink-0 inline-flex items-center justify-center rounded-lg bg-white border px-3 py-2 text-sm hover:bg-gray-100">ดูรายละเอียดร้าน</a>
             </div>
 
-            
-
-            <!-- ช่วงเวลารับ/คืน -->
             <div class="grid sm:grid-cols-2 gap-3">
-              <select name="pickup_slot" id="pickup_slot"
-                      class="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+              <select name="pickup_slot" id="pickup_slot" class="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
                 <option value="">ช่วงเวลารับชุด</option>
                 <option value="morning">เช้า (09:00–12:00)</option>
                 <option value="afternoon">บ่าย (13:00–17:00)</option>
                 <option value="evening">เย็น (18:00–20:00)</option>
               </select>
-              <select name="return_slot" id="return_slot"
-                      class="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+              <select name="return_slot" id="return_slot" class="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
                 <option value="">ช่วงเวลาคืนชุด</option>
                 <option value="morning">เช้า (09:00–12:00)</option>
                 <option value="afternoon">บ่าย (13:00–17:00)</option>
@@ -159,12 +144,9 @@
             </div>
           </div>
 
-          <!-- จัดส่งถึงบ้าน -->
           <div id="deliveryWrap" class="mt-3 hidden space-y-3">
-            <input name="address" id="address" type="text" placeholder="ระบุที่อยู่สำหรับจัดส่ง"
-              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-            <select name="delivery_slot" id="delivery_slot"
-                    class="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+            <input name="address" id="address" type="text" placeholder="ระบุที่อยู่สำหรับจัดส่ง" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+            <select name="delivery_slot" id="delivery_slot" class="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
               <option value="">ช่วงเวลาส่ง</option>
               <option value="morning">เช้า (09:00–12:00)</option>
               <option value="afternoon">บ่าย (13:00–17:00)</option>
@@ -174,37 +156,29 @@
           </div>
         </div>
 
-        <!-- ข้อมูลผู้เช่า -->
         <div class="mt-6">
           <p class="text-sm font-semibold text-gray-800">ข้อมูลผู้เช่า</p>
           <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <input name="renter_name" id="renter_name" type="text" placeholder="เช่น กานต์ สุกุมล"
-                value="{{ request.user.get_full_name|default:'' }}"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+              <input name="renter_name" id="renter_name" type="text" placeholder="เช่น กานต์ สุกุมล" value="{{ request.user.get_full_name|default:'' }}" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
               <p id="nameErr" class="mt-1 text-xs text-red-600 hidden">กรุณากรอกชื่อ–นามสกุลให้ถูกต้อง</p>
             </div>
             <div>
-              <input name="renter_phone" id="renter_phone" type="tel" inputmode="numeric" maxlength="12"
-                placeholder="0xx-xxx-xxxx"
-                value="{{ request.user.userprofile.phone|default:'' }}"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+              <input name="renter_phone" id="renter_phone" type="tel" inputmode="numeric" maxlength="12" placeholder="0xx-xxx-xxxx" value="{{ request.user.userprofile.phone|default:'' }}" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
               <p id="phoneErr" class="mt-1 text-xs text-red-600 hidden">กรุณากรอกเบอร์ 9–10 หลัก</p>
             </div>
           </div>
         </div>
 
-        <!-- เงื่อนไข -->
         <p class="mt-6 text-xs text-gray-500">
-          {% if end_date %}
-            ต้องคืนชุดภายในวันที่ {{ end_date|date:"d/m/Y" }} หากคืนเกินจากนี้ ระบบจะคิดค่าปรับล่าช้า
+          {% if ed %}
+            ต้องคืนชุดภายในวันที่ {% firstof end_date|date:"d/m/Y" ed %} หากคืนเกินจากนี้ ระบบจะคิดค่าปรับล่าช้า
           {% else %}
             ต้องคืนชุดภายในวันที่ — หากคืนเกินจากนี้ ระบบจะคิดค่าปรับล่าช้า
           {% endif %}
         </p>
       </section>
 
-      <!-- Right -->
       <aside class="bg-white rounded-xl shadow border p-4 sm:p-6 h-fit">
         <h2 class="text-base font-semibold text-gray-800">การชำระเงิน</h2>
 
@@ -234,7 +208,6 @@
           <p class="text-xs text-gray-500 mt-2">{{ shipping_clamp_note }}</p>
         {% endif %}
 
-        <!-- ยอมรับเงื่อนไข -->
         <label class="mt-4 flex items-start gap-2 text-sm">
           <input type="checkbox" id="agreeTerms" class="mt-1">
           <span class="text-gray-700">
@@ -245,14 +218,9 @@
           </span>
         </label>
 
-        <!-- ปุ่ม -->
         <div class="mt-6 flex gap-3">
-          <a href="{% url 'dress_detail' dress.id %}"
-             class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 rounded-lg text-center">
-            ย้อนกลับ
-          </a>
-          <button type="submit" id="confirmBtn"
-                  class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:pointer-events-none">
+          <a href="{% url 'dress:dress_detail' dress.id %}" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 rounded-lg text-center">ย้อนกลับ</a>
+          <button type="submit" id="confirmBtn" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:pointer-events-none">
             <svg id="loadingIcon" class="w-4 h-4 hidden animate-spin" viewBox="0 0 24 24" fill="none">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
@@ -264,21 +232,21 @@
     </form>
   </main>
 
-  <!-- JSON: ค่าส่งตามช่วง -->
   {{ shipping_tiers|json_script:"shippingTiersJSON" }}
 
   <script>
-    // ===== ค่าจาก server =====
     const RENT    = Number(("{{ rental_fee|default:'0' }}").toString().replace(/,/g,'')) || 0;
     const DEPOSIT = Number(("{{ deposit|default:'0' }}").toString().replace(/,/g,''))     || 0;
-    const DAYS    = Number(("{{ total_days|default:'0' }}").toString().replace(/,/g,''))  || 0;
+    const DAYS    = Number(("{{ td|default:'0' }}").toString().replace(/,/g,''))  || 0;
     const QTY     = 1;
+
+    /* URL ไปหน้า rent_payment.html (ต้องมีชื่อ urlpattern ว่า 'rent_payment') */
+    const PAYMENT_URL = "{% url 'dress:rent_payment' dress.id %}";
 
     const tiersNode = document.getElementById('shippingTiersJSON');
     let TIERS = [];
     try { TIERS = tiersNode ? JSON.parse(tiersNode.textContent) : []; } catch(_) { TIERS = []; }
 
-    // ===== Helpers =====
     const fmt = n => new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
     const calcShipping = (qty=1) => {
       if(!TIERS.length || qty < 1) return 0;
@@ -292,7 +260,6 @@
     };
     const digits = s => (s || '').replace(/\D/g,'');
 
-    // ===== Refs =====
     const rentFee     = document.getElementById('rentFee');
     const rentBreak   = document.getElementById('rentBreakdown');
     const depositFee  = document.getElementById('depositFee');
@@ -315,7 +282,6 @@
     const phoneErr   = document.getElementById('phoneErr');
     const agreeTerms = document.getElementById('agreeTerms');
 
-    // ===== Validate & UI =====
     function validName(){ return (nameInput.value || '').trim().length >= 2; }
     function validPhone(){ const d = digits(phoneInput.value); return d.length >= 9 && d.length <= 10; }
     function formatPhoneMask(){
@@ -371,15 +337,44 @@
     formatPhoneMask();
     updateUI();
 
-    // Submit
     document.getElementById('rentForm').addEventListener('submit', (e) => {
       updateUI();
       if (confirmBtn.disabled) { e.preventDefault(); return; }
+
+      // เตรียม query ไปหน้า rent_payment
+      const sd = document.querySelector('input[name="start_date"]').value || "";
+      const ed = document.querySelector('input[name="end_date"]').value || "";
+      const ds = document.querySelector('input[name="days"]').value || "";
+
+      const methodEl   = document.querySelector('input[name="receive_method"]:checked');
+      const method     = methodEl ? methodEl.value : "";
+
+      const params = new URLSearchParams({
+        start_date: sd,
+        end_date: ed,
+        days: ds,
+        method: method
+      });
+
+      if (method === "delivery") {
+        if (addressInput && addressInput.value) params.set("address", addressInput.value);
+        if (deliverySlot && deliverySlot.value) params.set("delivery_slot", deliverySlot.value);
+      } else {
+        if (pickupSlot && pickupSlot.value) params.set("pickup_slot", pickupSlot.value);
+        if (returnSlot && returnSlot.value) params.set("return_slot", returnSlot.value);
+      }
+
+      // แสดงสถานะระหว่าง redirect
       phoneInput.value = digits(phoneInput.value);
       confirmBtn.disabled = true;
       loadingIcon.classList.remove('hidden');
-      confirmText.textContent = 'กำลังตรวจสอบสต็อก...';
+      confirmText.textContent = 'กำลังไปหน้าชำระเงิน...';
+
+      e.preventDefault();
+      window.location.href = PAYMENT_URL + "?" + params.toString();
     });
   </script>
+
+  {% endwith %}
 </body>
 </html>

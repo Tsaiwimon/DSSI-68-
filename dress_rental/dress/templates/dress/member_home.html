@@ -20,7 +20,7 @@
       </div>
 
       <!-- Search -->
-      <form method="get" action="{% url 'member_home' %}" class="flex w-full md:w-1/2 max-w-2xl mt-4 md:mt-0">
+      <form method="get" action="{% url 'dress:member_home' %}" class="flex w-full md:w-1/2 max-w-2xl mt-4 md:mt-0">
         <input type="text" name="q" placeholder="ค้นหาชุดที่ต้องการ"
                value="{{ request.GET.q }}"
                class="flex-grow px-3 py-2 border rounded-l-lg focus:outline-none">
@@ -32,21 +32,21 @@
       <!-- Menu + Icons -->
       <div class="flex items-center space-x-8 mt-4 md:mt-0">
         <nav class="flex space-x-6 font-medium">
-          <a href="{% url 'member_home' %}" class="hover:underline">หน้าหลัก</a>
-          <a href="{% url 'how_to_rent' %}" class="hover:underline">วิธีเช่า</a>
-          <a href="{% url 'open_store' %}" class="hover:underline">สมัครเปิดร้าน</a>
+          <a href="{% url 'dress:member_home' %}" class="hover:underline">หน้าหลัก</a>
+          <a href="{% url 'dress:how_to_rent' %}" class="hover:underline">วิธีเช่า</a>
+          <a href="{% url 'dress:open_store' %}" class="hover:underline">สมัครเปิดร้าน</a>
         </nav>
 
         <!-- ✅ Icons (3 ไอคอน) -->
         <div class="flex space-x-6 items-center text-xl relative">
           <!-- 🛒 ตะกร้า -->
-          <a href="{% url 'cart_view' %}" class="hover:text-pink-500 relative" title="ดูตะกร้าสินค้า">
+          <a href="{% url 'dress:cart_view' %}" class="hover:text-pink-500 relative" title="ดูตะกร้าสินค้า">
             <i class="ph ph-shopping-cart cursor-pointer"></i>
             <span id="cart-count" class="absolute -top-2 -right-3 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 hidden">0</span>
           </a>
 
           <!-- ❤️ หัวใจ -->
-          <a href="{% url 'favorite_list' %}" class="hover:text-pink-500 relative" title="ดูรายการที่ถูกใจทั้งหมด">
+          <a href="{% url 'dress:favorite_list' %}" class="hover:text-pink-500 relative" title="ดูรายการที่ถูกใจทั้งหมด">
             <i class="ph ph-heart cursor-pointer"></i>
             <span id="favorite-count" class="absolute -top-2 -right-3 bg-pink-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 hidden">0</span>
           </a>
@@ -58,11 +58,11 @@
             </button>
             <!-- เมนู Dropdown -->
             <div id="userDropdown" class="hidden absolute right-0 mt-3 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
-              <a href="{% url 'profile_page' %}" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">โปรไฟล์</a>
-              <a href="{% url 'rental_history' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">ประวัติการเช่า</a>
-              <a href="{% url 'rental_list' %}" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">การเช่าของฉัน</a>
-              <a href="{% url 'notification' %}" class="block px-4 py-2 hover:bg-gray-100">การแจ้งเตือน</a>
-              <a href="{% url 'logout' %}" class="block px-4 py-2 hover:bg-gray-100 text-red-600 font-semibold">ออกจากระบบ</a>
+              <a href="{% url 'dress:profile_page' %}" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">โปรไฟล์</a>
+              <a href="{% url 'dress:rental_history' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">ประวัติการเช่า</a>
+              <a href="{% url 'dress:rental_list' %}" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">การเช่าของฉัน</a>
+              <a href="{% url 'dress:notification' %}" class="block px-4 py-2 hover:bg-gray-100">การแจ้งเตือน</a>
+              <a href="{% url 'dress:logout' %}" class="block px-4 py-2 hover:bg-gray-100 text-red-600 font-semibold">ออกจากระบบ</a>
             </div>
           </div>
         </div>
@@ -93,7 +93,7 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
         {% for d in dresses %}
           <div class="relative bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition">
-            <a href="{% url 'dress_detail' d.id %}">
+            <a href="{% url 'dress:dress_detail' d.id %}">
               {% if d.image %}
                 <img src="{{ d.image.url }}" alt="{{ d.name }}" class="w-full h-72 object-cover">
               {% else %}
@@ -137,7 +137,7 @@
   <script>
     async function updateFavoriteCount() {
       try {
-        const response = await fetch("{% url 'favorite_count_api' %}");
+        const response = await fetch("{% url 'dress:favorite_count_api' %}");
         if (!response.ok) return;
         const data = await response.json();
         const countSpan = document.getElementById("favorite-count");
@@ -159,7 +159,7 @@
   <script>
     async function updateCartCount() {
       try {
-        const response = await fetch("{% url 'cart_item_count' %}");
+        const response = await fetch("{% url 'dress:cart_item_count' %}");
         if (!response.ok) return;
         const data = await response.json();
         const countSpan = document.getElementById("cart-count");
