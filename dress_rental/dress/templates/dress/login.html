@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="h-screen flex flex-col items-center justify-center bg-gradient-to-b from-yellow-100 via-blue-100 to-pink-200">
+
+  <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+    <h2 class="text-2xl font-bold text-center mb-2">เข้าสู่ระบบ</h2>
+    <p class="text-center text-gray-600 mb-6">ลงชื่อเพื่อเข้าสู่ระบบของคุณ</p>
+
+    <!-- ปิด autofill ระดับฟอร์ม -->
+    <form method="POST" action="{% url 'login' %}" autocomplete="off" novalidate>
+      {% csrf_token %}
+
+      {% if messages %}
+        <div class="mb-4">
+          {% for message in messages %}
+            <p class="text-red-500 text-sm text-center">{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- ฟิลด์หลอกเพื่อดัก password manager ของเบราว์เซอร์ -->
+      <input type="text" name="fake-user" autocomplete="username" class="hidden" tabindex="-1">
+      <input type="password" name="fake-pass" autocomplete="current-password" class="hidden" tabindex="-1">
+
+      <div class="mb-4">
+        <label for="username" class="block text-sm mb-1">อีเมลหรือชื่อผู้ใช้</label>
+        <input
+          id="username"
+          type="text"
+          name="username"
+          placeholder="กรอกอีเมลหรือชื่อผู้ใช้"
+          autocomplete="off"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          inputmode="email"
+          class="w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+          required
+        >
+      </div>
+
+      <div class="mb-2">
+        <label for="password" class="block text-sm mb-1">รหัสผ่าน</label>
+        <input
+          id="password"
+          type="password"
+          name="password"
+          placeholder="รหัสผ่าน"
+          autocomplete="new-password"
+          class="w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+          required
+        >
+      </div>
+
+      <div class="text-right mb-6">
+        <a href="#" class="text-sm text-gray-600 hover:underline">ลืมรหัสผ่าน</a>
+      </div>
+
+      <button
+        type="submit"
+        class="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800"
+      >
+        เข้าสู่ระบบ
+      </button>
+    </form>
+
+    <p class="text-center text-sm mt-4">
+      ฉันไม่มีบัญชีผู้ใช้งาน
+      <a href="{% url 'signup' %}" class="text-black font-semibold hover:underline">สมัครใช้งาน</a>
+    </p>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>การเช่าของฉัน | Glam & Borrow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Header -->
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <div class="flex justify-between items-center px-8 py-4">
+    <h1 class="text-lg font-bold text-gray-800">การเช่าของฉัน</h1>
+    <a href="{% url 'member_home' %}" class="bg-white text-gray-700 px-4 py-2 rounded shadow hover:bg-gray-100 transition">
+      ← กลับหน้าหลัก
+    </a>
+  </div>
+</header>
+
+<!-- Tabs -->
+<div class="max-w-5xl mx-auto px-4 mt-6">
+  <div class="flex border-b border-gray-300 text-center text-gray-700">
+    <button class="tab-btn flex-1 py-3 font-semibold border-b-2 border-pink-500 text-pink-600" data-tab="current">กำลังเช่าอยู่</button>
+    <button class="tab-btn flex-1 py-3 hover:text-pink-500" data-tab="upcoming">เช่าในอนาคต</button>
+    <button class="tab-btn flex-1 py-3 hover:text-pink-500" data-tab="completed">เช่าสำเร็จแล้ว</button>
+  </div>
+</div>
+
+<!-- Content -->
+<main class="max-w-4xl mx-auto mt-6 px-4">
+
+  <!-- กำลังเช่าอยู่ -->
+  <div id="current" class="tab-content">
+    {% if current_rentals %}
+      {% for r in current_rentals %}
+      <div class="flex bg-pink-50 rounded-lg shadow-sm mb-4 p-4 items-start">
+        <img src="{{ r.image }}" alt="{{ r.dress_name }}" class="w-28 h-36 object-cover rounded mr-4">
+        <div class="flex-1">
+          <h2 class="font-semibold text-gray-800">{{ r.dress_name }}</h2>
+          <p class="text-gray-600 text-sm">{{ r.start_date }} - {{ r.end_date }}</p>
+          {% if r.is_overdue %}
+            <p class="text-red-600 text-sm font-semibold mt-1">! เลยกำหนดคืน</p>
+          {% endif %}
+          <p class="text-gray-700 mt-2">ราคา ฿{{ r.price }}</p>
+          <p class="text-gray-600 text-sm">วิธีคืนชุด : {{ r.return_method }}</p>
+          <div class="mt-3 flex space-x-2">
+            <a href="#" class="bg-gray-700 text-white px-4 py-1.5 rounded hover:bg-gray-800 transition">ดูรายละเอียด</a>
+            <a href="#" class="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 transition">แชทกับร้าน</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <!-- ไม่มีรายการเช่า -->
+      <div class="text-center bg-white border border-gray-200 p-10 rounded-lg shadow mt-10">
+        <img src="{% static 'img/empty-box.png' %}" alt="no rental" class="w-24 mx-auto mb-4 opacity-70">
+        <p class="text-gray-600 font-medium text-lg">ยังไม่มีการเช่า</p>
+        <p class="text-gray-400 text-sm mt-2">เมื่อคุณทำการเช่าชุด ระบบจะแสดงรายละเอียดที่นี่</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- เช่าในอนาคต -->
+  <div id="upcoming" class="tab-content hidden">
+    {% if upcoming_rentals %}
+      {% for r in upcoming_rentals %}
+      <div class="flex bg-white border border-gray-200 rounded-lg shadow-sm mb-4 p-4 items-start">
+        <img src="{{ r.image }}" alt="{{ r.dress_name }}" class="w-28 h-36 object-cover rounded mr-4">
+        <div class="flex-1">
+          <h2 class="font-semibold text-gray-800">{{ r.dress_name }}</h2>
+          <p class="text-gray-600 text-sm">{{ r.start_date }} - {{ r.end_date }}</p>
+          <p class="text-gray-700 mt-2">ราคา ฿{{ r.price }}</p>
+          <p class="text-gray-600 text-sm">วิธีคืนชุด : {{ r.return_method }}</p>
+          <div class="mt-3 flex space-x-2">
+            <a href="#" class="bg-gray-700 text-white px-4 py-1.5 rounded hover:bg-gray-800 transition">ดูรายละเอียด</a>
+            <a href="#" class="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 transition">แชทกับร้าน</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center bg-white border border-gray-200 p-10 rounded-lg shadow mt-10">
+        <img src="{% static 'img/empty-box.png' %}" alt="no rental" class="w-24 mx-auto mb-4 opacity-70">
+        <p class="text-gray-600 font-medium text-lg">ยังไม่มีการเช่าในอนาคต</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- เช่าสำเร็จแล้ว -->
+  <div id="completed" class="tab-content hidden">
+    {% if completed_rentals %}
+      {% for r in completed_rentals %}
+      <div class="flex bg-white border border-gray-200 rounded-lg shadow-sm mb-4 p-4 items-start">
+        <img src="{{ r.image }}" alt="{{ r.dress_name }}" class="w-28 h-36 object-cover rounded mr-4">
+        <div class="flex-1">
+          <h2 class="font-semibold text-gray-800">{{ r.dress_name }}</h2>
+          <p class="text-gray-600 text-sm">{{ r.start_date }} - {{ r.end_date }}</p>
+          <p class="text-gray-700 mt-2">ราคา ฿{{ r.price }}</p>
+          <p class="text-gray-600 text-sm">วิธีคืนชุด : {{ r.return_method }}</p>
+          <div class="mt-3 flex space-x-2">
+            <a href="#" class="bg-gray-700 text-white px-4 py-1.5 rounded hover:bg-gray-800 transition">ดูรายละเอียด</a>
+            <a href="#" class="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 transition">ให้คะแนน</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center bg-white border border-gray-200 p-10 rounded-lg shadow mt-10">
+        <img src="{% static 'img/empty-box.png' %}" alt="no rental" class="w-24 mx-auto mb-4 opacity-70">
+        <p class="text-gray-600 font-medium text-lg">ยังไม่มีประวัติการเช่าที่สำเร็จ</p>
+      </div>
+    {% endif %}
+  </div>
+
+</main>
+
+<!-- JS for Tabs -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const tabs = document.querySelectorAll(".tab-btn");
+  const contents = document.querySelectorAll(".tab-content");
+
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      tabs.forEach(t => t.classList.remove("border-pink-500", "text-pink-600"));
+      tab.classList.add("border-pink-500", "text-pink-600");
+      contents.forEach(c => c.classList.add("hidden"));
+      document.getElementById(tab.dataset.tab).classList.remove("hidden");
+    });
+  });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,181 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glam & Borrow | หน้าสมาชิก</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body class="bg-gray-50 relative">
+
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+    <div class="w-full px-10 py-10 flex items-center justify-between flex-wrap">
+      <!-- Logo -->
+      <div class="flex items-center space-x-2">
+        <img src="/media/img_home_logos/Screenshot 2025-09-14 022514.png" alt="Logo" class="w-10 h-10 rounded-full">
+        <span class="font-bold text-xl">Glam & Borrow</span>
+      </div>
+
+      <!-- Search -->
+      <form method="get" action="{% url 'member_home' %}" class="flex w-full md:w-1/2 max-w-2xl mt-4 md:mt-0">
+        <input type="text" name="q" placeholder="ค้นหาชุดที่ต้องการ"
+               value="{{ request.GET.q }}"
+               class="flex-grow px-3 py-2 border rounded-l-lg focus:outline-none">
+        <button type="submit" class="px-4 py-2 bg-white border border-l-0 rounded-r-lg hover:bg-gray-100">
+          🔍
+        </button>
+      </form>
+
+      <!-- Menu + Icons -->
+      <div class="flex items-center space-x-8 mt-4 md:mt-0">
+        <nav class="flex space-x-6 font-medium">
+          <a href="{% url 'member_home' %}" class="hover:underline">หน้าหลัก</a>
+          <a href="{% url 'how_to_rent' %}" class="hover:underline">วิธีเช่า</a>
+          <a href="{% url 'open_store' %}" class="hover:underline">สมัครเปิดร้าน</a>
+        </nav>
+
+        <!-- ✅ Icons (3 ไอคอน) -->
+        <div class="flex space-x-6 items-center text-xl relative">
+          <!-- 🛒 ตะกร้า -->
+          <a href="{% url 'cart_view' %}" class="hover:text-pink-500 relative" title="ดูตะกร้าสินค้า">
+            <i class="ph ph-shopping-cart cursor-pointer"></i>
+            <span id="cart-count" class="absolute -top-2 -right-3 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 hidden">0</span>
+          </a>
+
+          <!-- ❤️ หัวใจ -->
+          <a href="{% url 'favorite_list' %}" class="hover:text-pink-500 relative" title="ดูรายการที่ถูกใจทั้งหมด">
+            <i class="ph ph-heart cursor-pointer"></i>
+            <span id="favorite-count" class="absolute -top-2 -right-3 bg-pink-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 hidden">0</span>
+          </a>
+
+          <!-- 👤 รูปคน + Dropdown -->
+          <div class="relative">
+            <button id="userMenuBtn" class="hover:text-pink-500 focus:outline-none">
+              <i class="ph ph-user cursor-pointer"></i>
+            </button>
+            <!-- เมนู Dropdown -->
+            <div id="userDropdown" class="hidden absolute right-0 mt-3 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50">
+              <a href="{% url 'profile_page' %}" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">โปรไฟล์</a>
+              <a href="{% url 'rental_history' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">ประวัติการเช่า</a>
+              <a href="{% url 'rental_list' %}" class="block px-4 py-2 hover:bg-gray-100 text-gray-700">การเช่าของฉัน</a>
+              <a href="{% url 'notification' %}" class="block px-4 py-2 hover:bg-gray-100">การแจ้งเตือน</a>
+              <a href="{% url 'logout' %}" class="block px-4 py-2 hover:bg-gray-100 text-red-600 font-semibold">ออกจากระบบ</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Categories -->
+  <section class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-6 gap-6 py-8 px-6">
+    {% for c in categories %}
+      <a href="?category={{ c.name }}" 
+         class="flex flex-col items-center border rounded-lg py-6 shadow hover:shadow-md
+                {% if selected_category == c.name %} bg-yellow-100 border-yellow-400 {% else %} bg-white {% endif %}">
+        <span class="text-3xl">
+          {% if c.name == "ชุดเดรส" %}👗{% elif c.name == "ชุดคาเฟ่" %}🍸
+          {% elif c.name == "ชุดว่ายน้ำ" %}🩱{% elif c.name == "ชุดทางการ" %}🎓
+          {% elif c.name == "ชุดถ่ายแบบ" %}📷{% elif c.name == "ชุดถ่ายพรีเวดดิ้ง" %}💍
+          {% else %}👕{% endif %}
+        </span>
+        <span class="mt-2 font-medium">{{ c.name }}</span>
+      </a>
+    {% endfor %}
+  </section>
+
+  <!-- Product Grid -->
+  <main class="max-w-7xl mx-auto px-6 pt-1 pb-6 ">
+    {% if dresses %}
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        {% for d in dresses %}
+          <div class="relative bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition">
+            <a href="{% url 'dress_detail' d.id %}">
+              {% if d.image %}
+                <img src="{{ d.image.url }}" alt="{{ d.name }}" class="w-full h-72 object-cover">
+              {% else %}
+                <img src="{% static 'images/placeholder-4x3.jpg' %}" alt="{{ d.name }}" class="w-full h-72 object-cover">
+              {% endif %}
+              {% if not d.is_available %}
+                <div class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center">
+                  <p class="text-red-600 font-bold text-lg">ปิดการเช่าชั่วคราว</p>
+                </div>
+              {% endif %}
+            </a>
+            <div class="p-3">
+              <p class="text-red-500 font-bold text-sm">฿ {{ d.daily_price }}/วัน</p>
+              <h3 class="font-medium text-gray-800 text-sm mt-1 line-clamp-2">{{ d.name }}</h3>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-center text-gray-500">ยังไม่มีชุดให้เช่า</p>
+    {% endif %}
+  </main>
+
+  <!-- ✅ Script: Dropdown -->
+  <script>
+    const userBtn = document.getElementById("userMenuBtn");
+    const userDropdown = document.getElementById("userDropdown");
+
+    userBtn.addEventListener("click", () => {
+      userDropdown.classList.toggle("hidden");
+    });
+
+    window.addEventListener("click", (e) => {
+      if (userDropdown && !userBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+        userDropdown.classList.add("hidden");
+      }
+    });
+  </script>
+
+  <!-- ✅ Script: อัปเดตจำนวนหัวใจ -->
+  <script>
+    async function updateFavoriteCount() {
+      try {
+        const response = await fetch("{% url 'favorite_count_api' %}");
+        if (!response.ok) return;
+        const data = await response.json();
+        const countSpan = document.getElementById("favorite-count");
+        if (data.count > 0) {
+          countSpan.textContent = data.count;
+          countSpan.classList.remove("hidden");
+        } else {
+          countSpan.classList.add("hidden");
+        }
+      } catch (error) {
+        console.error("Error fetching favorite count:", error);
+      }
+    }
+    updateFavoriteCount();
+    setInterval(updateFavoriteCount, 5000);
+  </script>
+
+  <!-- ✅ Script: อัปเดตจำนวนสินค้าในตะกร้า -->
+  <script>
+    async function updateCartCount() {
+      try {
+        const response = await fetch("{% url 'cart_item_count' %}");
+        if (!response.ok) return;
+        const data = await response.json();
+        const countSpan = document.getElementById("cart-count");
+        if (data.count > 0) {
+          countSpan.textContent = data.count;
+          countSpan.classList.remove("hidden");
+        } else {
+          countSpan.classList.add("hidden");
+        }
+      } catch (error) {
+        console.error("Error fetching cart count:", error);
+      }
+    }
+    updateCartCount();
+    setInterval(updateCartCount, 5000);
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>แก้ไขรีวิว - {{ dress.name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-50">
+
+  <!-- Header -->
+  <div class="bg-gradient-to-r from-yellow-100 via-pink-200 to-blue-100 shadow-sm p-4 flex justify-between items-center">
+    <h1 class="text-lg font-semibold text-gray-800">แก้ไขรีวิวของ {{ dress.name }}</h1>
+    <a href="{% url 'review_list' dress.id %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700">← กลับหน้ารายการรีวิว</a>
+  </div>
+
+  <!-- ฟอร์มแก้ไขรีวิว -->
+  <div class="max-w-lg mx-auto mt-8 bg-white shadow-md rounded-lg p-6">
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <!-- คะแนน -->
+      <div class="mb-4">
+        <label for="rating" class="block font-medium mb-1">ให้คะแนน:</label>
+        <select name="rating" id="rating" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-yellow-300">
+          <option value="5" {% if review.rating == 5 %}selected{% endif %}>★★★★★ (5 ดาว)</option>
+          <option value="4" {% if review.rating == 4 %}selected{% endif %}>★★★★☆ (4 ดาว)</option>
+          <option value="3" {% if review.rating == 3 %}selected{% endif %}>★★★☆☆ (3 ดาว)</option>
+          <option value="2" {% if review.rating == 2 %}selected{% endif %}>★★☆☆☆ (2 ดาว)</option>
+          <option value="1" {% if review.rating == 1 %}selected{% endif %}>★☆☆☆☆ (1 ดาว)</option>
+        </select>
+      </div>
+
+      <!-- ความคิดเห็น -->
+      <div class="mb-4">
+        <label for="comment" class="block font-medium mb-1">ความคิดเห็นของคุณ:</label>
+        <textarea name="comment" id="comment" rows="4"
+                  class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-yellow-300"
+                  placeholder="พิมพ์ความคิดเห็นของคุณ...">{{ review.comment }}</textarea>
+      </div>
+
+      <!-- รูปภาพรีวิว -->
+      <div class="mb-4">
+        <label for="image" class="block font-medium mb-1">อัปโหลดรูปภาพใหม่ (ถ้ามี):</label>
+        {% if review.image %}
+          <div class="mb-2">
+            <img src="{{ review.image.url }}" alt="รูปรีวิวเดิม" class="w-32 h-32 rounded-lg border object-cover">
+          </div>
+        {% endif %}
+        <input type="file" name="image" id="image" accept="image/*"
+               class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-yellow-300">
+      </div>
+
+      <!-- ปุ่มบันทึก -->
+      <div class="text-right">
+        <button type="submit" class="px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600">
+          บันทึกการเปลี่ยนแปลง
+        </button>
+      </div>
+    </form>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,473 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ dress.name }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Flatpickr -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Header -->
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <div class="w-full px-10 py-10 flex items-center justify-between">
+    <!-- Logo -->
+    <div class="flex items-center space-x-2">
+      <img src="/media/img_home_logos/Screenshot 2025-09-14 022514.png" alt="Logo" class="w-10 h-10 rounded-full">
+      <span class="font-bold text-xl text-gray-700">Glam & Borrow</span>
+    </div>
+
+    <!-- Search box -->
+    <form method="get" action="{% url 'member_home' %}" class="flex w-3/5 max-w-2xl">
+      <input type="text" name="q" placeholder="ค้นหาชุดที่ต้องการ"
+             class="flex-grow px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-pink-300">
+      <button type="submit" class="px-4 bg-white border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-100">
+        🔍
+      </button>
+    </form>
+
+    <!-- Nav links -->
+    <nav class="flex space-x-6 font-medium text-gray-800">
+      <a href="{% url 'member_home' %}" class="hover:underline">หน้าหลัก</a>
+      <a href="{% url 'how_to_rent' %}" class="hover:underline">วิธีเช่า</a>
+      <a href="{% url 'open_store' %}" class="hover:underline">สมัครเปิดร้าน</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Content -->
+<div class="max-w-7xl mx-auto px-10 py-10 relative">
+
+  <!-- ✅ ปุ่มลูกศรย้อนกลับ -->
+  <button onclick="history.back()" 
+          class="absolute -left-6 top-6 md:-left-12 bg-white border rounded-full shadow-md w-10 h-10 
+                 flex items-center justify-center hover:bg-gray-100 transition">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
+         stroke-width="2" stroke="currentColor" class="w-5 h-5 text-gray-700">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+    </svg>
+  </button>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- ซ้าย: รูปภาพ -->
+    <div>
+      <img src="{{ dress.image.url }}" alt="{{ dress.name }}"
+           class="rounded-lg shadow-lg w-full max-h-[480px] object-cover">
+      <p class="mt-2 text-gray-500 text-sm">{{ dress.rent_count }} เช่าแล้ว</p>
+
+      <button class="mt-4 bg-yellow-400 text-gray-900 px-4 py-2 rounded shadow hover:bg-yellow-500 font-medium flex items-center space-x-2">
+        <i class="fa-solid fa-camera"></i><span>ลองชุดด้วย AI</span>
+      </button>
+
+      <div class="mt-6 flex items-center space-x-3 border p-3 rounded-lg shadow">
+        <img src="{% static 'img/shop-avatar.png' %}" class="w-10 h-10 rounded-full">
+        <div>
+          <p class="font-semibold">ร้าน: {{ dress.shop.name }}</p>
+          <p class="text-sm text-gray-500">⭐ 4.8</p>
+        </div>
+        <a href="#" class="ml-auto bg-blue-100 text-blue-700 px-3 py-1 rounded shadow hover:bg-blue-200">ดูร้านค้า</a>
+      </div>
+    </div>
+
+    <!-- ขวา: รายละเอียด -->
+    <div class="relative">
+      <div class="bg-white rounded-lg border shadow p-6 relative">
+
+        <!-- ✅ ปุ่มหัวใจ Favorite -->
+        <form method="POST" action="{% url 'toggle_favorite' dress.id %}" class="absolute top-4 right-4">
+          {% csrf_token %}
+          <button type="submit"
+                  class="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-pink-100 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                 fill="{% if is_favorite %}red{% else %}none{% endif %}"
+                 stroke="currentColor" stroke-width="2" class="w-5 h-5 text-gray-700">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5A4.69 4.69 0 0012 6.375
+                       4.69 4.69 0 007.688 3.75C5.099 3.75 3 5.765 3 8.25
+                       c0 7.688 9 12 9 12s9-4.312 9-12z" />
+            </svg>
+          </button>
+        </form>
+
+        <p class="text-red-600 text-2xl font-bold">฿ {{ dress.daily_price }}/วัน</p>
+        <h1 class="text-lg font-semibold mt-1">{{ dress.name }}</h1>
+
+        <!-- ปฏิทินเช่า -->
+        <div class="mt-4">
+          <label for="rental_range" class="block text-sm font-medium text-gray-700 mb-1">เลือกช่วงวันเช่า</label>
+          <input type="text" id="rental_range" name="rental_range"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                 placeholder="เลือกวันเริ่ม - วันสิ้นสุด">
+          <!-- ✅ สรุปจำนวนวัน + ราคาเช่ารวม -->
+          <div id="rentSummary" class="text-sm text-gray-700 mt-2 hidden">
+            เลือก <span id="selDays" class="font-semibold">–</span> วัน —
+            ราคาเช่ารวม <span id="selPrice" class="font-semibold">–</span> บาท
+          </div>
+        </div>
+
+        <!-- รายละเอียด -->
+        <div class="mt-4 text-sm text-gray-700 space-y-2">
+          <p><span class="font-semibold">รายละเอียด:</span> {{ dress.description|default:"-" }}</p>
+          <p><span class="font-semibold">ขนาด:</span> {{ dress.size|default:"-" }}</p>
+          <p><span class="font-semibold">มัดจำ:</span> ฿ {{ dress.deposit|default:"0" }}</p>
+          <p><span class="font-semibold">จำนวนคงเหลือ:</span> {{ dress.stock }} ชุด</p>
+          <p class="text-xs text-gray-500">หมายเหตุ: ค่ามัดจำจะโอนคืนหลังร้านตรวจรับชุดเรียบร้อย</p>
+        </div>
+
+        <!-- ✅ NEW: ตารางแพ็กค่าเช่าตามจำนวนวัน -->
+        {% if pack_prices %}
+          <div class="mt-5 bg-blue-50/60 border border-blue-200 rounded-lg p-4">
+            <h3 class="font-semibold text-blue-900">แพ็กค่าเช่าตามจำนวนวัน</h3>
+            <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {% for p in pack_prices %}
+                <div class="flex items-center justify-between bg-white rounded-md border px-3 py-2"
+                     data-pack-day="{{ p.days }}">
+                  <span class="text-gray-600">{{ p.days }} วัน</span>
+                  <span class="font-semibold text-gray-900">฿{{ p.price|floatformat:2 }}</span>
+                </div>
+              {% endfor %}
+            </div>
+            <p class="text-xs text-gray-500 mt-2">* ราคาต่อ <b>1 ชุด</b> (ยังไม่รวมค่ามัดจำและค่าส่ง)</p>
+          </div>
+        {% endif %}
+
+        <!-- ✅ NEW: ตารางค่าส่งขาไปตามจำนวนชุด -->
+        {% if shipping_tiers %}
+          <div class="mt-4 bg-green-50/60 border border-green-200 rounded-lg p-4">
+            <h3 class="font-semibold text-green-900">ค่าส่งขาไป (คิดต่อออเดอร์/ร้านเดียว)</h3>
+
+            <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {% for s in shipping_tiers %}
+                <div class="flex items-center justify-between bg-white rounded-md border px-3 py-2">
+                  <span class="text-gray-600">
+                    {% if s.min_qty == s.max_qty %}
+                      {{ s.min_qty }} ชุด
+                    {% else %}
+                      {{ s.min_qty }}–{{ s.max_qty }} ชุด
+                    {% endif %}
+                  </span>
+                  <span class="font-semibold text-gray-900">฿{{ s.fee|floatformat:2 }}</span>
+                </div>
+              {% endfor %}
+            </div>
+
+            {% if shipping_clamp_note %}
+              <p class="text-xs text-gray-500 mt-2">{{ shipping_clamp_note }}</p>
+            {% endif %}
+            <p class="text-xs text-gray-500 mt-1">* คิดค่าส่งเฉพาะขาไป / ขากลับลูกค้าเป็นผู้ชำระเอง</p>
+          </div>
+        {% endif %}
+
+        <!-- รีวิว -->
+        <div class="mt-6 border-t pt-4">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-gray-700">รีวิวจากลูกค้า ({{ review_count|default:0 }})</p>
+            <div class="flex items-center text-yellow-500">
+              {% for i in "12345" %}
+                {% if forloop.counter <= avg_rating|default:0 %}
+                  ★
+                {% else %}
+                  ☆
+                {% endif %}
+              {% endfor %}
+              <span class="ml-1 text-gray-700">{{ avg_rating|default:"0.0" }}/5</span>
+            </div>
+            <a href="{% url 'review_list' dress.id %}" class="ml-2 bg-gray-100 px-3 py-1 rounded shadow hover:bg-gray-200 text-sm font-medium">ดูรีวิวทั้งหมด</a>
+          </div>
+
+          <div class="mt-3 space-y-2">
+            {% for review in latest_reviews %}
+              <div class="border rounded-lg bg-white shadow-sm p-3">
+                <div class="flex items-center justify-between">
+                  <p class="font-medium text-sm">{{ review.user.username|truncatechars:6 }}</p>
+                  <div class="text-yellow-500 text-xs">
+                    {% for i in "12345" %}
+                      {% if forloop.counter <= review.rating %}
+                        ★
+                      {% else %}
+                        ☆
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">{{ review.comment|truncatechars:60 }}</p>
+              </div>
+            {% empty %}
+              <p class="text-gray-500 text-sm text-center mt-3">ยังไม่มีรีวิวสำหรับชุดนี้</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- ✅ ปุ่มเช่า -->
+        <div class="mt-6">
+          {% if dress.stock > 0 %}
+            <div class="flex flex-wrap gap-3">
+              <form id="add-to-cart-form" action="{% url 'add_to_cart' dress.id %}" method="post" class="flex-1">
+                {% csrf_token %}
+                <button type="submit" class="w-full bg-gray-800 text-white py-2 rounded shadow hover:bg-black text-center">
+                  เพิ่มลงตะกร้า
+                </button>
+              </form>
+
+              <!-- คงลิงก์เดิมไว้ทุกอย่าง -->
+              <a href="{% url 'rent_checkout' dress.id %}" class="flex-1 bg-blue-600 text-white py-2 rounded shadow hover:bg-blue-700 text-center">
+                เช่าทันที
+              </a>
+            </div>
+          {% else %}
+            <div class="bg-red-100 text-red-700 text-center py-3 rounded font-semibold">
+              สินค้าหมด ❌ ไม่สามารถเช่าได้
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ✅ ชุดอื่น ๆ จากร้านเดียวกัน -->
+{% if related_dresses %}
+  <div class="mt-16 mb-12 px-6 md:px-12">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">ชุดอื่นๆ จากร้าน {{ dress.shop.name }}</h2>
+
+    <div class="bg-white rounded-xl shadow p-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+        {% for item in related_dresses %}
+          <div class="bg-white shadow-sm rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300">
+            <a href="{% url 'dress_detail' item.id %}">
+              <img src="{{ item.image.url }}" alt="{{ item.name }}" 
+                   class="w-full h-64 object-cover hover:scale-105 transition-transform duration-300">
+            </a>
+            <div class="p-4">
+              <p class="font-semibold text-gray-900 truncate mb-1">{{ item.name }}</p>
+              <p class="text-pink-600 font-medium text-sm">฿{{ item.daily_price|floatformat:2 }}/วัน</p>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="flex justify-end mt-8">
+        <a href="{% url 'my_store' dress.shop.id %}" 
+           class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg 
+                  hover:bg-blue-700 hover:shadow-xl transition-all duration-200 font-semibold text-sm md:text-base">
+          ไปที่ร้านเพื่อดูชุดทั้งหมด
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+               stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<!-- ✅ ส่ง pack_prices เป็น JSON ที่ปลอดภัย -->
+{{ pack_prices|json_script:"packPricesJSON" }}
+
+<!-- ✅ Script Section -->
+
+<!-- เก็บ instance ของ Flatpickr ไว้ใช้งานภายหลัง (ไม่เปลี่ยน UI เดิม) -->
+<script>
+  (function() {
+    const fp = flatpickr("#rental_range", {
+      mode: "range",
+      locale: "th",
+      dateFormat: "d/m/Y",
+      minDate: "today"
+    });
+    window.__rentPicker = fp;  // เก็บไว้ใช้ตอนคลิก "เช่าทันที"
+  })();
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("add-to-cart-form");
+  if (!form) return;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    const response = await fetch(form.action, {
+      method: "POST",
+      headers: { "X-CSRFToken": csrfToken },
+    });
+
+    if (response.ok) {
+      const popup = document.createElement("div");
+      popup.className = `
+        fixed top-5 right-5 bg-white text-black font-medium px-5 py-3 
+        rounded-lg shadow-lg animate-fade-in z-50 border border-gray-300
+      `;
+      popup.innerHTML = `
+        ✅ <span class="ml-2">{{ dress.name }} ถูกเพิ่มลงในตะกร้าแล้ว!</span>
+      `;
+      document.body.appendChild(popup);
+      setTimeout(() => {
+        popup.classList.add("animate-fade-out");
+        setTimeout(() => popup.remove(), 300);
+      }, 2000);
+    } else {
+      const popup = document.createElement("div");
+      popup.className = `
+        fixed top-5 right-5 bg-red-500 text-white font-medium px-5 py-3 
+        rounded-lg shadow-lg animate-fade-in z-50
+      `;
+      popup.innerHTML = `❌ ไม่สามารถเพิ่มลงตะกร้าได้`;
+      document.body.appendChild(popup);
+      setTimeout(() => {
+        popup.classList.add("animate-fade-out");
+        setTimeout(() => popup.remove(), 300);
+      }, 2000);
+    }
+  });
+});
+
+const style = document.createElement('style');
+style.textContent = `
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-10px); }
+}
+.animate-fade-in { animation: fadeIn 0.25s ease-out; }
+.animate-fade-out { animation: fadeOut 0.25s ease-in; }
+`;
+document.head.appendChild(style);
+
+/* ====== เพิ่มฟีเจอร์นับวัน + คำนวณราคาเช่ารวม + ไฮไลต์แพ็ก ====== */
+(function () {
+  const packDataNode = document.getElementById("packPricesJSON");
+  const packData = packDataNode ? JSON.parse(packDataNode.textContent || "[]") : [];
+  const packMap = {};
+  packData.forEach(p => {
+    const d = Number(p.days);
+    const price = Number(p.price);
+    if (!isNaN(d) && !isNaN(price)) packMap[d] = price;
+  });
+
+  const DAILY = Number(("{{ dress.daily_price|default:'0' }}").toString().replace(/,/g, "")) || 0;
+
+  const input = document.getElementById("rental_range");
+  // ใช้ instance เดียวกับที่เราเก็บไว้
+  const fp = window.__rentPicker || (input ? input._flatpickr : null);
+
+  const summary = document.getElementById("rentSummary");
+  const selDays = document.getElementById("selDays");
+  const selPrice = document.getElementById("selPrice");
+
+  function thb(n) {
+    return new Intl.NumberFormat("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  }
+
+  function highlightPack(days) {
+    document.querySelectorAll("[data-pack-day]").forEach(el => {
+      el.classList.remove("ring-2","ring-blue-400","bg-blue-50");
+    });
+    const active = document.querySelector(`[data-pack-day="${days}"]`);
+    if (active) active.classList.add("ring-2","ring-blue-400","bg-blue-50");
+  }
+
+  function updateSummary() {
+    if (!fp) return;
+    const dates = fp.selectedDates;
+    if (!dates || dates.length < 2) {
+      summary.classList.add("hidden");
+      document.querySelectorAll("[data-pack-day]").forEach(el => {
+        el.classList.remove("ring-2","ring-blue-400","bg-blue-50");
+      });
+      return;
+    }
+    const s = new Date(dates[0].getFullYear(), dates[0].getMonth(), dates[0].getDate());
+    const e = new Date(dates[1].getFullYear(), dates[1].getMonth(), dates[1].getDate());
+    const ONE = 24 * 60 * 60 * 1000;
+    const days = Math.round((e - s) / ONE) + 1;
+    if (days <= 0) {
+      summary.classList.add("hidden");
+      return;
+    }
+
+    selDays.textContent = days;
+
+    let price = packMap[days];
+    if (price == null && DAILY > 0) {
+      price = DAILY * days;
+    }
+
+    if (price != null) {
+      selPrice.textContent = thb(price);
+      summary.classList.remove("hidden");
+    } else {
+      selPrice.textContent = "–";
+      summary.classList.remove("hidden");
+    }
+
+    highlightPack(days);
+  }
+
+  if (fp) {
+    fp.config.onChange.push(updateSummary);
+    setTimeout(updateSummary, 0);
+  }
+})();
+</script>
+
+<!-- ✅ จับคลิก "เช่าทันที" แล้วแนบพารามิเตอร์ start/end/days โดยไม่แก้ปุ่มเดิม -->
+<script>
+(function(){
+  const checkoutURL = "{% url 'rent_checkout' dress.id %}";
+  const rentLink = document.querySelector('a[href="' + checkoutURL + '"]');
+  if (!rentLink) return;
+
+  function toISODate(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function daysInclusive(a, b){
+    const A = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+    const B = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+    return Math.round((B - A) / (1000*60*60*24)) + 1;
+  }
+
+  rentLink.addEventListener('click', function(e){
+    const fp = window.__rentPicker;
+    if (!fp || !fp.selectedDates || fp.selectedDates.length < 2) {
+      e.preventDefault();
+      alert('กรุณาเลือกช่วงวันที่เช่าก่อน');
+      return;
+    }
+    const s = fp.selectedDates[0];
+    const e2 = fp.selectedDates[1];
+    const days = daysInclusive(s, e2);
+    if (days <= 0) {
+      e.preventDefault();
+      alert('ช่วงวันที่ไม่ถูกต้อง');
+      return;
+    }
+    const params = new URLSearchParams({
+      start_date: toISODate(s),
+      end_date: toISODate(e2),
+      days: String(days)
+    });
+    // ไปหน้า checkout พร้อม query string
+    e.preventDefault();
+    window.location.href = checkoutURL + "?" + params.toString();
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,77 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประวัติการเช่า | Glam & Borrow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Header -->
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <div class="w-full px-8 py-6 flex justify-between items-center">
+    <h1 class="text-xl font-semibold text-gray-800">ประวัติการเช่า</h1>
+    <a href="{% url 'member_home' %}" 
+       class="bg-white text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-100 transition">
+       ← กลับหน้าหลัก
+    </a>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="max-w-5xl mx-auto py-10 px-4 space-y-6">
+
+  {% if rentals %}
+    {% for rent in rentals %}
+      <div class="bg-pink-50 rounded-lg shadow-md p-4 flex flex-col sm:flex-row justify-between items-center">
+        
+        <!-- ซ้าย: ข้อมูลร้าน + รายการเช่า -->
+        <div class="w-full sm:w-auto flex items-start gap-4">
+          {% if rent.dress.image %}
+            <img src="{{ rent.dress.image.url }}" alt="{{ rent.dress.name }}" 
+                 class="w-24 h-32 object-cover rounded-lg shadow">
+          {% else %}
+            <img src="{% static 'images/placeholder-4x3.jpg' %}" alt="no image" 
+                 class="w-24 h-32 object-cover rounded-lg shadow">
+          {% endif %}
+
+          <div>
+            <p class="font-bold text-gray-900 mb-1">{{ rent.dress.shop.name }} <span class="text-gray-500">></span></p>
+            <p class="text-gray-700 text-sm">{{ rent.dress.name }}</p>
+            <p class="text-gray-800 font-semibold mt-1">฿{{ rent.dress.daily_price|floatformat:0 }}</p>
+            <p class="text-gray-700 text-sm">ขนาด: {{ rent.dress.size|default:"-" }}</p>
+
+            <!-- ✅ วันที่เช่าและวันที่คืน -->
+            <div class="mt-2 text-xs text-gray-600 space-y-1">
+              <p><span class="font-medium text-gray-800">วันที่เช่า:</span> {{ rent.start_date|date:"d/m/Y" }}</p>
+              <p><span class="font-medium text-gray-800">วันที่คืน:</span> {{ rent.end_date|date:"d/m/Y" }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ขวา: สถานะและปุ่ม -->
+        <div class="mt-4 sm:mt-0 flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+          <p class="text-gray-800 font-semibold">{{ rent.status|default:"สำเร็จ" }}</p>
+          <div class="flex gap-3">
+            <a href="{% url 'rent_again' rent.dress.id %}" 
+               class="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded shadow">
+              เช่าอีกครั้ง
+            </a>
+            <a href="{% url 'review_form' rent.dress.id %}" 
+               class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded shadow">
+              ให้คะแนน
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-center text-gray-500 mt-20">ยังไม่มีประวัติการเช่า</p>
+  {% endif %}
+
+</main>
+
+</body>
+</html>

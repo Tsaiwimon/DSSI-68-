@@ -1,0 +1,225 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตะกร้าสินค้า | Glam & Borrow</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+
+<!-- Header -->
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <div class="w-full px-8 py-6 flex justify-between items-center">
+    <h1 class="text-2xl font-bold text-gray-800">ตะกร้าสินค้า ({{ cart_items.count }})</h1>
+    <div class="flex items-center gap-4">
+      <a href="{% url 'member_home' %}" class="flex items-center text-gray-700 hover:text-pink-600 transition">
+        ← กลับหน้าหลัก
+      </a>
+      <button id="edit-btn" class="bg-gray-200 text-gray-800 px-4 py-1 rounded hover:bg-gray-300 transition">
+        แก้ไข
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="max-w-6xl mx-auto py-8 px-6">
+  {% for shop, data in grouped_cart.items %}
+    <div class="mb-6 bg-pink-50 rounded-lg shadow p-4 shop-group" data-shop="{{ shop.name }}">
+      <h2 class="font-bold text-lg mb-4">{{ shop.name }} <span class="text-gray-500">></span></h2>
+
+      {% for item in data.items %}
+        <div class="flex items-center justify-between border-b py-3 item-row" data-item-id="{{ item.id }}">
+          <div class="flex items-start gap-4">
+            <!-- ✅ Checkbox -->
+            <input type="checkbox" class="edit-checkbox hidden w-5 h-5 accent-pink-500" data-id="{{ item.id }}">
+
+            <!-- รูป -->
+            <a href="{% url 'dress_detail' item.dress.id %}" 
+               class="transition transform hover:scale-105 hover:shadow-lg cursor-pointer rounded-lg">
+              {% if item.dress.image %}
+                <img src="{{ item.dress.image.url }}" alt="{{ item.dress.name }}" class="w-20 h-24 object-cover rounded-lg">
+              {% else %}
+                <img src="{% static 'images/placeholder-4x3.jpg' %}" alt="{{ item.dress.name }}" class="w-20 h-24 object-cover rounded-lg">
+              {% endif %}
+            </a>
+
+            <!-- ข้อมูลสินค้า -->
+            <div>
+              <a href="{% url 'dress_detail' item.dress.id %}" 
+                 class="font-medium text-gray-800 hover:text-pink-600 transition cursor-pointer">
+                {{ item.dress.name }}
+              </a>
+              <p><span class="font-semibold">ขนาด:</span> {{ item.dress.size|default:"-" }}</p>
+
+              <!-- ✅ ปุ่มดูรายละเอียด (เพิ่มใหม่ให้ทุกชุดมีของตัวเอง) -->
+              <a href="{% url 'dress_detail' item.dress.id %}" 
+                 class="inline-block mt-1 bg-pink-100 text-pink-600 px-3 py-1 rounded hover:bg-pink-200 transition text-xs font-medium">
+                ดูรายละเอียด
+              </a>
+            </div>
+          </div>
+
+          <!-- จำนวน + ราคา -->
+          <div class="flex items-center gap-4">
+            <div class="flex items-center space-x-1">
+              <button class="decrease-btn bg-gray-200 text-gray-700 px-2 rounded" data-id="{{ item.id }}">-</button>
+              <input type="text" readonly value="{{ item.quantity }}" class="quantity-input w-10 text-center border border-gray-300 rounded">
+              <button class="increase-btn bg-gray-200 text-gray-700 px-2 rounded" data-id="{{ item.id }}">+</button>
+            </div>
+            <p class="font-semibold text-pink-600 item-total" data-price="{{ item.dress.daily_price }}">
+              ฿{{ item.dress.daily_price|floatformat:2 }}
+            </p>
+          </div>
+        </div>
+      {% endfor %}
+
+      <!-- ✅ แถวล่าง: รวมร้าน -->
+      <div class="mt-3 flex justify-end items-center">
+        <p class="font-semibold text-pink-700 shop-total">
+          รวมร้าน {{ shop.name }}: ฿{{ data.total|floatformat:2 }}
+        </p>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-center text-gray-500 mt-10">ยังไม่มีสินค้าในตะกร้า</p>
+  {% endfor %}
+
+  <!-- ✅ ปุ่มโหมดแก้ไข -->
+  <div id="edit-actions" class="hidden mt-8 text-right space-x-3">
+    <button id="delete-selected" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+      ลบที่เลือก
+    </button>
+    <button id="move-favorite" class="bg-pink-500 text-white px-4 py-2 rounded hover:bg-pink-600">
+      ย้ายไปสินค้าที่ถูกใจ
+    </button>
+    <button id="cancel-edit" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
+      ยกเลิก
+    </button>
+  </div>
+
+  <!-- ✅ รวมทั้งหมด -->
+  <div class="mt-10 flex justify-between items-center border-t pt-6">
+    <div></div>
+    <div class="text-right">
+      <p class="text-lg text-gray-600">
+        ยอดรวมทั้งหมด:
+        <span id="selected-total" class="font-bold text-pink-600">฿{{ total_price|floatformat:2 }}</span>
+      </p>
+      <button id="checkout-btn" class="mt-2 bg-blue-600 text-white px-8 py-2 rounded hover:bg-blue-700">
+        ชำระเงิน
+      </button>
+    </div>
+  </div>
+</main>
+
+<!-- ✅ Script -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const editBtn = document.getElementById("edit-btn");
+  const editActions = document.getElementById("edit-actions");
+  const checkboxes = document.querySelectorAll(".edit-checkbox");
+  const cancelBtn = document.getElementById("cancel-edit");
+  const deleteBtn = document.getElementById("delete-selected");
+  const moveBtn = document.getElementById("move-favorite");
+  const totalText = document.getElementById("selected-total");
+
+  let editMode = false;
+
+  // ✅ toggle โหมดแก้ไข
+  editBtn.addEventListener("click", () => {
+    editMode = !editMode;
+    checkboxes.forEach(cb => cb.classList.toggle("hidden", !editMode));
+    editActions.classList.toggle("hidden", !editMode);
+    editBtn.textContent = editMode ? "กลับ" : "แก้ไข";
+  });
+
+  // ✅ ยกเลิก
+  cancelBtn.addEventListener("click", () => {
+    editMode = false;
+    checkboxes.forEach(cb => { cb.checked = false; cb.classList.add("hidden"); });
+    editActions.classList.add("hidden");
+    editBtn.textContent = "แก้ไข";
+  });
+
+  // ✅ csrf
+  const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || "";
+
+  // ✅ ลบที่เลือก
+  deleteBtn.addEventListener("click", () => {
+    const selectedIds = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.dataset.id);
+    if (!selectedIds.length) return alert("กรุณาเลือกสินค้าที่ต้องการลบ");
+    if (!confirm("ต้องการลบสินค้าที่เลือกหรือไม่?")) return;
+
+    fetch("/cart/remove_bulk/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ ids: selectedIds })
+    }).then(() => location.reload());
+  });
+
+  // ✅ ย้ายไปถูกใจ
+  moveBtn.addEventListener("click", () => {
+    const selectedIds = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.dataset.id);
+    if (!selectedIds.length) return alert("กรุณาเลือกสินค้าที่ต้องการย้ายไปถูกใจ");
+
+    fetch("/cart/move_to_favorite/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ ids: selectedIds })
+    }).then(() => location.reload());
+  });
+
+  // ✅ อัปเดตจำนวนแบบเรียลไทม์
+  function recalcTotals() {
+    let overallTotal = 0;
+    document.querySelectorAll(".shop-group").forEach(shop => {
+      let shopTotal = 0;
+      shop.querySelectorAll(".item-row").forEach(item => {
+        const price = parseFloat(item.querySelector(".item-total").dataset.price);
+        const qty = parseInt(item.querySelector(".quantity-input").value);
+        const subtotal = price * qty;
+        shopTotal += subtotal;
+        item.querySelector(".item-total").textContent = "฿" + subtotal.toFixed(2);
+      });
+      shop.querySelector(".shop-total").textContent =
+        "รวมร้าน " + shop.dataset.shop + ": ฿" + shopTotal.toFixed(2);
+      overallTotal += shopTotal;
+    });
+    totalText.textContent = "฿" + overallTotal.toFixed(2);
+  }
+
+  async function updateQuantity(id, action, quantityInput) {
+    const res = await fetch("/cart/update_quantity/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ id, action })
+    });
+    const data = await res.json();
+    if (data.status === "ok") {
+      quantityInput.value = data.new_quantity;
+      recalcTotals();
+    }
+  }
+
+  document.querySelectorAll(".increase-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      const quantityInput = btn.parentElement.querySelector(".quantity-input");
+      updateQuantity(id, "increase", quantityInput);
+    });
+  });
+
+  document.querySelectorAll(".decrease-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      const quantityInput = btn.parentElement.querySelector(".quantity-input");
+      updateQuantity(id, "decrease", quantityInput);
+    });
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ที่ถูกใจของฉัน</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Header -->
+<div class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow p-4 flex justify-between items-center">
+  <h1 class="text-lg font-semibold text-gray-800">
+    ที่ถูกใจของฉัน ({{ favorites.count }})
+  </h1>
+  <a href="{% url 'member_home' %}" 
+     class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700">
+     ← กลับหน้าหลัก
+  </a>
+</div>
+
+<!-- Content -->
+<div class="max-w-7xl mx-auto mt-8 px-6 md:px-10">
+  {% if favorites %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="favorite-list">
+      {% for fav in favorites %}
+        <div id="fav-{{ fav.dress.id }}" 
+             class="bg-white rounded-lg shadow border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden">
+          <a href="{% url 'dress_detail' fav.dress.id %}">
+            <img src="{{ fav.dress.image.url }}" alt="{{ fav.dress.name }}"
+                 class="w-full h-72 object-cover hover:scale-105 transition-transform duration-300">
+          </a>
+
+          <div class="p-4 space-y-1">
+            <p class="text-sm text-gray-500">ร้าน: {{ fav.dress.shop.name }}</p>
+            <h2 class="font-semibold text-gray-800 truncate">{{ fav.dress.name }}</h2>
+            <p class="text-pink-600 font-bold">฿{{ fav.dress.daily_price }}</p>
+            <p class="text-sm text-gray-500">ขนาด: {{ fav.dress.size|default:"-" }}</p>
+
+            <div class="flex justify-between items-center pt-2">
+              <a href="{% url 'dress_detail' fav.dress.id %}" 
+                 class="text-blue-600 hover:underline text-sm">
+                 ดูรายละเอียด
+              </a>
+              <form method="POST" class="remove-favorite-form" data-id="{{ fav.dress.id }}">
+                {% csrf_token %}
+                <button type="submit" 
+                        class="text-red-500 hover:text-red-700 text-sm font-medium">
+                        ลบออก
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-gray-500 text-center mt-10">ยังไม่มีชุดที่ถูกใจ ❤️</p>
+  {% endif %}
+</div>
+
+<!-- ✅ Script ลบรายการแบบไม่รีเฟรช -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const forms = document.querySelectorAll(".remove-favorite-form");
+
+  forms.forEach(form => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault(); // ป้องกันการ reload หน้า
+      const dressId = form.dataset.id;
+      const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+
+      try {
+        const response = await fetch(`/dress/${dressId}/favorite/toggle/`, {
+          method: "POST",
+          headers: { "X-CSRFToken": csrfToken },
+        });
+
+        if (response.ok) {
+          // ลบ card ออกจาก DOM
+          const card = document.getElementById(`fav-${dressId}`);
+          if (card) card.remove();
+        } else {
+          alert("เกิดข้อผิดพลาดในการลบรายการนี้");
+        }
+      } catch (err) {
+        console.error("Error:", err);
+        alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
+      }
+    });
+  });
+});
+</script>
+
+</body>
+</html>

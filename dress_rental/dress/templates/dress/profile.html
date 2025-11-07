@@ -1,0 +1,139 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>โปรไฟล์ | Glam & Borrow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Header -->
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <div class="flex justify-between items-center px-8 py-4">
+    <h1 class="text-lg font-bold text-gray-800">โปรไฟล์</h1>
+    <div class="flex gap-3">
+      <a href="{% url 'member_home' %}" class="bg-white text-gray-700 px-4 py-2 rounded shadow hover:bg-gray-100 transition">
+        ← กลับหน้าหลัก
+      </a>
+      <button id="edit-btn" class="bg-blue-500 text-white px-5 py-2 rounded hover:bg-blue-600 transition">
+        แก้ไข
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="max-w-3xl mx-auto mt-8 px-6">
+  <form id="profile-form" action="{% url 'update_profile' %}" method="POST" enctype="multipart/form-data"
+        class="bg-white shadow-lg rounded-xl p-8">
+    {% csrf_token %}
+
+    <!-- รูปโปรไฟล์ -->
+    <div class="flex flex-col items-center mb-6">
+      <div class="relative">
+        {% if profile.profile_image %}
+          <img id="preview-image" src="{{ profile.profile_image.url }}" class="w-32 h-32 rounded-full object-cover border shadow">
+        {% else %}
+          <img id="preview-image" src="{% static 'img/default-avatar.png' %}" class="w-32 h-32 rounded-full object-cover border shadow">
+        {% endif %}
+        <label for="profile_image"
+               class="absolute bottom-0 right-0 bg-white border rounded-full p-1.5 shadow cursor-pointer hover:bg-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+               stroke="currentColor" class="w-5 h-5 text-gray-600">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M15.232 5.232l3.536 3.536M9 13h3l7-7a2.828 2.828 0 00-4-4l-6 6v3z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 21H5a2 2 0 01-2-2v-7h2v7h11v2z"/>
+          </svg>
+        </label>
+        <input id="profile_image" name="profile_image" type="file" accept="image/*" class="hidden" onchange="previewImage(event)">
+      </div>
+    </div>
+
+    <!-- ข้อมูลผู้ใช้ -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div>
+        <label class="block text-gray-600 text-sm mb-1">ชื่อผู้ใช้</label>
+        <input type="text" name="username" value="{{ request.user.username }}" readonly
+               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
+      </div>
+
+      <div>
+        <label class="block text-gray-600 text-sm mb-1">วันเดือนปีเกิด</label>
+        <input type="date" name="birth_date" value="{{ profile.birth_date|date:'Y-m-d' }}" readonly
+               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
+      </div>
+
+      <div>
+        <label class="block text-gray-600 text-sm mb-1">เพศ</label>
+        <input type="text" name="gender" value="{{ profile.gender }}" readonly
+               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
+      </div>
+
+      <div>
+        <label class="block text-gray-600 text-sm mb-1">เบอร์โทรศัพท์</label>
+        <input type="text" name="phone" value="{{ profile.phone }}" readonly
+               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
+      </div>
+
+      <div>
+        <label class="block text-gray-600 text-sm mb-1">อีเมล</label>
+        <input type="email" name="email" value="{{ request.user.email }}" readonly
+               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
+      </div>
+
+      <div>
+        <label class="block text-gray-600 text-sm mb-1">รหัสผ่าน</label>
+        <input type="password" value="********" readonly
+               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
+      </div>
+
+      <div class="md:col-span-2">
+        <label class="block text-gray-600 text-sm mb-1">ที่อยู่</label>
+        <input type="text" name="address" value="{{ profile.address }}" readonly
+               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
+      </div>
+    </div>
+
+    <!-- ปุ่ม -->
+    <div id="edit-buttons" class="hidden mt-8 flex justify-center gap-4">
+      <button type="button" id="cancel-btn" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">ยกเลิก</button>
+      <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">บันทึก</button>
+    </div>
+
+  </form>
+</main>
+
+<script>
+// เปิด/ปิดโหมดแก้ไข
+const editBtn = document.getElementById("edit-btn");
+const cancelBtn = document.getElementById("cancel-btn");
+const form = document.getElementById("profile-form");
+const inputs = form.querySelectorAll(".input-field");
+const buttons = document.getElementById("edit-buttons");
+
+editBtn.addEventListener("click", () => {
+  editBtn.textContent = "กำลังแก้ไข";
+  inputs.forEach(i => i.readOnly = false);
+  buttons.classList.remove("hidden");
+});
+
+cancelBtn.addEventListener("click", () => {
+  inputs.forEach(i => i.readOnly = true);
+  buttons.classList.add("hidden");
+  editBtn.textContent = "แก้ไข";
+  form.reset();
+});
+
+// พรีวิวรูปใหม่ก่อนอัปโหลด
+function previewImage(event) {
+  const reader = new FileReader();
+  reader.onload = function(){
+    document.getElementById("preview-image").src = reader.result;
+  }
+  reader.readAsDataURL(event.target.files[0]);
+}
+</script>
+
+</body>
+</html>

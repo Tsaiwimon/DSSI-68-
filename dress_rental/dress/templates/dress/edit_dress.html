@@ -1,0 +1,541 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>แก้ไขชุดเช่า</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow">
+    <div class="max-w-6xl mx-auto flex items-center px-6 py-4">
+      <a href="{% url 'store_dress' store.id %}" class="mr-4 text-gray-600 hover:text-black">←</a>
+      <h1 class="text-xl font-bold text-gray-700">แก้ไขชุดเช่า</h1>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="max-w-6xl mx-auto mt-8 bg-white shadow-lg rounded-xl p-8">
+    <form method="POST" enctype="multipart/form-data" class="grid grid-cols-12 gap-8 items-start">
+      {% csrf_token %}
+
+      <!-- รูปภาพ -->
+      <div class="col-span-12 lg:col-span-4 flex flex-col items-center space-y-4">
+        <div id="imagePreview" class="w-72 h-96 border rounded-lg overflow-hidden flex items-center justify-center bg-gray-50">
+          {% if dress.image %}
+            <img src="{{ dress.image.url }}" id="previewImg" class="w-full h-full object-cover">
+          {% else %}
+            <span class="text-gray-400">ยังไม่มีรูป</span>
+          {% endif %}
+        </div>
+
+        <div class="flex space-x-3">
+          <input type="file" name="image" id="imageInput" class="hidden" onchange="previewImage(event)">
+          <label for="imageInput" class="px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700">เปลี่ยนรูป</label>
+
+          {% if dress.image %}
+          <button type="button" onclick="removeImage()" class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
+            ลบรูป
+          </button>
+          <input type="hidden" name="remove_image" id="removeImageField" value="0">
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ฟอร์มหลัก -->
+      <div class="col-span-12 lg:col-span-8 grid grid-cols-12 gap-5">
+        <div class="col-span-12">
+          <label class="block font-semibold text-gray-700 mb-1">ชื่อชุด</label>
+          <input type="text" name="name" value="{{ dress.name }}" class="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none">
+        </div>
+
+        <div class="col-span-12">
+          <label class="block font-semibold text-gray-700 mb-1">รายละเอียด</label>
+          <input type="text" name="description" value="{{ dress.description }}" class="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none">
+        </div>
+
+        <div class="col-span-12 md:col-span-4">
+          <label class="block font-semibold text-gray-700 mb-1">ขนาด</label>
+          <input type="text" name="size" value="{{ dress.size|default_if_none:'' }}" placeholder="เช่น S, M, L"
+                 class="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none">
+        </div>
+
+        <div class="col-span-12 md:col-span-4">
+          <label class="block font-semibold text-gray-700 mb-1">ราคาเช่าต่อวัน (บาท)</label>
+          <input type="number" step="0.01" name="daily_price" value="{{ dress.daily_price }}" class="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none">
+        </div>
+
+        <div class="col-span-12 md:col-span-4">
+          <label class="block font-semibold text-gray-700 mb-1">ค่ามัดจำ (บาท)</label>
+          <input type="number" step="0.01" name="deposit" value="{{ dress.deposit|default:0 }}" class="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none">
+        </div>
+
+        <div class="col-span-12 md:col-span-4">
+          <label class="block font-semibold text-gray-700 mb-1">ค่าจัดส่ง (บาท)</label>
+          <input type="number" step="0.01" name="shipping_fee" value="{{ dress.shipping_fee|default:0 }}" class="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none">
+        </div>
+
+        <div class="col-span-12 md:col-span-4">
+          <label class="block font-semibold text-gray-700 mb-1">จำนวนชุด (Stock)</label>
+          <input type="number" name="stock" value="{{ dress.stock|default:1 }}" min="1" class="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none">
+        </div>
+
+        <div class="col-span-12 md:col-span-4">
+          <label class="block font-semibold text-gray-700 mb-1">หมวดหมู่</label>
+          <select name="categories" multiple size="6" class="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none">
+            {% for category in categories %}
+              <option value="{{ category.id }}" {% if category in dress.categories.all %}selected{% endif %}>{{ category.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- แพ็กราคาเช่าตามจำนวนวัน -->
+        <div class="col-span-12 border rounded-lg p-4">
+          <div class="flex flex-col md:flex-row md:items-end md:space-x-4 space-y-3 md:space-y-0">
+            <div class="flex-1">
+              <label class="block text-sm text-gray-600 mb-1">เลือกเทมเพลตราคาเช่าของร้าน</label>
+              <select id="price_template_select" name="price_template_id" class="w-full border rounded px-3 py-2 bg-white">
+                <option value="">-- ไม่ใช้เทมเพลต --</option>
+                {% for tpl in price_templates %}
+                  <option value="{{ tpl.id }}" {% if dress.price_template and tpl.id == dress.price_template.id %}selected{% endif %}>
+                    {{ tpl.name }} (สูงสุด {{ tpl.max_days }} วัน)
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="w-full md:w-56">
+              <label class="block text-sm text-gray-600 mb-1">จำกัดวันสูงสุดเฉพาะชุดนี้ (ถ้าต้องการ)</label>
+              <input type="number" min="1" name="max_days_override" id="max_days_override"
+                     value="{{ dress.max_rental_days_override|default_if_none:'' }}"
+                     placeholder="ปล่อยว่าง = ตามเทมเพลต/ร้าน"
+                     class="w-full border rounded px-3 py-2">
+            </div>
+
+            <div class="flex items-center space-x-2">
+              <button type="button" id="btn-edit-template"
+                      class="px-4 py-2 bg-yellow-600 text-white rounded disabled:opacity-50"
+                      disabled>แก้ไขเทมเพลตนี้</button>
+              <button type="button" id="btn-open-new-template"
+                      class="px-4 py-2 bg-green-600 text-white rounded">+ สร้างเทมเพลตใหม่</button>
+            </div>
+          </div>
+
+          <!-- preview ตารางราคา -->
+          <div class="mt-4 border rounded">
+            <table class="w-full text-sm" id="tpl_preview_table">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="p-2 w-24 text-left">วัน</th>
+                  <th class="p-2 text-left">ราคารวม (บาท)</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% if tpl_preview_items %}
+                {% for it in tpl_preview_items %}
+                  <tr>
+                    <td class="p-2">{{ it.day_count }}</td>
+                    <td class="p-2">฿{{ it.total_price }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="2" class="p-3 text-gray-500">ยังไม่ได้เลือกเทมเพลต</td></tr>
+              {% endif %}
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">* ตารางนี้แสดงจากเทมเพลตที่เลือก (แก้ไขได้ผ่านปุ่ม “แก้ไขเทมเพลตนี้”)</p>
+        </div>
+
+        <!-- ค่าส่งขาไปแบบเป็นช่วง -->
+        <div class="col-span-12 border rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <p class="font-semibold">ค่าส่งขาไปแบบเป็นช่วง (ต่อออเดอร์ในร้านนี้)</p>
+            <label class="inline-flex items-center text-sm text-gray-600">
+              <input type="checkbox" id="ship_clamp" class="mr-2"> ถ้าจำนวนเกินช่วงบน ให้คิดค่าส่งตามช่วงสูงสุด
+            </label>
+          </div>
+
+          <div class="mt-3 border rounded">
+            <table class="w-full text-sm" id="ship_table">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="p-2 w-32 text-left">ขั้นต่ำ (ชุด)</th>
+                  <th class="p-2 w-32 text-left">ขั้นสูง (ชุด)</th>
+                  <th class="p-2 text-left">ค่าส่ง (บาท)</th>
+                  <th class="p-2 w-16"></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="mt-3 flex items-center justify-between">
+            <div class="space-x-2">
+              <button type="button" id="ship_add_row" class="px-3 py-1 border rounded">+ เพิ่มช่วง</button>
+              <button type="button" id="ship_fill_1to3" class="px-3 py-1 border rounded">ตัวอย่าง 1/2/3 ชุด</button>
+            </div>
+            <button type="button" id="ship_save" class="px-4 py-2 bg-blue-600 text-white rounded">
+              บันทึกค่าส่งของร้าน
+            </button>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">* คิดค่าส่งเฉพาะขาไป / ขากลับลูกค้าเป็นผู้ชำระเอง</p>
+        </div>
+
+        <!-- ปุ่มบันทึกชุด -->
+        <div class="col-span-12 flex justify-end space-x-4">
+          <a href="{% url 'store_dress' store.id %}" class="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">ยกเลิก</a>
+          <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">บันทึก</button>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <!-- Modal: สร้างเทมเพลต -->
+  <div id="modal-new-template" class="fixed inset-0 bg-black bg-opacity-30 hidden z-50">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg mt-16 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">สร้างเทมเพลตราคาเช่าของร้าน</h3>
+        <button type="button" id="btn-close-new-template" class="text-gray-600">ปิด</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-sm text-gray-600 mb-1">ชื่อเทมเพลต</label>
+          <input type="text" id="tpl_name" class="w-full border rounded px-3 py-2" placeholder="เช่น แพ็กมาตรฐาน">
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">จำนวนวันสูงสุด</label>
+          <input type="number" id="tpl_max_days" min="1" value="8" class="w-full border rounded px-3 py-2">
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="flex items-center justify-between mb-2">
+          <p class="font-medium">ตารางราคา (วัน / ราคารวม)</p>
+          <div class="space-x-2">
+            <button type="button" id="btn-fill-1toN" class="px-3 py-1 border rounded">เติมแถว 1..N</button>
+            <button type="button" id="btn-add-row" class="px-3 py-1 border rounded">+ เพิ่มแถว</button>
+          </div>
+        </div>
+
+        <div class="border rounded">
+          <table class="w-full text-sm" id="tpl_table">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-2 w-24 text-left">วัน</th>
+                <th class="p-2 text-left">ราคารวม (บาท)</th>
+                <th class="p-2 w-16"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">ตัวอย่าง: 1 วัน = 100, 2 วัน = 180, 3 วัน = 250</p>
+      </div>
+
+      <div class="mt-5 flex justify-end gap-3">
+        <button type="button" id="btn-save-template" class="px-4 py-2 bg-blue-600 text-white rounded">
+          บันทึกเทมเพลต
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: แก้ไขเทมเพลต -->
+  <div id="modal-edit-template" class="fixed inset-0 bg-black bg-opacity-30 hidden z-50">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg mt-16 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">แก้ไขเทมเพลตราคาเช่าของร้าน</h3>
+        <button type="button" id="btn-close-edit-template" class="text-gray-600">ปิด</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-sm text-gray-600 mb-1">ชื่อเทมเพลต</label>
+          <input type="text" id="edit_tpl_name" class="w-full border rounded px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">จำนวนวันสูงสุด</label>
+          <input type="number" id="edit_tpl_max_days" min="1" class="w-full border rounded px-3 py-2">
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="flex items-center justify-between mb-2">
+          <p class="font-medium">ตารางราคา (วัน / ราคารวม)</p>
+          <button type="button" id="edit_btn_add_row" class="px-3 py-1 border rounded">+ เพิ่มแถว</button>
+        </div>
+
+        <div class="border rounded">
+          <table class="w-full text-sm" id="edit_tpl_table">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-2 w-24 text-left">วัน</th>
+                <th class="p-2 text-left">ราคารวม (บาท)</th>
+                <th class="p-2 w-16"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="mt-5 flex justify-end gap-3">
+        <button type="button" id="btn-update-template" class="px-4 py-2 bg-blue-600 text-white rounded">
+          บันทึกการแก้ไข
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- init shipping json -->
+  <script id="shipping-init" type="application/json">{{ shipping_init_json|safe }}</script>
+
+  <script>
+    // helpers
+    const storeId = "{{ store.id }}";
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const selTpl = document.getElementById("price_template_select");
+    const btnEditTpl = document.getElementById("btn-edit-template");
+
+    // ====== image
+    function previewImage(event) {
+      const reader = new FileReader();
+      reader.onload = function(){
+        document.getElementById('imagePreview').innerHTML =
+          `<img src="${reader.result}" class="w-full h-full object-cover rounded-lg">`;
+      };
+      reader.readAsDataURL(event.target.files[0]);
+    }
+    function removeImage() {
+      document.getElementById('imagePreview').innerHTML = '<span class="text-gray-400">ยังไม่มีรูป</span>';
+      document.getElementById('removeImageField').value = "1";
+    }
+
+    // ====== ราคาแพ็ก: แสดง preview + ปุ่มแก้ไข
+    function refreshPreview(tplId) {
+      const tbody = document.querySelector("#tpl_preview_table tbody");
+      if (!tplId) {
+        tbody.innerHTML = `<tr><td colspan="2" class="p-3 text-gray-500">ยังไม่ได้เลือกเทมเพลต</td></tr>`;
+        btnEditTpl.disabled = true;
+        return;
+      }
+      fetch(`/stores/${storeId}/price-templates/${tplId}/detail/`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ok) throw new Error(data.error || "error");
+          const items = data.template.items || [];
+          if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="2" class="p-3 text-gray-500">ไม่มีรายการราคา</td></tr>`;
+          } else {
+            tbody.innerHTML = items.map(it => `
+              <tr><td class="p-2">${it.day_count}</td><td class="p-2">฿${it.total_price}</td></tr>
+            `).join("");
+          }
+          btnEditTpl.disabled = false;
+        })
+        .catch(() => {
+          tbody.innerHTML = `<tr><td colspan="2" class="p-3 text-red-500">โหลดเทมเพลตไม่สำเร็จ</td></tr>`;
+          btnEditTpl.disabled = true;
+        });
+    }
+    selTpl.addEventListener("change", e => refreshPreview(e.target.value || ""));
+
+    // enable/disable edit button on load
+    (function initEditBtn(){
+      const initVal = selTpl.value || "";
+      btnEditTpl.disabled = !initVal;
+      if (initVal) refreshPreview(initVal);
+    })();
+
+    // ====== Modal: Create template (เหมือนของเดิม)
+    (function(){
+      const modal = document.getElementById("modal-new-template");
+      const btnOpen = document.getElementById("btn-open-new-template");
+      const btnClose = document.getElementById("btn-close-new-template");
+      const tblBody = document.querySelector("#tpl_table tbody");
+      function open(){ modal.classList.remove("hidden"); }
+      function close(){ modal.classList.add("hidden"); }
+      btnOpen && btnOpen.addEventListener("click", open);
+      btnClose && btnClose.addEventListener("click", close);
+      modal && modal.addEventListener("click", (e)=>{ if(e.target===modal) close(); });
+
+      function addRow(day="", price=""){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="p-2"><input type="number" min="1" class="w-20 border rounded px-2 py-1 day-input" value="${day}"></td>
+          <td class="p-2"><input type="number" min="0" step="0.01" class="w-full border rounded px-2 py-1 price-input" value="${price}"></td>
+          <td class="p-2 text-right"><button type="button" class="px-2 py-1 text-red-600 del-row">ลบ</button></td>`;
+        tr.querySelector(".del-row").addEventListener("click", ()=> tr.remove());
+        tblBody.appendChild(tr);
+      }
+      document.getElementById("btn-add-row").addEventListener("click", ()=> addRow());
+      document.getElementById("btn-fill-1toN").addEventListener("click", ()=>{
+        tblBody.innerHTML = "";
+        const n = parseInt(document.getElementById("tpl_max_days").value || "1", 10);
+        for (let d=1; d<=n; d++) addRow(d, "");
+      });
+
+      // default 1..8
+      tblBody.innerHTML = ""; for (let d=1; d<=8; d++) addRow(d, "");
+
+      document.getElementById("btn-save-template").addEventListener("click", async ()=>{
+        const name = document.getElementById("tpl_name").value.trim();
+        const maxDays = parseInt(document.getElementById("tpl_max_days").value || "0", 10);
+        if (!name){ alert("กรุณากรอกชื่อเทมเพลต"); return; }
+        if (maxDays < 1){ alert("จำนวนวันสูงสุดต้องมากกว่า 0"); return; }
+
+        const rows = Array.from(tblBody.querySelectorAll("tr")).map(tr=>({
+          day_count: parseInt(tr.querySelector(".day-input").value || "0", 10),
+          total_price: tr.querySelector(".price-input").value || ""
+        })).filter(r=> r.day_count>0 && r.total_price!=="" );
+
+        if (rows.length === 0){ alert("กรุณาเพิ่มรายการราคาอย่างน้อย 1 แถว"); return; }
+
+        const res = await fetch(`/stores/${storeId}/price-templates/create/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+          body: JSON.stringify({ name, max_days: maxDays, items: rows })
+        });
+        const data = await res.json();
+        if (!data.ok){ alert(data.error || "บันทึกไม่สำเร็จ"); return; }
+
+        // เติมเข้า select + เลือก
+        const opt = document.createElement("option");
+        opt.value = data.template.id;
+        opt.textContent = `${data.template.name} (สูงสุด ${data.template.max_days} วัน)`;
+        selTpl.appendChild(opt);
+        selTpl.value = String(data.template.id);
+        refreshPreview(selTpl.value);
+        close();
+      });
+    })();
+
+    // ====== Modal: Edit template (ใหม่)
+    (function(){
+      const modal = document.getElementById("modal-edit-template");
+      const btnOpen = document.getElementById("btn-edit-template");
+      const btnClose = document.getElementById("btn-close-edit-template");
+      const tblBody = document.querySelector("#edit_tpl_table tbody");
+      const nameEl = document.getElementById("edit_tpl_name");
+      const maxEl  = document.getElementById("edit_tpl_max_days");
+
+      function open(){ modal.classList.remove("hidden"); }
+      function close(){ modal.classList.add("hidden"); }
+      btnOpen && btnOpen.addEventListener("click", async ()=>{
+        const tplId = selTpl.value;
+        if (!tplId){ return; }
+        // load detail
+        const res = await fetch(`/stores/${storeId}/price-templates/${tplId}/detail/`);
+        const data = await res.json();
+        if (!data.ok){ alert(data.error || "โหลดข้อมูลไม่สำเร็จ"); return; }
+        nameEl.value = data.template.name || "";
+        maxEl.value  = data.template.max_days || 1;
+        tblBody.innerHTML = "";
+        (data.template.items || []).forEach(it => addRow(it.day_count, it.total_price));
+        open();
+      });
+      btnClose && btnClose.addEventListener("click", close);
+      modal && modal.addEventListener("click", (e)=>{ if(e.target===modal) close(); });
+
+      function addRow(day="", price=""){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="p-2"><input type="number" min="1" class="w-20 border rounded px-2 py-1 ed-day" value="${day}"></td>
+          <td class="p-2"><input type="number" min="0" step="0.01" class="w-full border rounded px-2 py-1 ed-price" value="${price}"></td>
+          <td class="p-2 text-right"><button type="button" class="px-2 py-1 text-red-600 ed-del">ลบ</button></td>`;
+        tr.querySelector(".ed-del").addEventListener("click", ()=> tr.remove());
+        tblBody.appendChild(tr);
+      }
+      document.getElementById("edit_btn_add_row").addEventListener("click", ()=> addRow());
+
+      document.getElementById("btn-update-template").addEventListener("click", async ()=>{
+        const tplId = selTpl.value;
+        if (!tplId){ return; }
+        const name = nameEl.value.trim();
+        const maxDays = parseInt(maxEl.value || "0", 10);
+        if (!name){ alert("กรุณากรอกชื่อเทมเพลต"); return; }
+        if (maxDays < 1){ alert("จำนวนวันสูงสุดต้องมากกว่า 0"); return; }
+
+        const rows = Array.from(tblBody.querySelectorAll("tr")).map(tr=>({
+          day_count: parseInt(tr.querySelector(".ed-day").value || "0", 10),
+          total_price: tr.querySelector(".ed-price").value || ""
+        })).filter(r=> r.day_count>0 && r.total_price!=="" );
+
+        if (rows.length === 0){ alert("กรุณาเพิ่มรายการราคาอย่างน้อย 1 แถว"); return; }
+
+        const res = await fetch(`/stores/${storeId}/price-templates/${tplId}/update/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+          body: JSON.stringify({ name, max_days: maxDays, items: rows })
+        });
+        const data = await res.json();
+        if (!data.ok){ alert(data.error || "บันทึกไม่สำเร็จ"); return; }
+
+        // อัปเดต option ปัจจุบัน (ชื่อ/วันสูงสุด)
+        const opt = selTpl.querySelector(`option[value="${tplId}"]`);
+        if (opt){ opt.textContent = `${data.template.name} (สูงสุด ${data.template.max_days} วัน)`; }
+        refreshPreview(tplId);
+        close();
+      });
+    })();
+
+    // ====== Shipping editor (ของเดิม)
+    (function(){
+      const initScript = document.getElementById("shipping-init");
+      let init = { clamp_to_max: true, brackets: [] };
+      try { init = JSON.parse(initScript.textContent || "{}"); } catch(e){}
+      const shipClamp = document.getElementById("ship_clamp");
+      const body = document.querySelector("#ship_table tbody");
+      shipClamp.checked = !!init.clamp_to_max;
+
+      function addShipRow(minVal="", maxVal="", feeVal=""){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="p-2"><input type="number" min="1" class="w-24 border rounded px-2 py-1 ship-min" value="${minVal}"></td>
+          <td class="p-2"><input type="number" min="1" class="w-24 border rounded px-2 py-1 ship-max" value="${maxVal}"></td>
+          <td class="p-2"><input type="number" min="0" step="0.01" class="w-full border rounded px-2 py-1 ship-fee" value="${feeVal}"></td>
+          <td class="p-2 text-right"><button type="button" class="px-2 py-1 text-red-600 ship-del">ลบ</button></td>`;
+        tr.querySelector(".ship-del").addEventListener("click", ()=> tr.remove());
+        body.appendChild(tr);
+      }
+
+      if (init.brackets && init.brackets.length){
+        init.brackets.forEach(b=> addShipRow(b.min_qty, b.max_qty, b.fee));
+      } else {
+        addShipRow(1,1,"");
+      }
+
+      document.getElementById("ship_add_row").addEventListener("click", ()=> addShipRow());
+      document.getElementById("ship_fill_1to3").addEventListener("click", ()=>{
+        body.innerHTML = "";
+        addShipRow(1,1,"");
+        addShipRow(2,2,"");
+        addShipRow(3,99,"");
+      });
+
+      document.getElementById("ship_save").addEventListener("click", async ()=>{
+        const rows = Array.from(body.querySelectorAll("tr")).map(tr=>({
+          min_qty: parseInt(tr.querySelector(".ship-min").value || "0", 10),
+          max_qty: parseInt(tr.querySelector(".ship-max").value || "0", 10),
+          fee: tr.querySelector(".ship-fee").value || ""
+        })).filter(r=> r.min_qty>0 && r.max_qty>0 && r.fee!=="");
+
+        if (rows.length===0){ alert("กรุณาเพิ่มช่วงค่าส่งอย่างน้อย 1 ช่วง"); return; }
+
+        const res = await fetch(`/stores/${storeId}/shipping-rule/save/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+          body: JSON.stringify({ clamp_to_max: shipClamp.checked, brackets: rows })
+        });
+        const data = await res.json();
+        if (!data.ok){ alert(data.error || "บันทึกค่าส่งไม่สำเร็จ"); return; }
+        alert("บันทึกค่าส่งของร้านเรียบร้อย");
+      });
+    })();
+  </script>
+</body>
+</html>

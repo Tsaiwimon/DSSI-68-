@@ -1,0 +1,106 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>คะแนนรีวิว - {{ dress.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+
+<!-- แถบหัว -->
+<div class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-100 shadow-sm p-4 flex justify-between items-center">
+    <h1 class="text-lg font-semibold text-gray-800">คะแนนรีวิว ({{ reviews.count }})</h1>
+    <div class="flex gap-2">
+        <a href="{% url 'dress_detail' dress.id %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700">← กลับหน้าชุด</a>
+        <a href="{% url 'review_create' dress.id %}" class="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600">เขียนรีวิว</a>
+    </div>
+</div>
+
+<!-- ส่วนจัดเรียง -->
+<div class="max-w-3xl mx-auto mt-6 px-4">
+
+    <!-- ✅ ข้อความชิดซ้ายแน่นอน -->
+    <div class="mb-2">
+        <p class="text-sm text-gray-600 text-left">
+            แสดงรีวิวทั้งหมดของ <span class="font-semibold">{{ dress.name }}</span>
+        </p>
+    </div>
+
+    <!-- Dropdown แยกออกมาอยู่ขวา -->
+    <div class="flex justify-end items-center mb-4">
+        <form method="get" class="flex gap-2 items-center">
+            <label for="sort" class="text-sm whitespace-nowrap">เรียงตาม:</label>
+            <select name="sort" id="sort" onchange="this.form.submit()" 
+                    class="border rounded-md px-2 py-1 text-sm">
+                <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>รีวิวใหม่ล่าสุด</option>
+                <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>รีวิวเก่าสุด</option>
+                <option value="high_rating" {% if request.GET.sort == 'high_rating' %}selected{% endif %}>คะแนนสูงสุด</option>
+                <option value="low_rating" {% if request.GET.sort == 'low_rating' %}selected{% endif %}>คะแนนต่ำสุด</option>
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- แสดงรายการรีวิว -->
+<div class="max-w-3xl mx-auto px-4">
+    <div class="space-y-4">
+        {% for review in reviews %}
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-semibold">
+                        {{ review.user.username|slice:":1"|upper }}
+                    </div>
+                    <div>
+                        <p class="font-medium">{{ review.user.username|truncatechars:6 }}</p>
+                        <p class="text-xs text-gray-400">รายการ: {{ review.item_color }}</p>
+                    </div>
+                </div>
+                <div class="text-yellow-500">
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= review.rating %}
+                            ★
+                        {% else %}
+                            ☆
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- ✅ ส่วนแสดงรูปรีวิว -->
+            {% if review.image %}
+              <div class="mt-3">
+                <img src="{{ review.image.url }}" alt="รูปรีวิว" 
+                     class="rounded-lg w-40 h-40 object-cover border shadow-sm">
+              </div>
+            {% endif %}
+
+            <p class="mt-2 text-gray-700 text-sm leading-relaxed">{{ review.comment }}</p>
+            <p class="mt-1 text-xs text-gray-400 text-right">รีวิวเมื่อ {{ review.created_at|date:"d/m/Y" }}</p>
+
+            <!-- ✅ ปุ่ม “แก้ไข” และ “ลบ” -->
+            {% if user == review.user %}
+            <div class="flex justify-end gap-2 mt-3">
+                <a href="{% url 'review_edit' dress.id review.id %}" 
+                   class="px-3 py-1 bg-yellow-400 text-white text-sm rounded-lg hover:bg-yellow-500">
+                   แก้ไข
+                </a>
+
+                <form method="POST" action="{% url 'review_delete' dress.id review.id %}" onsubmit="return confirm('ยืนยันการลบรีวิวนี้หรือไม่?');">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3 py-1 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600">
+                        ลบ
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <p class="text-gray-500 text-center mt-8">ยังไม่มีรีวิวสำหรับชุดนี้</p>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>

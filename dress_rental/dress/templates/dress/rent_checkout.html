@@ -1,0 +1,385 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>ยืนยันการเช่า — {{ dress.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+      <div class="flex items-center gap-3">
+        <button onclick="history.back()" class="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 hover:bg-white shadow">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-800">ยืนยันการเช่า</h1>
+      </div>
+
+      <!-- Stepper -->
+      <nav class="mt-4">
+        <ol class="max-w-6xl mx-auto flex items-center gap-2 text-xs sm:text-sm">
+          <li class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center bg-teal-600 text-white font-semibold">1</span>
+            <span class="text-gray-800">เลือกชุด</span>
+          </li>
+          <span class="h-px flex-1 bg-teal-300"></span>
+          <li class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center ring-2 ring-teal-600 text-teal-700 bg-white font-semibold">2</span>
+            <span class="text-gray-900 font-semibold">ยืนยัน</span>
+          </li>
+          <span class="h-px flex-1 bg-gray-300"></span>
+          <li class="flex items-center gap-2 opacity-70">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center bg-gray-200 text-gray-600 font-semibold">3</span>
+            <span>ชำระเงิน</span>
+          </li>
+          <span class="h-px flex-1 bg-gray-300"></span>
+          <li class="flex items-center gap-2 opacity-70">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center bg-gray-200 text-gray-600 font-semibold">4</span>
+            <span>เสร็จสิ้น</span>
+          </li>
+        </ol>
+      </nav>
+    </div>
+  </header>
+
+  {% if not total_days %}
+  <!-- Banner เตือนยังไม่เลือกช่วงวันที่ -->
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
+    <div class="bg-amber-50 text-amber-900 border border-amber-200 rounded-lg p-3 text-sm flex items-start gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856C18.403 19 20 17.403 20 15.5c0-1.279-.597-2.49-1.607-3.273L13 6.5a3 3 0 00-2 0l-5.393 5.727C4.597 13.01 4 14.221 4 15.5 4 17.403 5.597 19 7.062 19z"/>
+      </svg>
+      <div>
+        <div class="font-medium">ยังไม่ได้เลือกช่วงวันที่เช่า</div>
+        <div>โปรดกลับไปหน้า <a href="{% url 'dress_detail' dress.id %}" class="underline font-medium">รายละเอียดชุด</a> เพื่อเลือกวันที่/แพ็กเกจก่อนทำการยืนยัน</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Main -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+    <form id="rentForm" method="post" action="{% url 'rent_checkout' dress.id %}" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {% csrf_token %}
+
+      <!-- ค่าจากหน้ารายละเอียด -->
+      <input type="hidden" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+      <input type="hidden" name="end_date"   value="{{ end_date|date:'Y-m-d' }}">
+      <input type="hidden" name="days"       value="{{ total_days|default:0 }}">
+
+      <!-- Left -->
+      <section class="bg-white rounded-xl shadow border p-4 sm:p-6">
+        <h2 class="text-base font-semibold text-gray-800">รายละเอียดสินค้า</h2>
+
+        <div class="mt-4 flex gap-4">
+          <img src="{{ dress.image.url }}" alt="{{ dress.name }}" class="w-28 h-28 rounded-lg object-cover border" />
+          <div class="flex-1">
+            <p class="font-medium text-gray-900 leading-6">{{ dress.name }}</p>
+            <p class="text-pink-600 font-bold text-xl mt-1">฿{{ dress.daily_price }}/วัน</p>
+
+            {% if total_days and start_date and end_date %}
+              <p class="text-gray-700 text-sm mt-2">
+                วันที่เช่า:
+                <span class="font-medium">{{ start_date|date:"d/m/Y" }}</span>
+                – <span class="font-medium">{{ end_date|date:"d/m/Y" }}</span>
+                <span class="ml-1 text-gray-500">({{ total_days }} วัน)</span>
+              </p>
+              {% if rental_fee %}
+                <p class="text-xs text-gray-500">ราคาเช่าคำนวณตามแพ็กเกจ/อัตรารายวันอัตโนมัติ</p>
+              {% endif %}
+              <div class="mt-2 flex items-center gap-3 text-xs">
+                <a href="{% url 'dress_detail' dress.id %}#date" class="text-blue-600 hover:underline">แก้ไขวันที่</a>
+                <span class="text-gray-300">|</span>
+                <a href="{% url 'dress_detail' dress.id %}#packages" class="text-blue-600 hover:underline">เปลี่ยนแพ็กเกจ</a>
+              </div>
+            {% else %}
+              <p class="text-red-600 text-sm mt-2">
+                ยังไม่ได้เลือกช่วงวันที่ — <a href="{% url 'dress_detail' dress.id %}" class="underline">กลับไปเลือกวันที่</a>
+              </p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- ช่องทางรับชุด -->
+        <div class="mt-6">
+          <p class="text-sm font-semibold text-gray-800">ช่องทางการรับชุด</p>
+          <div class="mt-2 flex items-center gap-5">
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="receive_method" value="pickup" class="peer" checked>
+              <span class="w-3 h-3 rounded-full border peer-checked:bg-gray-600"></span>
+              มารับเอง
+            </label>
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="receive_method" value="delivery" class="peer">
+              <span class="w-3 h-3 rounded-full border peer-checked:bg-red-600"></span>
+              จัดส่งถึงบ้าน
+            </label>
+          </div>
+
+          <!-- มารับเอง: ปุ่มดูรายละเอียดร้าน + ข้อความบาง ๆ -->
+          <div id="pickupWrap" class="mt-3 space-y-3">
+            <div class="bg-gray-50 border rounded-lg p-3 flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <div class="font-medium text-gray-800 truncate">ดูรายละเอียดร้านเพิ่มเติม</div>
+                <p class="text-xs text-gray-600 mt-0.5 truncate">
+                  ดูรายละเอียดร้านเพิ่มเติมและแชทกับร้านเพื่อรับชุด
+                </p>
+              </div>
+              <a href="{% url 'public_store' dress.shop.id %}"
+                class="shrink-0 inline-flex items-center justify-center rounded-lg bg-white border px-3 py-2 text-sm hover:bg-gray-100">
+                ดูรายละเอียดร้าน
+                </a>
+
+            </div>
+
+            
+
+            <!-- ช่วงเวลารับ/คืน -->
+            <div class="grid sm:grid-cols-2 gap-3">
+              <select name="pickup_slot" id="pickup_slot"
+                      class="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                <option value="">ช่วงเวลารับชุด</option>
+                <option value="morning">เช้า (09:00–12:00)</option>
+                <option value="afternoon">บ่าย (13:00–17:00)</option>
+                <option value="evening">เย็น (18:00–20:00)</option>
+              </select>
+              <select name="return_slot" id="return_slot"
+                      class="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                <option value="">ช่วงเวลาคืนชุด</option>
+                <option value="morning">เช้า (09:00–12:00)</option>
+                <option value="afternoon">บ่าย (13:00–17:00)</option>
+                <option value="evening">เย็น (18:00–20:00)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- จัดส่งถึงบ้าน -->
+          <div id="deliveryWrap" class="mt-3 hidden space-y-3">
+            <input name="address" id="address" type="text" placeholder="ระบุที่อยู่สำหรับจัดส่ง"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+            <select name="delivery_slot" id="delivery_slot"
+                    class="rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+              <option value="">ช่วงเวลาส่ง</option>
+              <option value="morning">เช้า (09:00–12:00)</option>
+              <option value="afternoon">บ่าย (13:00–17:00)</option>
+              <option value="evening">เย็น (18:00–20:00)</option>
+            </select>
+            <p class="text-xs text-gray-500">* ค่าส่งคำนวณตามจำนวนชุดในออเดอร์ (1–2 ชุด ฿50 | 3–5 ชุด ฿65 | มากกว่า 5 ชุด ฿65)</p>
+          </div>
+        </div>
+
+        <!-- ข้อมูลผู้เช่า -->
+        <div class="mt-6">
+          <p class="text-sm font-semibold text-gray-800">ข้อมูลผู้เช่า</p>
+          <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <input name="renter_name" id="renter_name" type="text" placeholder="เช่น กานต์ สุกุมล"
+                value="{{ request.user.get_full_name|default:'' }}"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+              <p id="nameErr" class="mt-1 text-xs text-red-600 hidden">กรุณากรอกชื่อ–นามสกุลให้ถูกต้อง</p>
+            </div>
+            <div>
+              <input name="renter_phone" id="renter_phone" type="tel" inputmode="numeric" maxlength="12"
+                placeholder="0xx-xxx-xxxx"
+                value="{{ request.user.userprofile.phone|default:'' }}"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+              <p id="phoneErr" class="mt-1 text-xs text-red-600 hidden">กรุณากรอกเบอร์ 9–10 หลัก</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- เงื่อนไข -->
+        <p class="mt-6 text-xs text-gray-500">
+          {% if end_date %}
+            ต้องคืนชุดภายในวันที่ {{ end_date|date:"d/m/Y" }} หากคืนเกินจากนี้ ระบบจะคิดค่าปรับล่าช้า
+          {% else %}
+            ต้องคืนชุดภายในวันที่ — หากคืนเกินจากนี้ ระบบจะคิดค่าปรับล่าช้า
+          {% endif %}
+        </p>
+      </section>
+
+      <!-- Right -->
+      <aside class="bg-white rounded-xl shadow border p-4 sm:p-6 h-fit">
+        <h2 class="text-base font-semibold text-gray-800">การชำระเงิน</h2>
+
+        <div class="mt-4 space-y-3 bg-gray-50 rounded-lg p-4 border text-sm">
+          <div class="flex justify-between items-start">
+            <div>
+              <div>ค่าเช่า</div>
+              <div id="rentBreakdown" class="text-xs text-gray-500">฿0.00 × 1 ชุด</div>
+            </div>
+            <div class="text-right font-medium" id="rentFee">฿{{ rental_fee|default:0|floatformat:2 }}</div>
+          </div>
+          <div class="flex justify-between">
+            <span>ค่ามัดจำ</span>
+            <span id="depositFee" class="text-right font-medium">฿{{ deposit|default:0|floatformat:2 }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>ค่าส่ง</span>
+            <span id="shippingFee" class="text-right font-medium">฿0.00</span>
+          </div>
+          <div class="border-t pt-2 mt-2 flex justify-between font-semibold text-base">
+            <span>ยอดชำระ</span>
+            <span id="grandTotal" class="text-right">฿0.00</span>
+          </div>
+        </div>
+
+        {% if shipping_clamp_note %}
+          <p class="text-xs text-gray-500 mt-2">{{ shipping_clamp_note }}</p>
+        {% endif %}
+
+        <!-- ยอมรับเงื่อนไข -->
+        <label class="mt-4 flex items-start gap-2 text-sm">
+          <input type="checkbox" id="agreeTerms" class="mt-1">
+          <span class="text-gray-700">
+            ฉันได้อ่านและยอมรับ
+            <a href="/terms" class="underline text-blue-600">เงื่อนไขการเช่า</a> /
+            <a href="/deposit-policy" class="underline text-blue-600">นโยบายคืนมัดจำ</a> /
+            <a href="/privacy" class="underline text-blue-600">นโยบายความเป็นส่วนตัว</a>
+          </span>
+        </label>
+
+        <!-- ปุ่ม -->
+        <div class="mt-6 flex gap-3">
+          <a href="{% url 'dress_detail' dress.id %}"
+             class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 rounded-lg text-center">
+            ย้อนกลับ
+          </a>
+          <button type="submit" id="confirmBtn"
+                  class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:pointer-events-none">
+            <svg id="loadingIcon" class="w-4 h-4 hidden animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+            <span id="confirmBtnText">ยืนยันและชำระเงิน</span>
+          </button>
+        </div>
+      </aside>
+    </form>
+  </main>
+
+  <!-- JSON: ค่าส่งตามช่วง -->
+  {{ shipping_tiers|json_script:"shippingTiersJSON" }}
+
+  <script>
+    // ===== ค่าจาก server =====
+    const RENT    = Number(("{{ rental_fee|default:'0' }}").toString().replace(/,/g,'')) || 0;
+    const DEPOSIT = Number(("{{ deposit|default:'0' }}").toString().replace(/,/g,''))     || 0;
+    const DAYS    = Number(("{{ total_days|default:'0' }}").toString().replace(/,/g,''))  || 0;
+    const QTY     = 1;
+
+    const tiersNode = document.getElementById('shippingTiersJSON');
+    let TIERS = [];
+    try { TIERS = tiersNode ? JSON.parse(tiersNode.textContent) : []; } catch(_) { TIERS = []; }
+
+    // ===== Helpers =====
+    const fmt = n => new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    const calcShipping = (qty=1) => {
+      if(!TIERS.length || qty < 1) return 0;
+      let fee = 0;
+      for (const b of TIERS) {
+        const mn = Number(b.min_qty), mx = Number(b.max_qty), f = Number(b.fee);
+        if (qty >= mn && qty <= mx) { fee = f; break; }
+        if (qty > mx) fee = f;
+      }
+      return fee;
+    };
+    const digits = s => (s || '').replace(/\D/g,'');
+
+    // ===== Refs =====
+    const rentFee     = document.getElementById('rentFee');
+    const rentBreak   = document.getElementById('rentBreakdown');
+    const depositFee  = document.getElementById('depositFee');
+    const shippingFee = document.getElementById('shippingFee');
+    const grandTotal  = document.getElementById('grandTotal');
+    const confirmBtn  = document.getElementById('confirmBtn');
+    const loadingIcon = document.getElementById('loadingIcon');
+    const confirmText = document.getElementById('confirmBtnText');
+
+    const pickupWrap   = document.getElementById('pickupWrap');
+    const deliveryWrap = document.getElementById('deliveryWrap');
+    const addressInput = document.getElementById('address');
+    const pickupSlot   = document.getElementById('pickup_slot');
+    const returnSlot   = document.getElementById('return_slot');
+    const deliverySlot = document.getElementById('delivery_slot');
+
+    const nameInput  = document.getElementById('renter_name');
+    const phoneInput = document.getElementById('renter_phone');
+    const nameErr    = document.getElementById('nameErr');
+    const phoneErr   = document.getElementById('phoneErr');
+    const agreeTerms = document.getElementById('agreeTerms');
+
+    // ===== Validate & UI =====
+    function validName(){ return (nameInput.value || '').trim().length >= 2; }
+    function validPhone(){ const d = digits(phoneInput.value); return d.length >= 9 && d.length <= 10; }
+    function formatPhoneMask(){
+      const d = digits(phoneInput.value).slice(0,10);
+      let v = d;
+      if (d.length > 3 && d.length <= 6) v = d.slice(0,3) + '-' + d.slice(3);
+      else if (d.length > 6) v = d.slice(0,3) + '-' + d.slice(3,6) + '-' + d.slice(6);
+      phoneInput.value = v;
+    }
+
+    function updateUI(){
+      const methodEl   = document.querySelector('input[name="receive_method"]:checked');
+      const isDelivery = methodEl && methodEl.value === 'delivery';
+
+      pickupWrap.classList.toggle('hidden', isDelivery);
+      deliveryWrap.classList.toggle('hidden', !isDelivery);
+
+      addressInput && (addressInput.required = isDelivery);
+      deliverySlot && (deliverySlot.required = isDelivery);
+      pickupSlot && (pickupSlot.required = !isDelivery);
+      returnSlot && (returnSlot.required = !isDelivery);
+
+      const ship = isDelivery ? calcShipping(QTY) : 0;
+
+      rentFee.textContent     = `฿${fmt(RENT)}`;
+      rentBreak.textContent   = `฿${fmt(RENT)} × ${QTY} ชุด`;
+      depositFee.textContent  = `฿${fmt(DEPOSIT)}`;
+      shippingFee.textContent = `฿${fmt(ship)}`;
+      grandTotal.textContent  = `฿${fmt(RENT + DEPOSIT + ship)}`;
+
+      const okName  = validName();
+      const okPhone = validPhone();
+      const okTerms = agreeTerms.checked;
+      const okDate  = DAYS > 0;
+      const okAddr  = !isDelivery || (addressInput && addressInput.value.trim().length > 5);
+      const okSlot  = isDelivery ? !!deliverySlot.value : (!!pickupSlot.value && !!returnSlot.value);
+
+      nameErr.classList.toggle('hidden', okName);
+      phoneErr.classList.toggle('hidden', okPhone);
+
+      confirmBtn.disabled = !(okDate && okName && okPhone && okTerms && okAddr && okSlot);
+    }
+
+    document.querySelectorAll('input[name="receive_method"]').forEach(r => r.addEventListener('change', updateUI));
+    nameInput.addEventListener('input', updateUI);
+    phoneInput.addEventListener('input', () => { formatPhoneMask(); updateUI(); });
+    agreeTerms.addEventListener('change', updateUI);
+    addressInput && addressInput.addEventListener('input', updateUI);
+    pickupSlot && pickupSlot.addEventListener('change', updateUI);
+    returnSlot && returnSlot.addEventListener('change', updateUI);
+    deliverySlot && deliverySlot.addEventListener('change', updateUI);
+
+    formatPhoneMask();
+    updateUI();
+
+    // Submit
+    document.getElementById('rentForm').addEventListener('submit', (e) => {
+      updateUI();
+      if (confirmBtn.disabled) { e.preventDefault(); return; }
+      phoneInput.value = digits(phoneInput.value);
+      confirmBtn.disabled = true;
+      loadingIcon.classList.remove('hidden');
+      confirmText.textContent = 'กำลังตรวจสอบสต็อก...';
+    });
+  </script>
+</body>
+</html>

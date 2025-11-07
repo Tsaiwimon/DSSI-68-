@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>การแจ้งเตือน | Glam & Borrow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Header -->
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <div class="flex justify-between items-center px-8 py-4">
+    <h1 class="text-lg font-bold text-gray-800">การแจ้งเตือน</h1>
+    <a href="{% url 'member_home' %}"
+       class="bg-white text-gray-700 px-4 py-2 rounded shadow hover:bg-gray-100 transition">
+      ← กลับหน้าหลัก
+    </a>
+  </div>
+</header>
+
+<!-- Content -->
+<main class="max-w-3xl mx-auto py-8 px-4">
+
+  {% if notifications %}
+    {% for n in notifications %}
+      <div class="flex items-center bg-pink-50 p-4 rounded-lg shadow-sm mb-4">
+        <img src="{{ n.image }}" alt="notification image" class="w-20 h-24 rounded object-cover mr-4">
+        <div>
+          <p class="font-semibold text-gray-800">{{ n.message }}</p>
+          <p class="text-gray-600 text-sm">หมายเลขพัสดุ {{ n.tracking_code }}</p>
+          <p class="text-gray-400 text-xs mt-1">{{ n.date }} {{ n.time }}</p>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <!-- ✅ กรณีไม่มีการแจ้งเตือน -->
+    <div class="text-center bg-white border border-gray-200 p-10 rounded-lg shadow">
+      <img src="{% static 'img/empty-box.png' %}" alt="no notification" class="w-24 mx-auto mb-4 opacity-70">
+      <p class="text-gray-600 font-medium text-lg">ยังไม่มีการแจ้งเตือน</p>
+      <p class="text-gray-400 text-sm mt-2">เมื่อร้านค้าดำเนินการจัดส่งหรืออัปเดตสถานะ คุณจะเห็นที่นี่</p>
+    </div>
+  {% endif %}
+
+</main>
+
+</body>
+</html>

@@ -1,0 +1,95 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>วิธีเช่า | Glam & Borrow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col items-center">
+
+  <!-- Header -->
+  <header class="fixed top-0 left-0 w-full bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow z-50">
+    <div class="w-full flex justify-between items-center px-10 py-10">
+      <h1 class="text-gray-800 font-semibold text-lg">วิธีเช่า</h1>
+      <button onclick="history.back()" 
+              class="bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-lg px-4 py-1.5 shadow-sm transition">
+        ย้อนกลับ
+      </button>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="flex flex-col items-center mt-28 px-4">
+    <div class="bg-[#fffaf6] rounded-2xl shadow-xl p-8 max-w-3xl border border-gray-100">
+      <h2 class="text-2xl font-bold text-gray-800 text-center">ขั้นตอนการเช่าชุด</h2>
+      <p class="text-gray-500 text-center mt-1 mb-8">
+        เช่าง่าย ๆ เพียงไม่กี่ขั้นตอน ไม่ต้องมีบัตรเครดิต
+      </p>
+
+      <!-- ขั้นตอนการเช่า -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
+        
+        <!-- ขั้นตอนที่ 1 -->
+        <div class="flex flex-col items-center text-center">
+          <div class="bg-yellow-100 p-4 rounded-xl shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" 
+                 stroke="currentColor" class="w-10 h-10 text-yellow-600">
+              <path stroke-linecap="round" stroke-linejoin="round" 
+                    d="M3 5h18M3 10h18M3 15h18M3 20h18" />
+            </svg>
+          </div>
+          <p class="font-semibold text-gray-800 mt-3">ค้นหา / เลือกชุด</p>
+          <p class="text-gray-500 text-sm mt-1">พิมพ์ค้นหา ชุดเดรส ชุดทางการ ฯลฯ</p>
+        </div>
+
+        <!-- ขั้นตอนที่ 2 -->
+        <div class="flex flex-col items-center text-center">
+          <div class="bg-pink-100 p-4 rounded-xl shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" 
+                 stroke="currentColor" class="w-10 h-10 text-pink-600">
+              <path stroke-linecap="round" stroke-linejoin="round" 
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <p class="font-semibold text-gray-800 mt-3">จองชุด</p>
+          <p class="text-gray-500 text-sm mt-1">เลือกวันเริ่มต้น - วันคืนชุด</p>
+        </div>
+
+        <!-- ขั้นตอนที่ 3 -->
+        <div class="flex flex-col items-center text-center">
+          <div class="bg-blue-100 p-4 rounded-xl shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" 
+                 stroke="currentColor" class="w-10 h-10 text-blue-600">
+              <path stroke-linecap="round" stroke-linejoin="round" 
+                    d="M3 16V8a2 2 0 012-2h2l2-3h6l2 3h2a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <p class="font-semibold text-gray-800 mt-3">รับชุด</p>
+          <p class="text-gray-500 text-sm mt-1">รับชุดตามวันที่เลือกไว้</p>
+        </div>
+
+        <!-- ขั้นตอนที่ 4 -->
+        <div class="flex flex-col items-center text-center">
+          <div class="bg-green-100 p-4 rounded-xl shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" 
+                 stroke="currentColor" class="w-10 h-10 text-green-600">
+              <path stroke-linecap="round" stroke-linejoin="round" 
+                    d="M3 10h11l3-3m-3 3l3 3m-3-3v9a2 2 0 01-2 2H3a2 2 0 01-2-2V10z" />
+            </svg>
+          </div>
+          <p class="font-semibold text-gray-800 mt-3">ส่งชุดคืน</p>
+          <p class="text-gray-500 text-sm mt-1">คืนชุดตามกำหนดเวลา</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-10 text-sm text-gray-400 text-center">
+    © 2025 Glam & Borrow
+  </footer>
+
+</body>
+</html>

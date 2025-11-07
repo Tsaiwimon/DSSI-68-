@@ -1,0 +1,62 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>เขียนรีวิว - {{ dress.name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-50">
+
+  <!-- Header -->
+  <div class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-100 shadow-sm p-4 flex justify-between items-center">
+    <h1 class="text-lg font-semibold text-gray-800">เขียนรีวิวสำหรับ {{ dress.name }}</h1>
+    <a href="{% url 'review_list' dress.id %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700">← กลับหน้ารายการรีวิว</a>
+  </div>
+
+  <!-- Form -->
+  <div class="max-w-lg mx-auto mt-8 bg-white shadow-md rounded-lg p-6">
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <!-- คะแนน -->
+      <div class="mb-4">
+        <label for="rating" class="block font-medium mb-1">ให้คะแนน:</label>
+        <select name="rating" id="rating" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300">
+          <option value="5">★★★★★ (5 ดาว)</option>
+          <option value="4">★★★★☆ (4 ดาว)</option>
+          <option value="3">★★★☆☆ (3 ดาว)</option>
+          <option value="2">★★☆☆☆ (2 ดาว)</option>
+          <option value="1">★☆☆☆☆ (1 ดาว)</option>
+        </select>
+      </div>
+
+      <!-- คอมเมนต์ -->
+      <div class="mb-4">
+        <label for="comment" class="block font-medium mb-1">ความคิดเห็นของคุณ:</label>
+        <textarea name="comment" id="comment" rows="4"
+                  class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-300"
+                  placeholder="พิมพ์ความคิดเห็นของคุณ..."></textarea>
+      </div>
+
+      <!-- ✅ อัปโหลดรูปภาพ -->
+      <div class="mb-5">
+        <label for="image" class="block font-medium mb-1">แนบรูปภาพรีวิว (ถ้ามี):</label>
+        <input type="file" name="image" id="image" accept="image/*"
+               class="w-full text-sm text-gray-700 border rounded-lg cursor-pointer bg-gray-50
+                      file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0
+                      file:bg-pink-500 file:text-white hover:file:bg-pink-600">
+      </div>
+
+      <!-- ปุ่มส่ง -->
+      <div class="text-right">
+        <button type="submit" class="px-6 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600">
+          ส่งรีวิว
+        </button>
+      </div>
+    </form>
+  </div>
+
+</body>
+</html>
