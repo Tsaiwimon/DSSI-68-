@@ -1,0 +1,174 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>เสร็จสิ้น — {{ dress.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- สไตล์สำหรับสั่งพิมพ์: ซ่อนส่วนที่ไม่เกี่ยว และจัดใบรับชุดให้พิมพ์สวย -->
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; }
+      header, nav { display: none !important; }
+      main { padding: 0 !important; }
+      .print-card {
+        border: 1px solid #e5e7eb; /* gray-200 */
+        padding: 16px;
+        border-radius: 12px;
+      }
+      .print-title { font-size: 18px; font-weight: 700; }
+      .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .print-row { display: flex; justify-content: space-between; margin: 4px 0; }
+      .print-note { font-size: 12px; color: #374151; } /* gray-700 */
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+
+  <!-- Header + Stepper -->
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow no-print">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+      <div class="flex items-center gap-3">
+        <a href="{% url 'dress:home' %}" class="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 hover:bg-white shadow">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </a>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-800">เสร็จสิ้น</h1>
+      </div>
+
+      <!-- Stepper: ให้ 1–3 ทึบ, ขั้นที่ 4 เป็น active -->
+      <nav class="mt-4">
+        <ol class="max-w-6xl mx-auto flex items-center gap-2 text-xs sm:text-sm">
+          <li class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center bg-teal-600 text-white font-semibold">1</span>
+            <span class="text-gray-800">เลือกชุด</span>
+          </li>
+          <span class="h-px flex-1 bg-teal-300"></span>
+          <li class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center bg-teal-600 text-white font-semibold">2</span>
+            <span class="text-gray-800">ยืนยัน</span>
+          </li>
+          <span class="h-px flex-1 bg-teal-300"></span>
+          <li class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center bg-teal-600 text-white font-semibold">3</span>
+            <span class="text-gray-800">ชำระเงิน</span>
+          </li>
+          <span class="h-px flex-1 bg-teal-300"></span>
+          <li class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-full flex items-center justify-center ring-2 ring-teal-600 text-teal-700 bg-white font-semibold">4</span>
+            <span class="text-gray-900 font-semibold">เสร็จสิ้น</span>
+          </li>
+        </ol>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+    <section class="bg-white rounded-xl shadow border p-4 sm:p-6">
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">บันทึกการจองสำเร็จ</h2>
+          <p class="text-sm text-gray-600">
+            โปรดนำ <span class="font-semibold">ใบรับชุด</span> ไปยื่นที่หน้าร้านในวันรับชุด
+            เลขที่อ้างอิง
+            <span class="font-semibold">
+              {{ order_ref|default:request.GET.order_ref|default:"ORD-" }}{{ dress.id }}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 grid md:grid-cols-2 gap-6">
+        <!-- ซ้าย: รายละเอียดคำสั่งซื้อ -->
+        <div class="rounded-lg border p-4">
+          <h3 class="font-semibold text-gray-800">รายละเอียดคำสั่งซื้อ</h3>
+          <div class="mt-4 flex gap-3">
+            <img src="{{ dress.image.url }}" alt="{{ dress.name }}" class="w-16 h-16 rounded-lg object-cover border" />
+            <div class="min-w-0">
+              <div class="font-medium text-gray-800 truncate">{{ dress.name }}</div>
+              <div class="text-xs text-gray-500">
+                {{ start_date|default:request.GET.start_date }} – {{ end_date|default:request.GET.end_date }}
+                {% if days|default:request.GET.days %} ({{ days|default:request.GET.days }} วัน){% endif %}
+              </div>
+              <div class="text-xs text-gray-500">
+                วิธีรับชุด:
+                {% if method|default:request.GET.method == "delivery" %}จัดส่งถึงบ้าน{% else %}มารับเองที่ร้าน{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 space-y-2 text-sm max-w-md">
+            <div class="flex justify-between">
+              <span>ค่าเช่า</span>
+              <span>฿{{ rental_fee|default:request.GET.rental_fee|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>ค่ามัดจำ</span>
+              <span>฿{{ deposit|default:request.GET.deposit|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>ค่าส่ง</span>
+              <span>฿{{ shipping|default:request.GET.shipping|floatformat:2 }}</span>
+            </div>
+            <div class="border-t pt-2 font-semibold flex justify-between text-base">
+              <span>ยอดรวม</span>
+              <span>฿{{ amount_baht|default:request.GET.amount_baht|floatformat:2 }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ขวา: ใบนำเสนอ/ใบรับชุด -->
+        <div class="rounded-lg border p-4 print-card">
+          <h3 class="font-semibold text-gray-800 print-title">ใบนำเสนอ/ใบรับชุด</h3>
+          <dl class="mt-3 space-y-2 text-sm">
+            <div class="flex justify-between"><dt class="text-gray-600">ผู้เช่า</dt><dd class="font-medium">{{ request.user.username }}</dd></div>
+            <div class="flex justify-between">
+              <dt class="text-gray-600">ช่วงรับชุด</dt>
+              <dd class="font-medium">
+                {% if pickup_slot|default:request.GET.pickup_slot == "morning" %}เช้า (09:00–12:00){% elif pickup_slot|default:request.GET.pickup_slot == "afternoon" %}บ่าย (13:00–17:00){% elif pickup_slot|default:request.GET.pickup_slot == "evening" %}เย็น (18:00–20:00){% else %}-{% endif %}
+              </dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-gray-600">ช่วงคืนชุด</dt>
+              <dd class="font-medium">
+                {% if return_slot|default:request.GET.return_slot == "morning" %}เช้า (09:00–12:00){% elif return_slot|default:request.GET.return_slot == "afternoon" %}บ่าย (13:00–17:00){% elif return_slot|default:request.GET.return_slot == "evening" %}เย็น (18:00–20:00){% else %}-{% endif %}
+              </dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-gray-600">วิธีรับชุด</dt>
+              <dd class="font-medium">{% if method|default:request.GET.method == "delivery" %}จัดส่งถึงบ้าน{% else %}มารับเองที่ร้าน{% endif %}</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-gray-600">เลขที่อ้างอิง</dt>
+              <dd class="font-medium">
+                {{ order_ref|default:request.GET.order_ref|default:"ORD-" }}{{ dress.id }}
+              </dd>
+            </div>
+          </dl>
+
+          <p class="mt-3 text-xs text-gray-600 print-note">
+            กรุณานำบัตรประชาชนหรือเอกสารที่มีรูปถ่าย และใบรับชุดฉบับนี้แสดงที่หน้าร้านเพื่อรับชุด
+            ระบบจะชำระเงินที่หน้าร้านตามยอดคงค้าง (ค่าส่ง = 0 สำหรับมารับเอง)
+          </p>
+
+          <div class="mt-4 flex gap-2 no-print">
+            <button onclick="window.print()" class="px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700">พิมพ์ใบสรุป</button>
+            <a href="{% url 'dress:home' %}" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-medium hover:bg-gray-300">กลับหน้าแรก</a>
+            <a href="{% url 'dress:rental_history' %}" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-medium hover:bg-gray-300">ประวัติการเช่า</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+</body>
+</html>

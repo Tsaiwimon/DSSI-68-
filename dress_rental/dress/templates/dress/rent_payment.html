@@ -6,6 +6,21 @@
   <title>ชำระเงิน — {{ dress.name }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- สไตล์พิมพ์ (ซ่อนส่วนที่ไม่เกี่ยวเวลา print) -->
+  <style>
+    @media print {
+      header, .no-print { display: none !important; }
+      body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .receipt-card {
+        width: 210mm; min-height: 297mm; margin: 0 auto; padding: 16mm; box-sizing: border-box;
+        border: 1px solid #e5e7eb; border-radius: 8px;
+      }
+      .receipt-title { font-size: 18pt; font-weight: 700; margin-bottom: 8mm; }
+      .row { display: flex; justify-content: space-between; margin-bottom: 2mm; font-size: 11pt; }
+      .total { margin-top: 4mm; padding-top: 3mm; border-top: 1px solid #e5e7eb; font-weight: 700; }
+    }
+  </style>
 </head>
 <body class="bg-gray-50">
 
@@ -47,15 +62,22 @@
     </div>
   </header>
 
-  <!-- Main: กล่องเดียว มี 2 คอลัมน์ด้านใน -->
+  <!-- ใช้ pay_method จาก view -->
+  {% with pm=pay_method %}
   <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
     <section class="bg-white rounded-xl shadow border">
-      <!-- แท็บวิธีชำระ (คงไว้แบบเดิม) -->
+      <!-- แท็บวิธีชำระ แสดงสถานะปัจจุบัน -->
       <div class="px-4 sm:px-6 pt-4">
         <div class="inline-flex rounded-md bg-teal-50 p-1">
-          <button class="px-3 py-1.5 text-sm rounded-md bg-teal-600 text-white font-medium cursor-default">
-            พร้อมเพย์ / โอนเงิน
-          </button>
+          {% if pm == 'pay_at_store' %}
+            <button class="px-3 py-1.5 text-sm rounded-md bg-teal-600 text-white font-medium cursor-default">
+              ชำระที่หน้าร้าน
+            </button>
+          {% else %}
+            <button class="px-3 py-1.5 text-sm rounded-md bg-teal-600 text-white font-medium cursor-default">
+              พร้อมเพย์ / โอนเงิน
+            </button>
+          {% endif %}
         </div>
       </div>
 
@@ -72,6 +94,9 @@
                 {{ start_date|date:"Y-m-d" }} – {{ end_date|date:"Y-m-d" }}{% if days %} ({{ days }} วัน){% endif %}
               </div>
               {% endif %}
+              <div class="text-xs text-gray-500 mt-1">
+                วิธีรับชุด: {% if method == 'delivery' %}จัดส่งถึงบ้าน{% else %}มารับเองที่ร้าน{% endif %}
+              </div>
             </div>
           </div>
 
@@ -85,75 +110,120 @@
           </div>
 
           <p class="text-xs text-gray-500 mt-3">
-            * ระบบจะยืนยันการชำระโดยอัตโนมัติผ่าน Webhook ของ Omise
+            {% if pm == 'pay_at_store' %}
+              * โปรดพิมพ์ใบรับชุดและนำไปแสดงที่หน้าร้านเพื่อรับชุด
+            {% else %}
+              * ระบบจะยืนยันการชำระโดยอัตโนมัติผ่าน Webhook ของ Omise
+            {% endif %}
           </p>
         </div>
 
-        <!-- ขวา: ข้อมูลการชำระ + QR -->
-        <div>
-          <!-- ข้อมูลการชำระ (อยู่ด้านบนของ QR) -->
+        <!-- ขวา: โหมดชำระ “หน้าร้าน” -->
+        {% if pm == 'pay_at_store' %}
           <div class="rounded-lg border p-4">
-            <h3 class="font-semibold text-gray-800">ข้อมูลการชำระ</h3>
+            <h3 class="font-semibold text-gray-800">ใบรับชุดสำหรับยื่นหน้าร้าน</h3>
             <dl class="mt-3 space-y-2 text-sm">
+              <div class="flex justify-between"><dt class="text-gray-600">ชื่อผู้เช่า</dt><dd class="font-medium">{{ request.user.username }}</dd></div>
               <div class="flex justify-between">
-                <dt class="text-gray-600">ช่องทาง</dt>
-                <dd class="font-medium">PromptPay (Omise)</dd>
+                <dt class="text-gray-600">ช่วงรับชุด</dt>
+                <dd class="font-medium">
+                  {% if pickup_slot == 'morning' %}เช้า (09:00–12:00)
+                  {% elif pickup_slot == 'afternoon' %}บ่าย (13:00–17:00)
+                  {% elif pickup_slot == 'evening' %}เย็น (18:00–20:00)
+                  {% else %}-{% endif %}
+                </dd>
               </div>
               <div class="flex justify-between">
-                <dt class="text-gray-600">เลขที่คำสั่งซื้อ</dt>
-                <dd id="orderNo" class="font-medium">-</dd>
+                <dt class="text-gray-600">ช่วงคืนชุด</dt>
+                <dd class="font-medium">
+                  {% if return_slot == 'morning' %}เช้า (09:00–12:00)
+                  {% elif return_slot == 'afternoon' %}บ่าย (13:00–17:00)
+                  {% elif return_slot == 'evening' %}เย็น (18:00–20:00)
+                  {% else %}-{% endif %}
+                </dd>
               </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-600">สถานะ</dt>
-                <dd id="payStatus" class="font-medium">กำลังสร้าง QR...</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-600">หมดอายุ</dt>
-                <dd id="expTime" class="font-medium">-</dd>
-              </div>
+              <div class="flex justify-between"><dt class="text-gray-600">วิธีรับ</dt><dd class="font-medium">มารับเองที่ร้าน</dd></div>
+              <div class="flex justify-between"><dt class="text-gray-600">เลขที่อ้างอิง</dt><dd class="font-medium">{{ order_ref|default:"ORD-" }}{{ dress.id }}</dd></div>
             </dl>
-          </div>
 
-          <!-- QR -->
-          <div class="mt-4 rounded-lg border p-4">
-            <h3 class="font-semibold text-gray-800">สแกนเพื่อชำระ</h3>
-            <p class="text-xs text-gray-500 mt-1">เมื่อชำระเสร็จ ระบบจะอัปเดตอัตโนมัติผ่าน Webhook</p>
-
-            <div id="qrBox" class="mt-4 flex items-center justify-center">
-              <div class="w-64 h-64 rounded-lg bg-gray-100 border flex items-center justify-center">
-                <svg class="w-8 h-8 animate-spin text-gray-400" viewBox="0 0 24 24" fill="none">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                </svg>
-              </div>
+            <div class="mt-3 text-xs text-gray-600 bg-gray-50 border rounded p-3">
+              กดพิมพ์เพื่อเก็บเอกสาร หรือแสดงใบรับชุดนี้ในมือถือที่หน้าร้าน ระบบจะชำระที่หน้าร้านตามยอดด้านซ้าย
             </div>
 
-            <!-- แถบเหลืองเด่น -->
-            <p id="expireHint"
-               class="mt-3 hidden text-sm rounded-md border border-amber-200 bg-amber-50 text-amber-900 px-3 py-2">
-              โปรดสแกนและชำระภายใน <span class="font-semibold">45 นาที</span>
-              <span id="countdown" class="ml-1 text-amber-700">(เหลือ -:-)</span>
-            </p>
+            <div class="mt-4 flex gap-2">
+              <button onclick="window.print()" class="px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700">
+                พิมพ์ใบรับชุด
+              </button>
 
-            <p id="expiredNote" class="mt-3 text-sm text-red-600 hidden">
-              QR นี้หมดเวลาแล้ว โปรดรีเฟรชหน้าเพื่อขอ QR ใหม่
-            </p>
+              <a
+                href="{% url 'dress:rent_success' dress.id %}?pay_method=pay_at_store&method={{ method }}&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}&days={{ days }}&rental_fee={{ rental_fee }}&deposit={{ deposit }}&shipping={{ shipping }}&amount_baht={{ amount_baht }}&pickup_slot={{ pickup_slot }}&return_slot={{ return_slot }}&order_ref={{ order_ref|default:'ORD-' }}{{ dress.id }}"
+                class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-medium hover:bg-gray-300">
+                เสร็จสิ้น
+              </a>
+            </div>
           </div>
-        </div>
+        {% else %}
+        <!-- ขวา: โหมดพร้อมเพย์ (แสดง QR) -->
+          <div>
+            <div class="rounded-lg border p-4">
+              <h3 class="font-semibold text-gray-800">ข้อมูลการชำระ</h3>
+              <dl class="mt-3 space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <dt class="text-gray-600">ช่องทาง</dt>
+                  <dd class="font-medium">PromptPay (Omise)</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-600">เลขที่คำสั่งซื้อ</dt>
+                  <dd id="orderNo" class="font-medium">-</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-600">สถานะ</dt>
+                  <dd id="payStatus" class="font-medium">กำลังสร้าง QR...</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="text-gray-600">หมดอายุ</dt>
+                  <dd id="expTime" class="font-medium">-</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div class="mt-4 rounded-lg border p-4">
+              <h3 class="font-semibold text-gray-800">สแกนเพื่อชำระ</h3>
+              <p class="text-xs text-gray-500 mt-1">เมื่อชำระเสร็จ ระบบจะอัปเดตอัตโนมัติผ่าน Webhook</p>
+
+              <div id="qrBox" class="mt-4 flex items-center justify-center">
+                <div class="w-64 h-64 rounded-lg bg-gray-100 border flex items-center justify-center">
+                  <svg class="w-8 h-8 animate-spin text-gray-400" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                </div>
+              </div>
+
+              <p id="expireHint"
+                 class="mt-3 hidden text-sm rounded-md border border-amber-200 bg-amber-50 text-amber-900 px-3 py-2">
+                โปรดสแกนและชำระภายใน <span class="font-semibold">45 นาที</span>
+                <span id="countdown" class="ml-1 text-amber-700">(เหลือ -:-)</span>
+              </p>
+
+              <p id="expiredNote" class="mt-3 text-sm text-red-600 hidden">
+                QR นี้หมดเวลาแล้ว โปรดรีเฟรชหน้าเพื่อขอ QR ใหม่
+              </p>
+            </div>
+          </div>
+        {% endif %}
       </div>
     </section>
   </main>
 
+  <!-- สคริปต์สร้าง QR — จะทำงานเฉพาะโหมดพร้อมเพย์ -->
+  {% if pm != 'pay_at_store' %}
   <script>
-    // ===== ค่าที่ได้จาก server =====
-    const METHOD = "{{ method|default:'pickup' }}"; // 'delivery' | 'pickup'
+    const METHOD = "{{ method|default:'pickup' }}";
     const AMOUNT = Number(("{{ amount_baht|default:'0' }}").toString().replace(/,/g,'')) || 0;
 
-    // ===== URL สำหรับสร้าง PromptPay Charge / success =====
     const CREATE_URL  = "{% url 'dress:create_promptpay_charge' dress.id %}";
-    const SUCCESS_URL = "{% url 'dress:rent_success' dress.id %}";
 
-    // ===== Refs =====
     const qrBox       = document.getElementById('qrBox');
     const orderNoNode = document.getElementById('orderNo');
     const payStatus   = document.getElementById('payStatus');
@@ -162,8 +232,7 @@
     const expiredNote = document.getElementById('expiredNote');
     const countdown   = document.getElementById('countdown');
 
-    let expireAt = null; // unix sec
-    let tickId   = null;
+    let expireAt = null, tickId = null;
 
     function fmtTime(ts){
       const d = new Date(ts * 1000);
@@ -207,7 +276,6 @@
         expireAt = data.expires_at || Math.floor(Date.now()/1000) + 45*60;
         expNode.textContent     = fmtTime(expireAt);
 
-        // แสดง QR
         const img = new Image();
         img.className = 'w-64 h-64 rounded-lg border bg-white';
         img.alt = 'PromptPay QR';
@@ -225,5 +293,7 @@
 
     document.addEventListener('DOMContentLoaded', createCharge);
   </script>
+  {% endif %}
+  {% endwith %}
 </body>
 </html>

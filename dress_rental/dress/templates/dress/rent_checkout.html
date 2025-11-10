@@ -154,6 +154,22 @@
             </select>
             <p class="text-xs text-gray-500">* ค่าส่งคำนวณตามจำนวนชุดในออเดอร์ (1–2 ชุด ฿50 | 3–5 ชุด ฿65 | มากกว่า 5 ชุด ฿65)</p>
           </div>
+
+          <!-- เติม: วิธีชำระเงิน (แสดงเฉพาะกรณีมารับเอง) -->
+          <div id="payMethodBox" class="mt-4 hidden">
+            <p class="text-sm font-semibold text-gray-800">วิธีชำระเงิน</p>
+            <div class="mt-2 space-x-6 text-sm">
+              <label class="inline-flex items-center">
+                <input type="radio" name="pay_method" value="promptpay" class="mr-2" checked>
+                ชำระผ่านพร้อมเพย์ (QR)
+              </label>
+              <label class="inline-flex items-center">
+                <input type="radio" name="pay_method" value="pay_at_store" class="mr-2">
+                ชำระเงินที่หน้าร้าน
+              </label>
+            </div>
+          </div>
+          <!-- จบส่วนเติม -->
         </div>
 
         <div class="mt-6">
@@ -282,6 +298,9 @@
     const phoneErr   = document.getElementById('phoneErr');
     const agreeTerms = document.getElementById('agreeTerms');
 
+    /* เติม: กล่องเลือกวิธีชำระเงิน */
+    const payBox = document.getElementById('payMethodBox');
+
     function validName(){ return (nameInput.value || '').trim().length >= 2; }
     function validPhone(){ const d = digits(phoneInput.value); return d.length >= 9 && d.length <= 10; }
     function formatPhoneMask(){
@@ -298,6 +317,9 @@
 
       pickupWrap.classList.toggle('hidden', isDelivery);
       deliveryWrap.classList.toggle('hidden', !isDelivery);
+
+      /* เติม: โชว์/ซ่อนกล่องวิธีชำระเงินเฉพาะกรณีรับเอง */
+      if (payBox) payBox.classList.toggle('hidden', isDelivery);
 
       addressInput && (addressInput.required = isDelivery);
       deliverySlot && (deliverySlot.required = isDelivery);
@@ -362,6 +384,12 @@
       } else {
         if (pickupSlot && pickupSlot.value) params.set("pickup_slot", pickupSlot.value);
         if (returnSlot && returnSlot.value) params.set("return_slot", returnSlot.value);
+
+        /* เติม: แนบวิธีชำระเงินเมื่อมารับเอง */
+        let payMethod = "promptpay";
+        const pm = document.querySelector('input[name="pay_method"]:checked');
+        if (pm && pm.value) payMethod = pm.value;
+        params.set("pay_method", payMethod);
       }
 
       // แสดงสถานะระหว่าง redirect

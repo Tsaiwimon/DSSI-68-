@@ -14,7 +14,7 @@
   <div class="w-full px-8 py-6 flex justify-between items-center">
     <h1 class="text-2xl font-bold text-gray-800">ตะกร้าสินค้า ({{ cart_items.count }})</h1>
     <div class="flex items-center gap-4">
-      <a href="{% url 'member_home' %}" class="flex items-center text-gray-700 hover:text-pink-600 transition">
+      <a href="{% url 'dress:member_home' %}" class="flex items-center text-gray-700 hover:text-pink-600 transition">
         ← กลับหน้าหลัก
       </a>
       <button id="edit-btn" class="bg-gray-200 text-gray-800 px-4 py-1 rounded hover:bg-gray-300 transition">
@@ -37,7 +37,7 @@
             <input type="checkbox" class="edit-checkbox hidden w-5 h-5 accent-pink-500" data-id="{{ item.id }}">
 
             <!-- รูป -->
-            <a href="{% url 'dress_detail' item.dress.id %}" 
+            <a href="{% url 'dress:dress_detail' item.dress.id %}" 
                class="transition transform hover:scale-105 hover:shadow-lg cursor-pointer rounded-lg">
               {% if item.dress.image %}
                 <img src="{{ item.dress.image.url }}" alt="{{ item.dress.name }}" class="w-20 h-24 object-cover rounded-lg">
@@ -48,14 +48,14 @@
 
             <!-- ข้อมูลสินค้า -->
             <div>
-              <a href="{% url 'dress_detail' item.dress.id %}" 
+              <a href="{% url 'dress:dress_detail' item.dress.id %}" 
                  class="font-medium text-gray-800 hover:text-pink-600 transition cursor-pointer">
                 {{ item.dress.name }}
               </a>
               <p><span class="font-semibold">ขนาด:</span> {{ item.dress.size|default:"-" }}</p>
 
               <!-- ✅ ปุ่มดูรายละเอียด (เพิ่มใหม่ให้ทุกชุดมีของตัวเอง) -->
-              <a href="{% url 'dress_detail' item.dress.id %}" 
+              <a href="{% url 'dress:dress_detail' item.dress.id %}" 
                  class="inline-block mt-1 bg-pink-100 text-pink-600 px-3 py-1 rounded hover:bg-pink-200 transition text-xs font-medium">
                 ดูรายละเอียด
               </a>

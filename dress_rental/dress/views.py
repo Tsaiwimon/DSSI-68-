@@ -3,6 +3,12 @@ import json
 import time
 from datetime import datetime
 
+import omise
+from django.conf import settings
+omise.api_public = settings.OMISE_PUBLIC_KEY
+omise.api_secret = settings.OMISE_SECRET_KEY
+
+
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -18,7 +24,9 @@ from django.views.decorators.http import require_POST
 from .models import (
     Shop, Dress, Category, Review, Favorite, CartItem, Rental, UserProfile,
     PriceTemplate, PriceTemplateItem, ShippingRule, ShippingBracket
+
 )
+
 
 # =========================
 # หน้าแรก (สาธารณะ)
@@ -1128,40 +1136,70 @@ def _quote_for(dress, start_date, end_date, method="pickup"):
 # =========================
 # ชำระเงิน
 # =========================
+
+
 @login_required(login_url="dress:login")
 def rent_payment(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
 
-    # ลองอ่านจาก session (มาจาก POST ของ checkout) ก่อน
-    sess = request.session.get("checkout") or {}
-    if sess and int(sess.get("dress_id", 0)) == dress.id:
-        start_date = _parse_date(sess.get("start_date") or "")
-        end_date   = _parse_date(sess.get("end_date") or "")
-        method     = (sess.get("receive_method") or "pickup").strip()
+    # --- helpers ---
+    def _norm_method(val: str) -> str:
+        return "delivery" if (val or "").strip() == "delivery" else "pickup"
 
-        rental_fee = float(sess.get("rental_fee") or 0)
-        deposit    = float(sess.get("deposit") or 0)
-        shipping   = float(sess.get("shipping") or 0)
-        amount     = float(sess.get("amount_baht") or 0)
-        days       = int(sess.get("days") or 0)
-        address    = sess.get("address")
-        pickup_slot = sess.get("pickup_slot")
-        return_slot = sess.get("return_slot")
+    def _norm_pay(val: str) -> str:
+        return "pay_at_store" if (val or "").strip() == "pay_at_store" else "promptpay"
+
+    def _to_money(x) -> float:
+        try:
+            return float(Decimal(str(x)))
+        except Exception:
+            return 0.0
+
+    sess = request.session.get("checkout") or {}
+    pay_method_qs = _norm_pay(request.GET.get("pay_method") or "")
+
+    if sess and int(sess.get("dress_id", 0)) == dress.id:
+        start_date    = _parse_date(sess.get("start_date") or "")
+        end_date      = _parse_date(sess.get("end_date") or "")
+        method        = _norm_method(sess.get("receive_method") or "pickup")
+
+        rental_fee    = _to_money(sess.get("rental_fee"))
+        deposit       = _to_money(sess.get("deposit"))
+        shipping      = _to_money(sess.get("shipping"))
+        amount        = _to_money(sess.get("amount_baht"))
+        days          = int(sess.get("days") or 0)
+
+        address       = sess.get("address")
+        pickup_slot   = sess.get("pickup_slot")
+        return_slot   = sess.get("return_slot")
         delivery_slot = sess.get("delivery_slot")
+
+        pay_method    = pay_method_qs or _norm_pay(sess.get("pay_method") or "promptpay")
     else:
-        # fallback: อ่านจาก query string
         start_date = _parse_date((request.GET.get("start_date") or request.GET.get("start") or "").strip())
         end_date   = _parse_date((request.GET.get("end_date")   or request.GET.get("end")   or "").strip())
-        method     = (request.GET.get("method") or "pickup").strip()
-        q = _quote_for(dress, start_date, end_date, method)
+        method     = _norm_method(request.GET.get("method") or "pickup")
 
+        q = _quote_for(dress, start_date, end_date, method)
         days, rental_fee, deposit, shipping, amount = (
-            q["days"], q["rental_fee"], q["deposit"], q["shipping"], q["amount_baht"]
+            int(q["days"]),
+            _to_money(q["rental_fee"]),
+            _to_money(q["deposit"]),
+            _to_money(q["shipping"]),
+            _to_money(q["amount_baht"]),
         )
-        address = request.GET.get("address")
-        pickup_slot = request.GET.get("pickup_slot")
-        return_slot = request.GET.get("return_slot")
+
+        address       = request.GET.get("address")
+        pickup_slot   = request.GET.get("pickup_slot")
+        return_slot   = request.GET.get("return_slot")
         delivery_slot = request.GET.get("delivery_slot")
+
+        pay_method    = pay_method_qs or "promptpay"
+
+    # pickup + pay_at_store = ไม่มีค่าส่ง
+    if method == "pickup" and pay_method == "pay_at_store":
+        shipping = 0.0
+        amount   = float(rental_fee) + float(deposit) + float(shipping)
 
     ctx = {
         "dress": dress,
@@ -1169,6 +1207,7 @@ def rent_payment(request, dress_id):
         "end_date": end_date,
         "days": days,
         "method": method,
+        "pay_method": pay_method,   # ใช้ใน template เพื่อสลับ QR/ใบรับชุด
         "rental_fee": rental_fee,
         "deposit": deposit,
         "shipping": shipping,
@@ -1180,32 +1219,178 @@ def rent_payment(request, dress_id):
     }
     return render(request, "dress/rent_payment.html", ctx)
 
-# สร้าง Omise PromptPay Charge (mock)
+
+
+
+
+
+
+# ตั้งคีย์จาก settings (โหลดจาก .env แล้ว)
+omise.api_public = settings.OMISE_PUBLIC_KEY or ""
+omise.api_secret = settings.OMISE_SECRET_KEY or ""
+
+
+# ---------------------------------------------------------------------
+# 1) สร้าง Omise PromptPay Charge (SANDBOX) + ถอยกลับเป็น mock เมื่อจำเป็น
+# ---------------------------------------------------------------------
 @require_POST
-@csrf_exempt
+@csrf_exempt  # ถ้าอยากเปิด CSRF ให้ส่ง csrftoken จาก fetch ด้วย
 def create_promptpay_charge(request, dress_id):
-    amount = request.POST.get("amount")
-    method = request.POST.get("method")  # 'delivery' | 'pickup'
-    if not amount:
+    amount_str = request.POST.get("amount")
+    method = (request.POST.get("method") or "").strip()  # 'delivery' | 'pickup'
+
+    if not amount_str:
         return HttpResponseBadRequest("Missing amount")
 
-    data = {
-        "order_no": f"ORD-{dress_id}-{int(time.time())}",
-        "status": "pending",
-        "qr_image": "/static/img/mock-qr.png",
-        "charge_id": "chrg_test_123",
-        "expires_at": int(time.time()) + 900,    # 15 นาที
-        "method": method,
-        "amount": int(float(amount)),
-    }
-    return JsonResponse(data)
+    try:
+        amount_baht = float(amount_str)
+    except ValueError:
+        return HttpResponseBadRequest("Invalid amount")
 
+    # ถ้าไม่มีคีย์ ให้คืนค่า mock เพื่อไม่ให้พัง
+    if not (settings.OMISE_PUBLIC_KEY and settings.OMISE_SECRET_KEY):
+        data = {
+            "order_no": f"ORD-{dress_id}-{int(time.time())}",
+            "status": "pending",
+            "qr_image": "/static/img/mock-qr.png",
+            "charge_id": "chrg_mock_" + str(int(time.time())),
+            "expires_at": int(time.time()) + 45 * 60,
+            "method": method,
+            "amount": int(round(amount_baht)),
+        }
+        return JsonResponse(data)
+
+    try:
+        # แปลงเป็นสตางค์ตาม Omise (integer)
+        amount_satang = int(round(amount_baht * 100))
+
+        # 1) สร้าง Source แบบ promptpay
+        source = omise.Source.create(
+            type="promptpay",
+            amount=amount_satang,
+            currency=settings.OMISE_CURRENCY or "thb",
+        )
+
+        # 2) สร้าง Charge อ้างอิง source
+        charge = omise.Charge.create(
+            amount=amount_satang,
+            currency=settings.OMISE_CURRENCY or "thb",
+            source=source.id,
+            metadata={
+                "dress_id": dress_id,
+                "user_id": request.user.id if request.user.is_authenticated else None,
+                "receive_method": method,
+            },
+        )
+
+        # 3) ดึงข้อมูลรูป QR + เวลาหมดอายุ (ถ้ามี)
+        qr_url = None
+        exp_unix = None
+        try:
+            qr_url = charge.source.scannable_code.image.download_uri
+        except Exception:
+            qr_url = None
+
+        try:
+            exp_unix = charge.source.references.expires_at
+        except Exception:
+            exp_unix = None
+
+        data = {
+            "order_no": charge.id,                     # ใช้ charge.id เป็นเลขอ้างอิง
+            "status": charge.status,                   # ส่วนใหญ่ 'pending' ใน Sandbox
+            "qr_image": qr_url or "/static/img/mock-qr.png",
+            "charge_id": charge.id,
+            "expires_at": exp_unix or (int(time.time()) + 45 * 60),
+            "method": method,
+            "amount": int(round(amount_baht)),
+        }
+        return JsonResponse(data)
+
+    except omise.errors.BaseError as e:
+        # ถ้ามี error จาก Omise ให้ถอยกลับเป็น mock เพื่อไม่ขัด flow
+        data = {
+            "order_no": f"ORD-{dress_id}-{int(time.time())}",
+            "status": "pending",
+            "qr_image": "/static/img/mock-qr.png",
+            "charge_id": "chrg_fallback_" + str(int(time.time())),
+            "expires_at": int(time.time()) + 45 * 60,
+            "method": method,
+            "amount": int(round(amount_baht)),
+            "note": f"omise_error:{str(e)}",
+        }
+        return JsonResponse(data, status=200)
+    except Exception as e:
+        return JsonResponse({"error": "unexpected: " + str(e)}, status=500)
+
+
+# ---------------------------------------------------------------------
+# 2) หน้าสำเร็จ (คงโค้ดเดิมของคุณไว้ แต่เพิ่มรองรับ charge_id จาก Sandbox)
+# ---------------------------------------------------------------------
 def rent_success(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
+
+    # อ่านจาก session ก่อน
+    sess = request.session.get("checkout") or {}
+    if sess and int(sess.get("dress_id", 0)) == dress.id:
+        start_date = _parse_date(sess.get("start_date") or "")
+        end_date   = _parse_date(sess.get("end_date") or "")
+        days       = int(sess.get("days") or 0)
+        method     = (sess.get("receive_method") or request.GET.get("method") or "pickup").strip()
+        rental_fee = float(sess.get("rental_fee") or 0)
+        deposit    = float(sess.get("deposit") or 0)
+        shipping   = float(sess.get("shipping") or 0)
+        amount     = float(sess.get("amount_baht") or 0)
+        pickup_slot = sess.get("pickup_slot")
+        return_slot = sess.get("return_slot")
+        order_ref   = request.GET.get("order_ref") or f"ORD-{dress_id}-{timezone.now().strftime('%m-%d')}"
+    else:
+        # fallback จาก query string
+        start_date = _parse_date(request.GET.get("start_date") or request.GET.get("start") or "")
+        end_date   = _parse_date(request.GET.get("end_date")   or request.GET.get("end")   or "")
+        days       = int(request.GET.get("days") or 0)
+        method     = (request.GET.get("method") or "pickup").strip()
+        rental_fee = float(request.GET.get("rental_fee") or 0)
+        deposit    = float(request.GET.get("deposit") or 0)
+        shipping   = float(request.GET.get("shipping") or 0)
+        amount     = float(request.GET.get("amount_baht") or 0)
+        pickup_slot = request.GET.get("pickup_slot")
+        return_slot = request.GET.get("return_slot")
+        order_ref   = request.GET.get("order_ref") or f"ORD-{dress_id}-{timezone.now().strftime('%m-%d')}"
+
+    # วิธีชำระ:
+    # - ถ้ามี charge_id (จาก Sandbox) ถือว่า paid via promptpay
+    # - ถ้าแนบ pay_method=pay_at_store แสดงใบรับชุด
+    charge_id  = request.GET.get("charge_id")
+    pay_method = request.GET.get("pay_method") or ("promptpay" if charge_id else "pay_at_store")
+
+    # ล้าง session checkout
+    if "checkout" in request.session:
+        try:
+            del request.session["checkout"]
+            request.session.modified = True
+        except Exception:
+            pass
+
     ctx = {
         "dress": dress,
-        "start_date": request.GET.get("start_date"),
-        "end_date": request.GET.get("end_date"),
-        "days": request.GET.get("days"),
+        "start_date": start_date,
+        "end_date": end_date,
+        "days": days,
+        "method": method,
+        "pay_method": pay_method,   # 'promptpay' | 'pay_at_store'
+        "rental_fee": rental_fee,
+        "deposit": deposit,
+        "shipping": shipping,
+        "amount_baht": amount,
+        "pickup_slot": pickup_slot,
+        "return_slot": return_slot,
+        "order_ref": order_ref or charge_id or "",
+        "charge_id": charge_id or "",
     }
     return render(request, "dress/rent_success.html", ctx)
+
+
+
+
+
