@@ -1,13 +1,15 @@
-Set-Content -Encoding UTF8 .gitignore @"
 venv/
-**/__pycache__/
+__pycache__/
 *.pyc
+
 media/
 staticfiles/
+
 .env
 .env.*
+
 .vscode/
 .idea/
+db.sqlite3
+
 .DS_Store
-Thumbs.db
-"@
