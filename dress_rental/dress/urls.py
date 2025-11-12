@@ -76,4 +76,8 @@ urlpatterns = [
     path("dress/<int:dress_id>/payment/", views.rent_payment, name="rent_payment"),
     path("dress/<int:dress_id>/payment/create-charge/", views.create_promptpay_charge, name="create_promptpay_charge"),
     path("dress/<int:dress_id>/success/",  views.rent_success,  name="rent_success"),
+
+
+    # Webhook (ตั้งใน Omise Dashboard ให้ยิงมาที่นี่)
+    path("omise/webhook/", views.omise_webhook, name="omise_webhook"),
 ]

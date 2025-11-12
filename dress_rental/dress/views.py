@@ -8,7 +8,6 @@ from django.conf import settings
 omise.api_public = settings.OMISE_PUBLIC_KEY
 omise.api_secret = settings.OMISE_SECRET_KEY
 
-
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -20,13 +19,15 @@ from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.utils import timezone  # เพิ่มให้รองรับการใช้ timezone
 
 from .models import (
     Shop, Dress, Category, Review, Favorite, CartItem, Rental, UserProfile,
     PriceTemplate, PriceTemplateItem, ShippingRule, ShippingBracket
-
 )
 
+# ค่าคงที่สำหรับรูป QR fallback (ชี้ไปที่ไฟล์ .svg)
+FALLBACK_QR_URL = "/static/img/mock-qr.svg"
 
 # =========================
 # หน้าแรก (สาธารณะ)
@@ -1137,7 +1138,6 @@ def _quote_for(dress, start_date, end_date, method="pickup"):
 # ชำระเงิน
 # =========================
 
-
 @login_required(login_url="dress:login")
 def rent_payment(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
@@ -1219,16 +1219,9 @@ def rent_payment(request, dress_id):
     }
     return render(request, "dress/rent_payment.html", ctx)
 
-
-
-
-
-
-
 # ตั้งคีย์จาก settings (โหลดจาก .env แล้ว)
 omise.api_public = settings.OMISE_PUBLIC_KEY or ""
 omise.api_secret = settings.OMISE_SECRET_KEY or ""
-
 
 # ---------------------------------------------------------------------
 # 1) สร้าง Omise PromptPay Charge (SANDBOX) + ถอยกลับเป็น mock เมื่อจำเป็น
@@ -1252,7 +1245,7 @@ def create_promptpay_charge(request, dress_id):
         data = {
             "order_no": f"ORD-{dress_id}-{int(time.time())}",
             "status": "pending",
-            "qr_image": "/static/img/mock-qr.png",
+            "qr_image": FALLBACK_QR_URL,  # เปลี่ยนเป็น .svg ผ่านค่าคงที่
             "charge_id": "chrg_mock_" + str(int(time.time())),
             "expires_at": int(time.time()) + 45 * 60,
             "method": method,
@@ -1299,7 +1292,7 @@ def create_promptpay_charge(request, dress_id):
         data = {
             "order_no": charge.id,                     # ใช้ charge.id เป็นเลขอ้างอิง
             "status": charge.status,                   # ส่วนใหญ่ 'pending' ใน Sandbox
-            "qr_image": qr_url or "/static/img/mock-qr.png",
+            "qr_image": qr_url or FALLBACK_QR_URL,     # เปลี่ยนเป็น .svg ผ่านค่าคงที่
             "charge_id": charge.id,
             "expires_at": exp_unix or (int(time.time()) + 45 * 60),
             "method": method,
@@ -1312,7 +1305,7 @@ def create_promptpay_charge(request, dress_id):
         data = {
             "order_no": f"ORD-{dress_id}-{int(time.time())}",
             "status": "pending",
-            "qr_image": "/static/img/mock-qr.png",
+            "qr_image": FALLBACK_QR_URL,  # เปลี่ยนเป็น .svg ผ่านค่าคงที่
             "charge_id": "chrg_fallback_" + str(int(time.time())),
             "expires_at": int(time.time()) + 45 * 60,
             "method": method,
@@ -1322,7 +1315,6 @@ def create_promptpay_charge(request, dress_id):
         return JsonResponse(data, status=200)
     except Exception as e:
         return JsonResponse({"error": "unexpected: " + str(e)}, status=500)
-
 
 # ---------------------------------------------------------------------
 # 2) หน้าสำเร็จ (คงโค้ดเดิมของคุณไว้ แต่เพิ่มรองรับ charge_id จาก Sandbox)
@@ -1390,7 +1382,34 @@ def rent_success(request, dress_id):
     }
     return render(request, "dress/rent_success.html", ctx)
 
+# ---- Omise Webhook (Sandbox/Dev) -----------------------------------
+@csrf_exempt
+def omise_webhook(request):
+    """
+    รับ Webhook จาก Omise (Sandbox)
+    ใน dev/staging เราเพียงแค่รับไว้และตอบ 200 กลับ เพื่อให้ Omise ไม่ส่งซ้ำ
+    คุณสามารถต่อยอด: อัปเดตสถานะคำสั่งซื้อ/บันทึก charge_id ลงฐานข้อมูล ฯลฯ
+    """
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method not allowed"}, status=405)
 
+    # อ่าน payload
+    try:
+        raw = request.body.decode("utf-8") if request.body else "{}"
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("invalid json")
 
+    # โครงสร้างทั่วไปของ Omise: {"key": "charge.complete", "data": {...}}
+    event_key = payload.get("key") or payload.get("type")
+    data = payload.get("data") or {}
+    charge_id = (data.get("id") or "") if isinstance(data, dict) else ""
 
+    # ตัวอย่าง: จัดการบางเหตุการณ์พื้นฐาน (ต่อยอดได้)
+    # - charge.complete => ชำระสำเร็จ
+    # - charge.failed   => ชำระล้มเหลว
+    # - charge.expired  => QR หมดอายุ
+    # TODO: map charge_id -> ออเดอร์ของคุณ แล้วอัปเดตสถานะใน DB ที่นี่
 
+    # ตอบกลับ 200 ให้ Omise ทราบว่าเรารับแล้ว
+    return JsonResponse({"ok": True, "event": event_key, "charge_id": charge_id})
