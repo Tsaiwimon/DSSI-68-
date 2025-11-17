@@ -209,6 +209,19 @@
               <p id="expiredNote" class="mt-3 text-sm text-red-600 hidden">
                 QR นี้หมดเวลาแล้ว โปรดรีเฟรชหน้าเพื่อขอ QR ใหม่
               </p>
+
+              <!-- ปุ่มยืนยันการชำระ (ไปหน้าเสร็จสิ้น) -->
+              <div class="mt-4 flex gap-2">
+                <a id="paidBtn"
+                   href="#"
+                   class="hidden px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700">
+                  ฉันชำระแล้ว
+                </a>
+                <button id="refreshBtn" type="button"
+                        class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 font-medium hover:bg-gray-300">
+                  ขอ QR ใหม่
+                </button>
+              </div>
             </div>
           </div>
         {% endif %}
@@ -223,6 +236,7 @@
     const AMOUNT = Number(("{{ amount_baht|default:'0' }}").toString().replace(/,/g,'')) || 0;
 
     const CREATE_URL  = "{% url 'dress:create_promptpay_charge' dress.id %}";
+    const SUCCESS_URL = "{% url 'dress:rent_success' dress.id %}";
 
     const qrBox       = document.getElementById('qrBox');
     const orderNoNode = document.getElementById('orderNo');
@@ -232,7 +246,10 @@
     const expiredNote = document.getElementById('expiredNote');
     const countdown   = document.getElementById('countdown');
 
-    let expireAt = null, tickId = null;
+    const paidBtn     = document.getElementById('paidBtn');
+    const refreshBtn  = document.getElementById('refreshBtn');
+
+    let expireAt = null, tickId = null, lastChargeId = null;
 
     function fmtTime(ts){
       const d = new Date(ts * 1000);
@@ -260,19 +277,44 @@
       }, 1000);
     }
 
+    function buildSuccessHref(chargeId){
+      // ส่งพารามิเตอร์ไป rent_success เพื่อให้หน้าเสร็จสิ้นแสดงข้อมูลถูกต้อง
+      const params = new URLSearchParams({
+        pay_method: 'promptpay',
+        method: "{{ method|default:'pickup' }}",
+        start_date: "{{ start_date|date:'Y-m-d' }}",
+        end_date: "{{ end_date|date:'Y-m-d' }}",
+        days: "{{ days|default:'0' }}",
+        rental_fee: "{{ rental_fee|default:'0' }}",
+        deposit: "{{ deposit|default:'0' }}",
+        shipping: "{{ shipping|default:'0' }}",
+        amount_baht: "{{ amount_baht|default:'0' }}",
+        pickup_slot: "{{ pickup_slot|default:'' }}",
+        return_slot: "{{ return_slot|default:'' }}",
+        charge_id: chargeId || ''
+      });
+      return `${SUCCESS_URL}?${params.toString()}`;
+    }
+
     async function createCharge(){
       try{
         payStatus.textContent = 'กำลังสร้าง QR...';
+        expiredNote.classList.add('hidden');
+        if (tickId) { clearInterval(tickId); tickId = null; }
+
         const res = await fetch(CREATE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({ amount: AMOUNT, method: METHOD })
         });
         if(!res.ok) throw new Error('สร้างรายการชำระล้มเหลว');
+
         const data = await res.json();
 
         orderNoNode.textContent = data.order_no || '-';
+        lastChargeId = data.charge_id || data.order_no || '';
         payStatus.textContent   = (data.status || 'pending') === 'pending' ? 'รอสแกนชำระ' : data.status;
+
         expireAt = data.expires_at || Math.floor(Date.now()/1000) + 45*60;
         expNode.textContent     = fmtTime(expireAt);
 
@@ -285,13 +327,20 @@
 
         expireHint.classList.remove('hidden');
         startCountdown();
+
+        // แสดงปุ่ม "ฉันชำระแล้ว" และผูกลิงก์ไปหน้าเสร็จสิ้น
+        paidBtn.classList.remove('hidden');
+        paidBtn.href = buildSuccessHref(lastChargeId);
+
       }catch(err){
         payStatus.textContent = 'เกิดข้อผิดพลาดในการสร้าง QR';
-        qrBox.innerHTML = '<div class="w-64 h-64 rounded-lg bg-red-50 border border-red-200 flex items-center justify-center text-red-600 text-sm">สร้าง QR ไม่สำเร็จ</div>';
+        qrBox.innerHTML = '<div class="w-64 h-64 rounded-lg bg-red-50 border border-red-200 flex items-center justify-center text-red-600 text-sm text-center px-2">สร้าง QR ไม่สำเร็จ</div>';
+        paidBtn.classList.add('hidden');
       }
     }
 
     document.addEventListener('DOMContentLoaded', createCharge);
+    refreshBtn?.addEventListener('click', createCharge);
   </script>
   {% endif %}
   {% endwith %}

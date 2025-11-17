@@ -40,6 +40,54 @@ class PlatformSettings(models.Model):
     def current(cls):
         obj = cls.objects.filter(is_active=True).order_by("-updated_at", "-id").first()
         return obj
+    
+
+# การขอถอนเงินของร้าน (แอดมินอนุมัติ/ปฏิเสธ)
+class WithdrawalRequest(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "รอดำเนินการ"),   # ร้านกดขอถอนแล้ว รอแอดมินตรวจสอบ
+        ("approved", "อนุมัติแล้ว"),  # แอดมินอนุมัติ เตรียมโอน
+        ("rejected", "ปฏิเสธ"),       # แอดมินปฏิเสธคำขอถอน
+        ("paid", "โอนเงินแล้ว"),      # โอนเงินจริงให้ร้านแล้ว
+    ]
+
+    store = models.ForeignKey(
+        "Shop",
+        on_delete=models.CASCADE,
+        related_name="withdraw_requests",
+    )
+    amount = models.DecimalField(max_digits=10, decimal_places=2)  # จำนวนเงินที่ขอถอน
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="pending",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)  # เวลาที่ร้านกดขอถอน
+    processed_at = models.DateTimeField(blank=True, null=True)    # เวลาที่แอดมินกดอนุมัติ/ปฏิเสธ/โอนแล้ว
+    note = models.CharField(max_length=255, blank=True, null=True)  # หมายเหตุจากแอดมิน (ถ้ามี)
+
+    def __str__(self):
+        return f"{self.store.name} ขอถอน {self.amount} ({self.status})"
+    
+
+
+class StoreTransaction(models.Model):
+    # ถ้า Shop กับ RentalOrder อยู่ใน app เดียวกัน (ไฟล์ models.py เดียวกัน)
+    store = models.ForeignKey('Shop', on_delete=models.CASCADE)
+    order = models.ForeignKey('RentalOrder', on_delete=models.CASCADE, null=True, blank=True)
+
+    gross_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    commission_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    net_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.store.name} - {self.net_amount} ฿"
+
+
 
 
 # =============================
@@ -94,6 +142,60 @@ class Shop(models.Model):
         if ps:
             return (ps.commission_rate, ps.commission_min_fee, ps.commission_vat_rate)
         return (Decimal("0.10"), Decimal("0.00"), Decimal("0.00"))
+    
+
+
+
+
+class RentalOrder(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'รอดำเนินการ'),
+        ('paid', 'ชำระเงินแล้ว'),
+        ('cancelled', 'ยกเลิก'),
+        ('completed', 'เช่าเสร็จแล้ว'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='rental_orders'
+    )
+
+    # ใช้ชื่อ model แบบ string
+    dress = models.ForeignKey(
+        'Dress',
+        on_delete=models.CASCADE,
+        related_name='rental_orders'
+    )
+
+    rental_shop = models.ForeignKey(
+        'Shop',
+        on_delete=models.CASCADE,
+        related_name='orders'
+    )
+
+    pickup_date = models.DateField()
+    return_date = models.DateField()
+
+    total_price = models.DecimalField(max_digits=8, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+
+    omise_charge_id = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return f"ORD-{self.id} ({self.user})"
+
+    
+
+
+
+    
 
 
 # =============================
@@ -333,6 +435,9 @@ class Review(models.Model):
     image = models.ImageField(upload_to='review_images/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    shop_reply = models.TextField(blank=True, null=True)
+    replied_at = models.DateTimeField(blank=True, null=True)
+
     class Meta:
         ordering = ("-created_at",)
 
@@ -480,6 +585,100 @@ class Rental(models.Model):
         if not self.rent_total or not self.grand_total:
             self.compute_totals()
         super().save(*args, **kwargs)
+
+
+
+#การแจ้งเตือน
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ("order", "คำสั่งเช่า"),
+        ("payment", "การชำระเงิน"),
+        ("reminder", "เตือนเวลา"),
+        ("shop_message", "ข้อความจากร้าน"),
+        ("system", "ระบบ"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+
+    type = models.CharField(
+        max_length=50,
+        choices=TYPE_CHOICES,
+        default="order",
+    )
+
+    related_order = models.ForeignKey(
+        "RentalOrder",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="notifications",
+    )
+
+    sender_shop = models.ForeignKey(
+        "Shop",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="sent_notifications",
+        help_text="ถ้าเป็นข้อความจากร้าน ระบุร้านที่ส่ง",
+    )
+
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} -> {self.user}"
+
+
+
+
+
+# =============================
+# การชำระเงิน (ผูกกับ Omise charge)
+# =============================
+class Payment(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+        ('expired', 'Expired'),
+    ]
+
+    # แนะนำให้ใช้ AUTH_USER_MODEL เพื่อยืดหยุ่นกว่าการ import User ตรง ๆ
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+
+    # หากยังไม่อยากผูก FK กับ Dress ตอนนี้ คงเป็น IntegerField ตามที่ระบุ
+    dress_id = models.IntegerField(null=True, blank=True)
+
+    # charge_id จาก Omise (เช่น chrg_test_xxx) ต้องไม่ซ้ำ
+    charge_id = models.CharField(max_length=64, unique=True)
+
+    # จำนวนเงินเป็น "สตางค์" (integer) ตามรูปแบบของ Omise
+    amount = models.IntegerField(default=0)
+
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='pending')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["charge_id"]),
+            models.Index(fields=["status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.charge_id} ({self.status})"
+    
 
 
 # =============================

@@ -24,7 +24,7 @@
 
 <body class="bg-gray-50">
 
-<!-- Header -->
+<!-- Header (คงดีไซน์เดิม) -->
 <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
   <div class="flex items-center justify-between px-10 py-10">
     <!-- ชื่อหน้า -->
@@ -42,13 +42,12 @@
       <span class="font-semibold text-lg">{{ store.name }}</span>
 
       <!-- ปุ่มฟันเฟือง -->
-      <button id="settingsButton" onclick="toggleDropdown()" 
+      <button id="settingsButton" onclick="toggleDropdown()"
               class="text-gray-700 hover:text-gray-900 focus:outline-none">
-        <!-- Heroicon: Cog -->
         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.591 1.093c1.53-.994 3.385.86 2.39 2.39a1.724 1.724 0 001.092 2.592c1.757.426 1.757 2.924 0 3.35a1.724 1.724 0 00-1.093 2.591c.994 1.53-.86 3.385-2.39 2.39a1.724 1.724 0 00-2.592 1.092c-.426 1.757-2.924 1.757-3.35 0a1.724 1.724 0 00-2.591-1.093c-1.53.995-3.385-.86-2.39-2.39a1.724 1.724 0 00-1.092-2.592c-1.757-.426-1.757-2.924 0-3.35a1.724 1.724 0 001.093-2.591c-.995-1.53.86-3.385 2.39-2.39a1.724 1.724 0 002.592-1.092z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       </button>
@@ -68,27 +67,27 @@
 
 <!-- Tabs -->
 <div class="flex justify-center space-x-3 bg-white shadow py-3 px-4 border-t border-gray-100">
-  <a href="{% url 'my_store' store.id %}" 
+  <a href="{% url 'dress:my_store' store.id %}"
      class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
     หน้าร้าน
   </a>
-  <a href="{% url 'store_dress' store.id %}" 
+  <a href="{% url 'dress:store_dress' store.id %}"
      class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
     รายการสินค้า
   </a>
-  <a href="{% url 'back_office' store.id %}" 
+  <a href="{% url 'dress:back_office' store.id %}"
      class="flex-1 text-center py-3 rounded-lg bg-black text-white font-semibold hover:bg-gray-800 transition">
     หลังร้าน
   </a>
 </div>
 
 <!-- Main Content -->
-<main class="max-w-5xl mx-auto px-4 py-10">
+<main class="max-w-5xl mx-auto px-4 py-10 space-y-10">
 
   <!-- ข้อมูลร้าน -->
-  <div class="bg-white shadow-md rounded-xl p-6 flex flex-col md:flex-row items-center justify-between mb-10">
+  <section class="bg-white shadow-md rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between">
     <div class="flex items-center space-x-4">
-      <img src="{% if store.shop_logo %}{{ store.shop_logo.url }}{% else %}{% static 'img/shop-avatar.png' %}{% endif %}" 
+      <img src="{% if store.shop_logo %}{{ store.shop_logo.url }}{% else %}{% static 'img/shop-avatar.png' %}{% endif %}"
            alt="shop logo" class="w-20 h-20 rounded-full shadow border border-gray-200">
       <div>
         <h2 class="text-xl font-semibold text-gray-800">{{ store.name }}</h2>
@@ -96,58 +95,103 @@
       </div>
     </div>
 
-    <!-- ปุ่มดูร้านค้า (แก้เฉพาะส่วนนี้เท่านั้น) -->
-    <a href="{% url 'public_store' store.id %}" 
+    <a href="{% url 'dress:public_store' store.id %}"
        class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-6 py-2 rounded-md shadow mt-4 md:mt-0 transition">
        ดูร้านค้า
     </a>
-  </div>
+  </section>
 
   <!-- สถิติการเช่าชุด -->
   <section>
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">ข้อมูลการเช่าชุดล่าสุด</h3>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-gray-800">ข้อมูลการเช่าชุดล่าสุด</h3>
+      <p class="text-xs text-gray-500">
+        สรุปสถานะคำสั่งเช่าทั้งหมดของร้านแบบรวดเร็ว
+      </p>
+    </div>
+
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-      <div class="bg-blue-100 p-4 rounded-lg text-center shadow-sm">
-        <div class="text-3xl mb-2">🛒</div>
-        <p class="text-2xl font-bold text-blue-700">2</p>
-        <p class="text-gray-700 text-sm">คำเช่าใหม่</p>
-      </div>
-      <div class="bg-blue-100 p-4 rounded-lg text-center shadow-sm">
-        <div class="text-3xl mb-2">🚚</div>
-        <p class="text-2xl font-bold text-blue-700">5</p>
-        <p class="text-gray-700 text-sm">สถานะการจัดส่ง</p>
-      </div>
-      <div class="bg-blue-100 p-4 rounded-lg text-center shadow-sm">
-        <div class="text-3xl mb-2">❌</div>
-        <p class="text-2xl font-bold text-blue-700">10</p>
-        <p class="text-gray-700 text-sm">ที่ถูกยกเลิก</p>
-      </div>
-      <div class="bg-blue-100 p-4 rounded-lg text-center shadow-sm">
-        <div class="text-3xl mb-2">✅</div>
-        <p class="text-2xl font-bold text-blue-700">58</p>
-        <p class="text-gray-700 text-sm">เช่าสำเร็จ</p>
-      </div>
-      <div class="bg-blue-100 p-4 rounded-lg text-center shadow-sm">
-        <div class="text-3xl mb-2">⭐</div>
-        <p class="text-2xl font-bold text-blue-700">2</p>
-        <p class="text-gray-700 text-sm">รีวิว</p>
-      </div>
+      <!-- คำเช่าใหม่ -->
+      <a href="{% url 'dress:back_office_orders_new' store.id %}"
+         class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
+                hover:shadow-md hover:-translate-y-0.5 transform transition block">
+        <div class="w-10 h-10 mx-auto mb-2 rounded-full bg-blue-50 flex items-center justify-center">
+          <span class="text-2xl">🛒</span>
+        </div>
+        <p class="text-2xl font-bold text-blue-700">{{ new_count }}</p>
+        <p class="text-gray-600 text-sm mt-1">คำเช่าใหม่</p>
+      </a>
+
+      <!-- สถานะการจัดส่ง -->
+      <a href="{% url 'dress:back_office_orders_shipping' store.id %}"
+         class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
+                hover:shadow-md hover:-translate-y-0.5 transform transition block">
+        <div class="w-10 h-10 mx-auto mb-2 rounded-full bg-indigo-50 flex items-center justify-center">
+          <span class="text-2xl">🚚</span>
+        </div>
+        <p class="text-2xl font-bold text-indigo-700">{{ shipping_count }}</p>
+        <p class="text-gray-600 text-sm mt-1">สถานะการจัดส่ง</p>
+      </a>
+
+      <!-- ถูกยกเลิก -->
+      <a href="{% url 'dress:back_office_orders_cancelled' store.id %}"
+         class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
+                hover:shadow-md hover:-translate-y-0.5 transform transition block">
+        <div class="w-10 h-10 mx-auto mb-2 rounded-full bg-red-50 flex items-center justify-center">
+          <span class="text-2xl">❌</span>
+        </div>
+        <p class="text-2xl font-bold text-red-600">{{ cancelled_count }}</p>
+        <p class="text-gray-600 text-sm mt-1">ที่ถูกยกเลิก</p>
+      </a>
+
+      <!-- เช่าสำเร็จ -->
+      <a href="{% url 'dress:back_office_orders_completed' store.id %}"
+         class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
+                hover:shadow-md hover:-translate-y-0.5 transform transition block">
+        <div class="w-10 h-10 mx-auto mb-2 rounded-full bg-green-50 flex items-center justify-center">
+          <span class="text-2xl">✅</span>
+        </div>
+        <p class="text-2xl font-bold text-green-700">{{ completed_count }}</p>
+        <p class="text-gray-600 text-sm mt-1">เช่าสำเร็จ</p>
+      </a>
+
+      <!-- รีวิว -->
+      <a href="{% url 'dress:back_office_reviews' store.id %}"
+         class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
+                hover:shadow-md hover:-translate-y-0.5 transform transition block">
+        <div class="w-10 h-10 mx-auto mb-2 rounded-full bg-yellow-50 flex items-center justify-center">
+          <span class="text-2xl">⭐</span>
+        </div>
+        <p class="text-2xl font-bold text-yellow-600">{{ review_count }}</p>
+        <p class="text-gray-600 text-sm mt-1">รีวิว</p>
+      </a>
     </div>
   </section>
 
   <!-- ปุ่มเมนูหลักหลังร้าน -->
-  <section class="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
-    <a href="#" class="bg-white border border-gray-200 rounded-xl shadow p-6 text-center hover:shadow-md transition">
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <a href="{% url 'dress:store_dress' store.id %}"
+       class="bg-white border border-gray-200 rounded-2xl shadow p-6 text-center
+              hover:shadow-md hover:-translate-y-0.5 transform transition">
       <div class="text-4xl mb-3">👗</div>
       <p class="font-semibold text-gray-800">ชุดของฉัน</p>
+      <p class="text-xs text-gray-500 mt-1">จัดการชุดทั้งหมดในร้านของคุณ</p>
     </a>
-    <a href="#" class="bg-white border border-gray-200 rounded-xl shadow p-6 text-center hover:shadow-md transition">
+
+    <a href="{% url 'dress:back_office_finance' store.id %}"
+       class="bg-white border border-gray-200 rounded-2xl shadow p-6 text-center
+              hover:shadow-md hover:-translate-y-0.5 transform transition">
       <div class="text-4xl mb-3">💳</div>
       <p class="font-semibold text-gray-800">การเงิน</p>
+      <p class="text-xs text-gray-500 mt-1">ดูรายรับและสถานะการชำระเงิน</p>
     </a>
-    <a href="#" class="bg-white border border-gray-200 rounded-xl shadow p-6 text-center hover:shadow-md transition">
+
+    <a href="{% url 'dress:back_office_stats' store.id %}"
+       class="bg-white border border-gray-200 rounded-2xl shadow p-6 text-center
+              hover:shadow-md hover:-translate-y-0.5 transform transition">
       <div class="text-4xl mb-3">📈</div>
       <p class="font-semibold text-gray-800">สถิติร้านค้า</p>
+      <p class="text-xs text-gray-500 mt-1">วิเคราะห์การเติบโตของร้าน</p>
     </a>
   </section>
 

@@ -25,6 +25,41 @@ urlpatterns = [
     path("my-store/<int:store_id>/delete-dress/<int:dress_id>/", views.delete_dress, name="delete_dress"),
     path("my-store/<int:store_id>/toggle/<int:dress_id>/", views.toggle_availability, name="toggle_availability"),
     path("my-store/<int:store_id>/back-office/", views.back_office, name="back_office"),
+    path("my-store/<int:store_id>/back-office/finance/",views.back_office_finance,name="back_office_finance"),
+    path("my-store/<int:store_id>/back-office/stats/",views.back_office_stats,name="back_office_stats"),
+     # รายการคำสั่งเช่าตามสถานะ
+    path(
+        "my-store/<int:store_id>/orders/new/",
+        views.back_office_orders_new,
+        name="back_office_orders_new",
+    ),
+    path(
+        "my-store/<int:store_id>/orders/shipping/",
+        views.back_office_orders_shipping,
+        name="back_office_orders_shipping",
+    ),
+    path(
+        "my-store/<int:store_id>/orders/cancelled/",
+        views.back_office_orders_cancelled,
+        name="back_office_orders_cancelled",
+    ),
+    path(
+        "my-store/<int:store_id>/orders/completed/",
+        views.back_office_orders_completed,
+        name="back_office_orders_completed",
+    ),
+
+    # รีวิวของร้าน
+    path(
+        "my-store/<int:store_id>/reviews/",
+        views.back_office_reviews,
+        name="back_office_reviews",
+    ),
+    
+    #การแจ้งเตือน
+    path("notifications/", views.notification_page, name="notifications"),
+    path("orders/<int:order_id>/send-message/", views.send_shop_message, name="send_shop_message"),
+    
 
     # หน้าร้านสาธารณะ
     path("store/<int:store_id>/", views.public_store, name="public_store"),
@@ -57,6 +92,7 @@ urlpatterns = [
     path("rental-history/", views.rental_history_view, name="rental_history"),
     path("notifications/", views.notification_page, name="notification"),
     path("my-rentals/", views.rental_list_view, name="rental_list"),
+    path("rental/<int:order_id>/cancel/", views.cancel_rental, name="cancel_rental"),
     path("profile/", views.profile_page, name="profile_page"),
     path("profile/update/", views.update_profile, name="update_profile"),
     path("how-to-rent/", views.how_to_rent, name="how_to_rent"),
@@ -72,7 +108,7 @@ urlpatterns = [
     path("stores/<int:store_id>/shipping-rule/save/", views.api_save_shipping_rule, name="api_save_shipping_rule"),
     path("my-store/<int:store_id>/shipping-rule/save/", views.api_save_shipping_rule),
 
-
+    # การชำระเงิน (Payment)
     path("dress/<int:dress_id>/payment/", views.rent_payment, name="rent_payment"),
     path("dress/<int:dress_id>/payment/create-charge/", views.create_promptpay_charge, name="create_promptpay_charge"),
     path("dress/<int:dress_id>/success/",  views.rent_success,  name="rent_success"),
@@ -80,4 +116,6 @@ urlpatterns = [
 
     # Webhook (ตั้งใน Omise Dashboard ให้ยิงมาที่นี่)
     path("omise/webhook/", views.omise_webhook, name="omise_webhook"),
+
+    path("payments/status/", views.payment_status_api, name="payment_status_api"),
 ]

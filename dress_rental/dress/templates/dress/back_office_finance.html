@@ -1,0 +1,192 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>การเงินหลังร้าน | {{ store.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+  <!-- Header (ห้ามแก้) -->
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+    <div class="flex items-center justify-between px-10 py-10">
+      <div class="flex items-center space-x-3">
+        <h1 class="text-2xl font-bold text-gray-900">การเงินหลังร้าน</h1>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        {% if store.shop_logo %}
+          <img src="{{ store.shop_logo.url }}" alt="logo" class="w-12 h-12 rounded-full object-cover">
+        {% else %}
+          <img src="{% static 'images/store-placeholder.png' %}" alt="logo" class="w-12 h-12 rounded-full object-cover">
+        {% endif %}
+        <span class="font-semibold text-lg">{{ store.name }}</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs บนสุด (ห้ามแก้) -->
+  <div class="flex justify-center space-x-3 bg-white shadow py-3 px-4 border-t border-gray-100">
+    <a href="{% url 'dress:my_store' store.id %}"
+       class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
+      หน้าร้าน
+    </a>
+    <a href="{% url 'dress:store_dress' store.id %}"
+       class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
+      รายการสินค้า
+    </a>
+    <a href="{% url 'dress:back_office' store.id %}"
+       class="flex-1 text-center py-3 rounded-lg bg-black text-white font-semibold hover:bg-gray-800 transition">
+      หลังร้าน
+    </a>
+  </div>
+
+  <!-- ปุ่มกลับหลังร้าน -->
+  <section class="max-w-6xl mx-auto px-6 pt-6">
+    <div class="flex justify-end">
+      <a href="{% url 'dress:back_office' store.id %}"
+         class="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 transition">
+        ← ย้อนกลับหลังร้าน
+      </a>
+    </div>
+  </section>
+
+  <!-- เนื้อหา -->
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+
+    <!-- ภาพรวมรายได้ -->
+    <section>
+      <h2 class="text-xl font-semibold text-gray-900">ภาพรวมรายได้</h2>
+      <p class="text-xs text-gray-500 mb-4">
+        สรุปรายได้จากออเดอร์ที่ชำระเงินแล้วของร้านคุณ ตัวเลขทุกจำนวนเป็นเงินบาท (฿)
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
+
+        <!-- การ์ด 1 -->
+        <div class="bg-white rounded-2xl shadow-sm border p-6">
+          <div class="flex justify-between items-center">
+            <p class="text-sm font-medium text-gray-700">รายได้ทั้งหมดตั้งแต่เปิดร้าน</p>
+            <span class="bg-blue-50 text-blue-700 text-[11px] px-2 py-1 rounded-full border">รวมทั้งหมด</span>
+          </div>
+          <p class="text-3xl font-bold mt-4">{{ total_income|floatformat:2 }} ฿</p>
+        </div>
+
+        <!-- การ์ด 2 -->
+        <div class="bg-white rounded-2xl shadow-sm border p-6">
+          <div class="flex justify-between items-center">
+            <p class="text-sm font-medium text-gray-700">รายได้เดือนนี้</p>
+            <span class="bg-green-50 text-green-700 text-[11px] px-2 py-1 rounded-full border">เดือนปัจจุบัน</span>
+          </div>
+          <p class="text-3xl font-bold mt-4">{{ income_this_month|floatformat:2 }} ฿</p>
+        </div>
+
+        <!-- การ์ด 3 -->
+        <div class="bg-white rounded-2xl shadow-sm border p-6">
+          <div class="flex justify-between items-center">
+            <p class="text-sm font-medium text-gray-700">รายได้วันนี้</p>
+            <span class="bg-yellow-50 text-yellow-700 text-[11px] px-2 py-1 rounded-full border">วันนี้</span>
+          </div>
+          <p class="text-3xl font-bold mt-4">{{ income_today|floatformat:2 }} ฿</p>
+        </div>
+
+      </div>
+    </section>
+
+        <!-- กระเป๋าเงิน + ถอนเงิน -->
+    <section class="bg-white rounded-2xl shadow-sm border p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">กระเป๋าเงินร้านค้า (Wallet Balance)</h3>
+
+        <!-- ฟอร์มขอถอนเงิน -->
+        <form method="post" action="{% url 'dress:back_office_finance' store.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="withdraw_all">
+
+          {% if wallet_balance|default:0 > 0 %}
+            <!-- มีเงินในกระเป๋า: ปุ่มกดได้ ส่ง POST -->
+            <button type="submit"
+                    class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
+              ขอถอนเงิน
+            </button>
+          {% else %}
+            <!-- เงินในกระเป๋า = 0: ปุ่ม disable ไม่ส่งฟอร์ม -->
+            <button type="button"
+                    class="px-4 py-2 bg-gray-300 text-white text-sm rounded-lg cursor-not-allowed opacity-60"
+                    disabled>
+              ขอถอนเงิน
+            </button>
+          {% endif %}
+        </form>
+      </div>
+
+      <p class="text-3xl font-bold text-gray-800">
+        {{ wallet_balance|default:0|floatformat:2 }} ฿
+      </p>
+      <p class="text-xs text-gray-500 mt-1">รายได้สุทธิหลังหักค่าคอมมิชชั่น</p>
+    </section>
+
+
+    <!-- ประวัติออเดอร์ที่สร้างรายได้ -->
+    <section class="bg-white rounded-2xl shadow-sm border p-6">
+      <h3 class="text-lg font-semibold mb-4">ประวัติออเดอร์ที่สร้างรายได้</h3>
+
+      <table class="w-full text-sm">
+        <thead class="text-gray-600 border-b">
+          <tr>
+            <th class="py-2 text-left">ออเดอร์</th>
+            <th class="py-2 text-center">รายได้สุทธิ</th>
+            <th class="py-2 text-center">วันที่ชำระเงิน</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in transactions %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="py-2">{{ t.order.id }}</td>
+            <td class="py-2 text-center">{{ t.net_amount|floatformat:2 }} ฿</td>
+            <td class="py-2 text-center">{{ t.created_at|date:"d/m/Y" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="text-center py-4 text-gray-400 text-sm">ยังไม่มีประวัติรายได้</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ประวัติการถอนเงิน -->
+    <section class="bg-white rounded-2xl shadow-sm border p-6">
+      <h3 class="text-lg font-semibold mb-4">ประวัติการถอนเงิน</h3>
+
+      <table class="w-full text-sm">
+        <thead class="text-gray-600 border-b">
+          <tr>
+            <th class="py-2 text-left">จำนวนเงิน</th>
+            <th class="py-2 text-center">สถานะ</th>
+            <th class="py-2 text-center">วันที่ถอน</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for w in withdrawal_history %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="py-2">{{ w.amount|floatformat:2 }} ฿</td>
+            <td class="py-2 text-center text-blue-600">{{ w.status }}</td>
+            <td class="py-2 text-center">{{ w.requested_at|date:"d/m/Y" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="text-center py-4 text-gray-400 text-sm">ยังไม่มีประวัติการถอนเงิน</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+    </section>
+
+  </main>
+
+</body>
+</html>

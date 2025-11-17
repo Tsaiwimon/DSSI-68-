@@ -76,12 +76,22 @@
           </svg>
         </div>
         <div>
-          <h2 class="text-lg font-bold text-gray-800">บันทึกการจองสำเร็จ</h2>
+          <h2 class="text-lg font-bold text-gray-800">
+            {% if pay_method|default:request.GET.pay_method == 'promptpay' %}
+              ชำระเงินสำเร็จ (รอระบบยืนยันใน Sandbox)
+            {% else %}
+              บันทึกการจองสำเร็จ
+            {% endif %}
+          </h2>
           <p class="text-sm text-gray-600">
-            โปรดนำ <span class="font-semibold">ใบรับชุด</span> ไปยื่นที่หน้าร้านในวันรับชุด
             เลขที่อ้างอิง
             <span class="font-semibold">
-              {{ order_ref|default:request.GET.order_ref|default:"ORD-" }}{{ dress.id }}
+              {# ลำดับ fallback: order_ref > charge_id > "ORD-<dress.id>" #}
+              {% if order_ref %}{{ order_ref }}
+              {% elif request.GET.order_ref %}{{ request.GET.order_ref }}
+              {% elif charge_id %}{{ charge_id }}
+              {% elif request.GET.charge_id %}{{ request.GET.charge_id }}
+              {% else %}ORD-{{ dress.id }}{% endif %}
             </span>
           </p>
         </div>
@@ -96,12 +106,19 @@
             <div class="min-w-0">
               <div class="font-medium text-gray-800 truncate">{{ dress.name }}</div>
               <div class="text-xs text-gray-500">
-                {{ start_date|default:request.GET.start_date }} – {{ end_date|default:request.GET.end_date }}
-                {% if days|default:request.GET.days %} ({{ days|default:request.GET.days }} วัน){% endif %}
+                {# แสดงวันแบบรองรับทั้ง object และ query string #}
+                {% if start_date %}{{ start_date|date:"Y-m-d" }}{% else %}{{ request.GET.start_date }}{% endif %}
+                –
+                {% if end_date %}{{ end_date|date:"Y-m-d" }}{% else %}{{ request.GET.end_date }}{% endif %}
+                {% with d=days|default:request.GET.days %}
+                  {% if d %} ({{ d }} วัน){% endif %}
+                {% endwith %}
               </div>
               <div class="text-xs text-gray-500">
                 วิธีรับชุด:
-                {% if method|default:request.GET.method == "delivery" %}จัดส่งถึงบ้าน{% else %}มารับเองที่ร้าน{% endif %}
+                {% with m=method|default:request.GET.method %}
+                  {% if m == "delivery" %}จัดส่งถึงบ้าน{% else %}มารับเองที่ร้าน{% endif %}
+                {% endwith %}
               </div>
             </div>
           </div>
@@ -109,24 +126,40 @@
           <div class="mt-4 space-y-2 text-sm max-w-md">
             <div class="flex justify-between">
               <span>ค่าเช่า</span>
-              <span>฿{{ rental_fee|default:request.GET.rental_fee|floatformat:2 }}</span>
+              <span>
+                {% with v=rental_fee|default:request.GET.rental_fee %}
+                  ฿{{ v|floatformat:2 }}
+                {% endwith %}
+              </span>
             </div>
             <div class="flex justify-between">
               <span>ค่ามัดจำ</span>
-              <span>฿{{ deposit|default:request.GET.deposit|floatformat:2 }}</span>
+              <span>
+                {% with v=deposit|default:request.GET.deposit %}
+                  ฿{{ v|floatformat:2 }}
+                {% endwith %}
+              </span>
             </div>
             <div class="flex justify-between">
               <span>ค่าส่ง</span>
-              <span>฿{{ shipping|default:request.GET.shipping|floatformat:2 }}</span>
+              <span>
+                {% with v=shipping|default:request.GET.shipping %}
+                  ฿{{ v|floatformat:2 }}
+                {% endwith %}
+              </span>
             </div>
             <div class="border-t pt-2 font-semibold flex justify-between text-base">
               <span>ยอดรวม</span>
-              <span>฿{{ amount_baht|default:request.GET.amount_baht|floatformat:2 }}</span>
+              <span>
+                {% with v=amount_baht|default:request.GET.amount_baht %}
+                  ฿{{ v|floatformat:2 }}
+                {% endwith %}
+              </span>
             </div>
           </div>
         </div>
 
-        <!-- ขวา: ใบนำเสนอ/ใบรับชุด -->
+        <!-- ขวา: ใบนำเสนอ/ใบรับชุด + สถานะการชำระ -->
         <div class="rounded-lg border p-4 print-card">
           <h3 class="font-semibold text-gray-800 print-title">ใบนำเสนอ/ใบรับชุด</h3>
           <dl class="mt-3 space-y-2 text-sm">
@@ -134,30 +167,68 @@
             <div class="flex justify-between">
               <dt class="text-gray-600">ช่วงรับชุด</dt>
               <dd class="font-medium">
-                {% if pickup_slot|default:request.GET.pickup_slot == "morning" %}เช้า (09:00–12:00){% elif pickup_slot|default:request.GET.pickup_slot == "afternoon" %}บ่าย (13:00–17:00){% elif pickup_slot|default:request.GET.pickup_slot == "evening" %}เย็น (18:00–20:00){% else %}-{% endif %}
+                {% with s=pickup_slot|default:request.GET.pickup_slot %}
+                  {% if s == "morning" %}เช้า (09:00–12:00)
+                  {% elif s == "afternoon" %}บ่าย (13:00–17:00)
+                  {% elif s == "evening" %}เย็น (18:00–20:00)
+                  {% else %}-{% endif %}
+                {% endwith %}
               </dd>
             </div>
             <div class="flex justify-between">
               <dt class="text-gray-600">ช่วงคืนชุด</dt>
               <dd class="font-medium">
-                {% if return_slot|default:request.GET.return_slot == "morning" %}เช้า (09:00–12:00){% elif return_slot|default:request.GET.return_slot == "afternoon" %}บ่าย (13:00–17:00){% elif return_slot|default:request.GET.return_slot == "evening" %}เย็น (18:00–20:00){% else %}-{% endif %}
+                {% with s=return_slot|default:request.GET.return_slot %}
+                  {% if s == "morning" %}เช้า (09:00–12:00)
+                  {% elif s == "afternoon" %}บ่าย (13:00–17:00)
+                  {% elif s == "evening" %}เย็น (18:00–20:00)
+                  {% else %}-{% endif %}
+                {% endwith %}
               </dd>
             </div>
             <div class="flex justify-between">
               <dt class="text-gray-600">วิธีรับชุด</dt>
-              <dd class="font-medium">{% if method|default:request.GET.method == "delivery" %}จัดส่งถึงบ้าน{% else %}มารับเองที่ร้าน{% endif %}</dd>
+              <dd class="font-medium">
+                {% with m=method|default:request.GET.method %}
+                  {% if m == "delivery" %}จัดส่งถึงบ้าน{% else %}มารับเองที่ร้าน{% endif %}
+                {% endwith %}
+              </dd>
             </div>
             <div class="flex justify-between">
               <dt class="text-gray-600">เลขที่อ้างอิง</dt>
               <dd class="font-medium">
-                {{ order_ref|default:request.GET.order_ref|default:"ORD-" }}{{ dress.id }}
+                {% if order_ref %}{{ order_ref }}
+                {% elif request.GET.order_ref %}{{ request.GET.order_ref }}
+                {% elif charge_id %}{{ charge_id }}
+                {% elif request.GET.charge_id %}{{ request.GET.charge_id }}
+                {% else %}ORD-{{ dress.id }}{% endif %}
               </dd>
             </div>
           </dl>
 
+          {# กล่องแสดงสถานะการชำระ #}
+          <div class="mt-4 text-sm bg-gray-50 border rounded p-3">
+            <div class="flex justify-between">
+              <span class="text-gray-600">วิธีชำระ</span>
+              <span class="font-medium">
+                {% if pay_method|default:request.GET.pay_method == 'promptpay' %}PromptPay{% else %}ชำระที่หน้าร้าน{% endif %}
+              </span>
+            </div>
+            {% if charge_id or request.GET.charge_id %}
+              <div class="flex justify-between mt-1">
+                <span class="text-gray-600">Charge ID</span>
+                <span class="font-mono text-xs">{{ charge_id|default:request.GET.charge_id }}</span>
+              </div>
+            {% endif %}
+            {% if pay_method|default:request.GET.pay_method == 'promptpay' %}
+              <p class="text-xs text-gray-500 mt-3">
+                หมายเหตุ: ใน Sandbox ของ Omise สถานะอาจยังเป็น <b>pending</b> แม้สแกนแล้ว ระบบจริงควรอัปเดตจาก Webhook อัตโนมัติ
+              </p>
+            {% endif %}
+          </div>
+
           <p class="mt-3 text-xs text-gray-600 print-note">
             กรุณานำบัตรประชาชนหรือเอกสารที่มีรูปถ่าย และใบรับชุดฉบับนี้แสดงที่หน้าร้านเพื่อรับชุด
-            ระบบจะชำระเงินที่หน้าร้านตามยอดคงค้าง (ค่าส่ง = 0 สำหรับมารับเอง)
           </p>
 
           <div class="mt-4 flex gap-2 no-print">

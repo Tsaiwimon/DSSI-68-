@@ -37,15 +37,15 @@
 
   <!-- Tabs -->
   <div class="flex justify-center space-x-3 bg-white shadow py-3 px-4">
-    <a href="{% url 'my_store' store.id %}"
+    <a href="{% url 'dress:my_store' store.id %}"
        class="flex-1 text-center py-3 rounded-lg bg-black text-white font-semibold shadow hover:bg-gray-800 transition">
       หน้าร้าน
     </a>
-    <a href="{% url 'store_dress' store.id %}"
+    <a href="{% url 'dress:store_dress' store.id %}"
        class="flex-1 text-center py-3 rounded-lg border font-semibold shadow hover:bg-gray-100 transition">
       รายการสินค้า
     </a>
-    <a href="{% url 'back_office' store.id %}"
+    <a href="{% url 'dress:back_office' store.id %}"
        class="flex-1 text-center py-3 rounded-lg border font-semibold shadow hover:bg-gray-100 transition">
       หลังร้าน
     </a>

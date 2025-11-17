@@ -10,39 +10,100 @@
 
 <!-- Header -->
 <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
-  <div class="flex justify-between items-center px-8 py-4">
-    <h1 class="text-lg font-bold text-gray-800">การแจ้งเตือน</h1>
-    <a href="{% url 'dress:member_home' %}"
-       class="bg-white text-gray-700 px-4 py-2 rounded shadow hover:bg-gray-100 transition">
-      ← กลับหน้าหลัก
+  <div class="w-full px-8 py-9 flex justify-between items-center">
+    <h1 class="text-xl font-semibold text-gray-800">การแจ้งเตือน</h1>
+    <a href="{% url 'dress:member_home' %}" 
+       class="bg-white text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-100 transition">
+       ← กลับหน้าหลัก
     </a>
   </div>
 </header>
 
+
+
 <!-- Content -->
 <main class="max-w-3xl mx-auto py-8 px-4">
 
+  {% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>การแจ้งเตือน | Glam & Borrow</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+
   {% if notifications %}
-    {% for n in notifications %}
-      <div class="flex items-center bg-pink-50 p-4 rounded-lg shadow-sm mb-4">
-        <img src="{{ n.image }}" alt="notification image" class="w-20 h-24 rounded object-cover mr-4">
-        <div>
-          <p class="font-semibold text-gray-800">{{ n.message }}</p>
-          <p class="text-gray-600 text-sm">หมายเลขพัสดุ {{ n.tracking_code }}</p>
-          <p class="text-gray-400 text-xs mt-1">{{ n.date }} {{ n.time }}</p>
-        </div>
-      </div>
-    {% endfor %}
+    <div class="space-y-4">
+      {% for notif in notifications %}
+        <article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-4">
+          <div class="w-10 flex-shrink-0 flex items-start justify-center pt-1">
+            {% if notif.type == "shop_message" %}
+              <span class="px-2 py-1 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600">
+                จากร้าน
+              </span>
+            {% elif notif.type == "payment" %}
+              <span class="px-2 py-1 rounded-full text-[10px] font-semibold bg-green-50 text-green-600">
+                การชำระเงิน
+              </span>
+            {% elif notif.type == "reminder" %}
+              <span class="px-2 py-1 rounded-full text-[10px] font-semibold bg-yellow-50 text-yellow-700">
+                เตือนความจำ
+              </span>
+            {% else %}
+              <span class="px-2 py-1 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600">
+                ระบบ
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="flex-1">
+            <div class="flex justify-between items-start gap-2">
+              <div>
+                <h2 class="font-semibold text-sm text-gray-900">
+                  {{ notif.title }}
+                </h2>
+                {% if notif.type == "shop_message" and notif.sender_shop %}
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    จากร้าน: {{ notif.sender_shop.name }}
+                  </p>
+                {% endif %}
+              </div>
+              <div class="text-right text-[11px] text-gray-400 whitespace-nowrap">
+                {{ notif.created_at|date:"d/m/Y H:i" }}
+              </div>
+            </div>
+
+            <p class="mt-2 text-sm text-gray-700 whitespace-pre-line">
+              {{ notif.message }}
+            </p>
+
+            {% if notif.related_order %}
+              <div class="mt-2 text-xs text-gray-400">
+                คำสั่งเช่า: #{{ notif.related_order.id }}
+              </div>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
   {% else %}
-    <!-- ✅ กรณีไม่มีการแจ้งเตือน -->
-    <div class="text-center bg-white border border-gray-200 p-10 rounded-lg shadow">
-      <img src="{% static 'img/empty-box.png' %}" alt="no notification" class="w-24 mx-auto mb-4 opacity-70">
-      <p class="text-gray-600 font-medium text-lg">ยังไม่มีการแจ้งเตือน</p>
-      <p class="text-gray-400 text-sm mt-2">เมื่อร้านค้าดำเนินการจัดส่งหรืออัปเดตสถานะ คุณจะเห็นที่นี่</p>
+    <div class="flex flex-col items-center justify-center py-16 text-gray-500">
+      <img src="{% static 'img/no-notification.svg' %}" alt="no notification"
+           class="w-32 h-32 mb-4 opacity-80">
+      <div class="font-medium">ยังไม่มีการแจ้งเตือน</div>
+      <p class="text-xs text-gray-400 mt-1">
+        เมื่อร้านดำเนินการจัดส่งหรืออัปเดตสถานะ คุณจะเห็นการแจ้งเตือนที่นี่
+      </p>
     </div>
   {% endif %}
 
 </main>
-
 </body>
 </html>

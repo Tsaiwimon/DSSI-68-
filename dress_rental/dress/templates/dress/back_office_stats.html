@@ -1,0 +1,281 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>สถิติร้านค้า | {{ store.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+  <!-- Header (โครงสร้างเหมือนหน้าอื่น) -->
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+    <div class="flex items-center justify-between px-10 py-10">
+      <div class="flex items-center space-x-3">
+        <h1 class="text-2xl font-bold text-gray-900">สถิติร้านค้า</h1>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        {% if store.shop_logo %}
+          <img src="{{ store.shop_logo.url }}" alt="logo" class="w-12 h-12 rounded-full object-cover">
+        {% else %}
+          <img src="{% static 'images/store-placeholder.png' %}" alt="logo" class="w-12 h-12 rounded-full object-cover">
+        {% endif %}
+        <span class="font-semibold text-lg">{{ store.name }}</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs บนสุด -->
+  <div class="flex justify-center space-x-3 bg-white shadow py-3 px-4 border-t border-gray-100">
+    <a href="{% url 'dress:my_store' store.id %}"
+       class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
+      หน้าร้าน
+    </a>
+    <a href="{% url 'dress:store_dress' store.id %}"
+       class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
+      รายการสินค้า
+    </a>
+    <a href="{% url 'dress:back_office' store.id %}"
+       class="flex-1 text-center py-3 rounded-lg bg-black text-white font-semibold hover:bg-gray-800 transition">
+      หลังร้าน
+    </a>
+  </div>
+
+  <!-- ปุ่มกลับหลังร้าน -->
+  <section class="max-w-6xl mx-auto px-6 pt-6">
+    <div class="flex justify-end">
+      <a href="{% url 'dress:back_office' store.id %}"
+         class="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 transition">
+        ← ย้อนกลับหลังร้าน
+      </a>
+    </div>
+  </section>
+
+  <!-- เนื้อหา -->
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+
+    <!-- 1) การ์ดสรุปสถิติหลัก -->
+    <section>
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">ภาพรวมสถิติร้าน</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- จำนวนออเดอร์ทั้งหมด -->
+        <div class="bg-white rounded-2xl shadow-sm border p-5">
+          <p class="text-xs font-medium text-gray-500">คำสั่งเช่าทั้งหมด</p>
+          <p class="mt-3 text-3xl font-extrabold text-gray-900">{{ total_orders }}</p>
+        </div>
+
+        <!-- ออเดอร์สำเร็จ -->
+        <div class="bg-white rounded-2xl shadow-sm border p-5">
+          <p class="text-xs font-medium text-gray-500">เช่าสำเร็จ</p>
+          <p class="mt-3 text-3xl font-extrabold text-emerald-600">{{ completed_orders }}</p>
+        </div>
+
+        <!-- ออเดอร์ยกเลิก -->
+        <div class="bg-white rounded-2xl shadow-sm border p-5">
+          <p class="text-xs font-medium text-gray-500">ยกเลิก</p>
+          <p class="mt-3 text-3xl font-extrabold text-red-500">{{ cancelled_orders }}</p>
+        </div>
+
+        <!-- คะแนนรีวิวเฉลี่ย -->
+        <div class="bg-white rounded-2xl shadow-sm border p-5">
+          <p class="text-xs font-medium text-gray-500">คะแนนรีวิวเฉลี่ย</p>
+          <p class="mt-3 text-3xl font-extrabold text-yellow-500">
+            {{ avg_rating|floatformat:1 }}
+          </p>
+          <p class="mt-1 text-[11px] text-gray-400">จากรีวิวทั้งหมด {{ reviews_count }} รายการ</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2) กล่องสรุปรายได้รวม -->
+    <section>
+      <div class="bg-white rounded-2xl shadow-sm border p-6 flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-semibold text-gray-900">รายได้รวมจากออเดอร์ที่สำเร็จ</h3>
+          <p class="mt-1 text-xs text-gray-500">ตัวเลขนี้มาจากรายได้สุทธิ (หักค่าคอมแล้ว)</p>
+        </div>
+        <p class="text-3xl font-extrabold text-gray-900">
+          {{ total_revenue|floatformat:2 }} ฿
+        </p>
+      </div>
+    </section>
+
+    <!-- 3) ชุดที่ได้รับความนิยมสูงสุด -->
+    <section class="bg-white rounded-2xl shadow-sm border p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">ชุดที่ได้รับความนิยมสูงสุด</h3>
+        <span class="text-xs text-gray-400">จัดอันดับจากจำนวนออเดอร์ที่สำเร็จ</span>
+      </div>
+
+      <table class="w-full text-sm">
+        <thead class="border-b text-gray-600">
+          <tr>
+            <th class="py-2 text-left w-12">#</th>
+            <th class="py-2 text-left">ชื่อชุด</th>
+            <th class="py-2 text-center">จำนวนเช่าสำเร็จ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in top_dresses %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="py-2">{{ forloop.counter }}</td>
+            <td class="py-2">
+              {{ d.name }}
+            </td>
+            <td class="py-2 text-center">
+              {{ d.success_count }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="py-4 text-center text-gray-400 text-sm">
+              ยังไม่มีสถิติการเช่าเพียงพอ
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 4) ออเดอร์ล่าสุด (มุมมองแบบเร็ว) -->
+    <section class="bg-white rounded-2xl shadow-sm border p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">ออเดอร์ล่าสุด</h3>
+        <span class="text-xs text-gray-400">แสดงรายการล่าสุดไม่เกิน 10 ออเดอร์</span>
+      </div>
+
+      <table class="w-full text-sm">
+        <thead class="border-b text-gray-600">
+          <tr>
+            <th class="py-2 text-left">ออเดอร์</th>
+            <th class="py-2 text-left">สถานะ</th>
+            <th class="py-2 text-center">วันที่สร้าง</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in recent_orders %}
+          <tr class="border-b hover:bg-gray-50">
+            <td class="py-2">#{{ o.id }}</td>
+            <td class="py-2">
+              {{ o.status }}
+            </td>
+            <td class="py-2 text-center">
+              {{ o.created_at|date:"d/m/Y H:i" }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="py-4 text-center text-gray-400 text-sm">
+              ยังไม่มีประวัติคำสั่งเช่า
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 5) กราฟรายได้รายวัน (30 วันที่ผ่านมา) -->
+    <section class="bg-white rounded-2xl shadow-sm border p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">
+          กราฟรายได้รายวัน (30 วันที่ผ่านมา)
+        </h3>
+        <p class="text-xs text-gray-400">
+          แสดงยอดสุทธิหลังหักค่าคอมจาก StoreTransaction
+        </p>
+      </div>
+
+      <div class="h-72">
+        <canvas id="revenueChart"></canvas>
+      </div>
+    </section>
+
+    <!-- 6) กราฟจำนวนออเดอร์ตามสถานะ -->
+    <section class="bg-white rounded-2xl shadow-sm border p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">
+          กราฟจำนวนออเดอร์ตามสถานะ
+        </h3>
+        <p class="text-xs text-gray-400">
+          ใช้สำหรับดูภาพรวมออเดอร์ที่สำเร็จ ยกเลิก และสถานะอื่น ๆ
+        </p>
+      </div>
+
+      <div class="h-72">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    // ข้อมูลจาก view (เป็น JSON string ที่ส่งมาจาก context)
+    const revenueLabels = {{ revenue_labels|safe }};
+    const revenueData = {{ revenue_data|safe }};
+    const statusLabels = {{ status_labels|safe }};
+    const statusData = {{ status_data|safe }};
+
+    // กราฟรายได้รายวัน (Line Chart)
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(revenueCtx, {
+      type: 'line',
+      data: {
+        labels: revenueLabels,
+        datasets: [{
+          label: 'รายได้สุทธิ (฿)',
+          data: revenueData,
+          tension: 0.3,
+          fill: true,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true }
+        },
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    // กราฟจำนวนออเดอร์ตามสถานะ (Bar Chart)
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+      type: 'bar',
+      data: {
+        labels: statusLabels,
+        datasets: [{
+          label: 'จำนวนออเดอร์',
+          data: statusData,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            precision: 0
+          }
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>

@@ -9,7 +9,19 @@ load_dotenv(BASE_DIR / ".env")  # โหลดตัวแปรจาก .env �
 # ---- Core -------------------------------------------------------------------
 SECRET_KEY = 'django-insecure-)wo&*ioi^w1%$qi3^&&s6%d#85shnt)@7a9z$1msz!76-dv@*c'
 DEBUG = True
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+
+# อนุญาตทั้ง localhost และโดเมน ngrok (อย่าประกาศซ้ำด้านล่าง)
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".ngrok-free.app"]
+
+CSRF_TRUSTED_ORIGINS = ["https://*.ngrok-free.app"]
+
+
+# ให้ CSRF เชื่อถือโดเมน ngrok ด้วย (สำคัญเวลา POST ฟอร์มผ่านโดเมน ngrok)
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.ngrok-free.app",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -78,18 +90,18 @@ LOGOUT_REDIRECT_URL = "dress:login"
 # AUTH_USER_MODEL = 'dress.CustomUser'  # ถ้ายังไม่ใช้ให้คอมเมนต์ไว้
 
 # ---- I18N / TZ --------------------------------------------------------------
-LANGUAGE_CODE = 'th'            # แนะนำให้ใช้ภาษาไทย
-TIME_ZONE = 'Asia/Bangkok'      # แนะนำให้เป็นเวลาไทย
+LANGUAGE_CODE = 'th'
+TIME_ZONE = 'Asia/Bangkok'
 USE_I18N = True
 USE_TZ = True
 
 # ---- Static / Media ---------------------------------------------------------
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "static",
-                    BASE_DIR / "static_img",
-                   ]
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+    BASE_DIR / "static_img",
+]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / "media"
@@ -100,4 +112,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 OMISE_PUBLIC_KEY = os.getenv("OMISE_PUBLIC_KEY", "")
 OMISE_SECRET_KEY = os.getenv("OMISE_SECRET_KEY", "")
 OMISE_CURRENCY   = os.getenv("OMISE_CURRENCY", "thb")
-# หมายเหตุ: ใน view ให้ตั้งค่า omise.api_public/omise.api_secret จากตัวแปรข้างบน
+# หมายเหตุ: ใน view ให้ตั้งค่า omise.api_public / omise.api_secret จากตัวแปรข้างบน
