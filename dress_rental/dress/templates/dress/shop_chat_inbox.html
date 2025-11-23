@@ -1,0 +1,80 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>กล่องข้อความร้าน {{ shop_obj.name }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Header -->
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <div class="w-full px-10 py-8 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      {% if shop_obj and shop_obj.shop_logo %}
+        <img src="{{ shop_obj.shop_logo.url }}" class="w-10 h-10 rounded-full object-cover" alt="logo">
+      {% endif %}
+      <div>
+        <h1 class="text-xl font-semibold text-gray-800">กล่องข้อความร้าน</h1>
+        <p class="text-sm text-gray-600">
+          ร้าน: {{ shop_obj.name|default:"-" }}
+        </p>
+      </div>
+    </div>
+
+    <a href="{% url 'dress:back_office' shop_obj.id %}"
+       class="bg-white text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-100 transition">
+      ← กลับหลังร้าน
+    </a>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-8">
+  <h2 class="text-lg font-semibold mb-4">รายการแชทจากลูกค้า</h2>
+
+  {% if threads %}
+    <div class="bg-white rounded-xl shadow border border-gray-100 divide-y">
+      {% for th in threads %}
+        <a href="{% url 'dress:shop_chat_thread' th.id %}"
+           class="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition">
+          <div class="flex flex-col">
+            <p class="font-semibold text-gray-800">
+              ลูกค้า: {{ th.customer.get_full_name|default:th.customer.username }}
+            </p>
+            <p class="text-sm text-gray-700 mt-1 line-clamp-1">
+              {{ th.last_message|default:"ยังไม่มีข้อความในห้องแชทนี้" }}
+            </p>
+            {% if th.last_message_time %}
+              <p class="text-xs text-gray-400 mt-1">
+                อัปเดตล่าสุด {{ th.last_message_time|date:"Y-m-d H:i" }}
+              </p>
+            {% else %}
+              <p class="text-xs text-gray-400 mt-1">
+                ยังไม่มีข้อความในห้องแชทนี้
+              </p>
+            {% endif %}
+          </div>
+
+          <div class="flex flex-col items-end gap-1">
+            {% if th.has_unread %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-600">
+                ยังไม่ได้อ่าน
+              </span>
+            {% endif %}
+            <span class="text-xs text-pink-600">
+              เปิดดูแชท →
+            </span>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-gray-400 text-sm">
+      ยังไม่มีข้อความจากลูกค้า
+    </p>
+  {% endif %}
+</main>
+
+</body>
+</html>

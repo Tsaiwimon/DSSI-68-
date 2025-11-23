@@ -23,7 +23,7 @@
       </div>
     {% endif %}
 
-    <form method="POST" action="{% url 'signup' %}" class="space-y-2">
+    <form method="POST" action="{% url 'dress:signup' %}" class="space-y-2">
       {% csrf_token %}
 
       <div>
@@ -84,7 +84,7 @@
 
     <p class="text-center text-xs mt-3 text-gray-600">
       มีบัญชีอยู่แล้ว?
-      <a href="{% url 'login' %}" class="text-black font-semibold hover:underline">เข้าสู่ระบบ</a>
+      <a href="{% url 'dress:login' %}" class="text-black font-semibold hover:underline">เข้าสู่ระบบ</a>
     </p>
   </div>
 

@@ -34,10 +34,13 @@
           <a href="{% url 'dress:home' %}" class="hover:underline">หน้าหลัก</a>
           <a href="{% url 'dress:how_to_rent' %}" class="hover:underline">วิธีเช่า</a>
         </nav>
-        {% if request.user.is_authenticated %}
+
+        {% if user.is_authenticated %}
+          <!-- เคสล็อกอินแล้ว -->
           <a href="{% url 'dress:member_home' %}" class="font-medium hover:underline">บัญชีของฉัน</a>
           <a href="{% url 'dress:logout' %}" class="font-medium hover:underline">ออกจากระบบ</a>
         {% else %}
+          <!-- เคสยังไม่ล็อกอิน -->
           <a href="{% url 'dress:login' %}" class="font-medium hover:underline">เข้าสู่ระบบ</a>
         {% endif %}
       </div>

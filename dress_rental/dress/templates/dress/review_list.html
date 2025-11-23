@@ -124,12 +124,12 @@
             <!-- ปุ่มแก้ไข / ลบ สำหรับเจ้าของรีวิว -->
             {% if user == review.user %}
             <div class="flex justify-end gap-2 mt-3">
-                <a href="{% url 'dress:dreview_edit' dress.id review.id %}"
+                <a href="{% url 'dress:review_edit' dress.id review.id %}"
                    class="px-3 py-1 bg-yellow-400 text-white text-sm rounded-lg hover:bg-yellow-500">
                    แก้ไข
                 </a>
 
-                <form method="POST" action="{% url 'dress:dreview_delete' dress.id review.id %}"
+                <form method="POST" action="{% url 'dress:review_delete' dress.id review.id %}"
                       onsubmit="return confirm('ยืนยันการลบรีวิวนี้หรือไม่?');">
                     {% csrf_token %}
                     <button type="submit"

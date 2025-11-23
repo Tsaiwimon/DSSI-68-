@@ -13,41 +13,50 @@
 </head>
 <body class="bg-gray-50">
 
-<!-- Header -->
+<!-- Header (ให้เหมือนหน้า Home) -->
 <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
-  <div class="w-full px-10 py-10 flex items-center justify-between">
+  <div class="w-full px-10 py-9 flex items-center justify-between">
     <!-- Logo -->
     <div class="flex items-center space-x-2">
       <img src="/media/img_home_logos/Screenshot 2025-09-14 022514.png" alt="Logo" class="w-10 h-10 rounded-full">
       <span class="font-bold text-xl text-gray-700">Glam & Borrow</span>
     </div>
 
-    <!-- Search box -->
-    <form method="get" action="{% url 'dress:member_home' %}" class="flex w-3/5 max-w-2xl">
+    <!-- Search -->
+    <form method="get" action="{% url 'dress:home' %}" class="flex w-1/2 max-w-2xl">
       <input type="text" name="q" placeholder="ค้นหาชุดที่ต้องการ"
-             class="flex-grow px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-pink-300">
-      <button type="submit" class="px-4 bg-white border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-100">
+             value="{{ request.GET.q|default_if_none:'' }}"
+             class="flex-grow px-3 py-2 border rounded-l-lg focus:outline-none">
+      <button type="submit" class="px-4 py-2 bg-white border border-l-0 rounded-r-lg hover:bg-gray-100">
         🔍
       </button>
     </form>
 
-    <!-- Nav links -->
-    <nav class="flex space-x-6 font-medium text-gray-800">
-      <a href="{% url 'dress:member_home' %}" class="hover:underline">หน้าหลัก</a>
-      <a href="{% url 'dress:how_to_rent' %}" class="hover:underline">วิธีเช่า</a>
-      <a href="{% url 'dress:open_store' %}" class="hover:underline">สมัครเปิดร้าน</a>
-    </nav>
+    <!-- Menu -->
+    <div class="flex items-center space-x-8">
+      <nav class="flex space-x-6 font-medium">
+        <a href="{% url 'dress:home' %}" class="hover:underline">หน้าหลัก</a>
+        <a href="{% url 'dress:how_to_rent' %}" class="hover:underline">วิธีเช่า</a>
+      </nav>
+
+      {% if request.user.is_authenticated %}
+        <a href="{% url 'dress:member_home' %}" class="font-medium hover:underline">บัญชีของฉัน</a>
+        <a href="{% url 'dress:logout' %}" class="font-medium hover:underline">ออกจากระบบ</a>
+      {% else %}
+        <a href="{% url 'dress:login' %}" class="font-medium hover:underline">เข้าสู่ระบบ</a>
+      {% endif %}
+    </div>
   </div>
 </header>
 
 <!-- Content -->
 <div class="max-w-7xl mx-auto px-10 py-10 relative">
 
-  <!-- ✅ ปุ่มลูกศรย้อนกลับ -->
-  <button onclick="history.back()" 
+  <!-- ปุ่มย้อนกลับ -->
+  <button onclick="history.back()"
           class="absolute -left-6 top-6 md:-left-12 bg-white border rounded-full shadow-md w-10 h-10 
                  flex items-center justify-center hover:bg-gray-100 transition">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
          stroke-width="2" stroke="currentColor" class="w-5 h-5 text-gray-700">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
     </svg>
@@ -55,7 +64,7 @@
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-    <!-- ซ้าย: รูปภาพ -->
+    <!-- ซ้าย: รูปภาพ + ข้อมูลร้าน + เงื่อนไขระบบกลาง -->
     <div>
       <img src="{{ dress.image.url }}" alt="{{ dress.name }}"
            class="rounded-lg shadow-lg w-full max-h-[480px] object-cover">
@@ -65,21 +74,113 @@
         <i class="fa-solid fa-camera"></i><span>ลองชุดด้วย AI</span>
       </button>
 
-      <div class="mt-6 flex items-center space-x-3 border p-3 rounded-lg shadow">
-        <img src="{% static 'img/shop-avatar.png' %}" class="w-10 h-10 rounded-full">
-        <div>
-          <p class="font-semibold">ร้าน: {{ dress.shop.name }}</p>
-          <p class="text-sm text-gray-500">⭐ 4.8</p>
+      <!-- การ์ดข้อมูลร้าน -->
+      <div class="mt-6 bg-white border rounded-xl shadow p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+        <!-- ซ้าย: โลโก้ร้าน -->
+        <div class="flex items-center justify-center">
+          {% if dress.shop.shop_logo %}
+            <img src="{{ dress.shop.shop_logo.url }}"
+                 class="w-12 h-12 rounded-full object-cover"
+                 alt="{{ dress.shop.name }}">
+          {% else %}
+            <div class="w-12 h-12 rounded-full bg-gray-100 border border-gray-200
+                        flex items-center justify-center text-xs text-gray-500">
+              ร้าน
+            </div>
+          {% endif %}
         </div>
-        <a href="#" class="ml-auto bg-blue-100 text-blue-700 px-3 py-1 rounded shadow hover:bg-blue-200">ดูร้านค้า</a>
+
+        <!-- กลาง: ชื่อร้าน + คะแนน + คำอธิบาย -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-500">ร้าน</span>
+            <p class="font-semibold text-gray-900 truncate">
+              {{ dress.shop.name }}
+            </p>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px]
+                         bg-emerald-50 text-emerald-700 border border-emerald-100">
+              ร้านเช่าในระบบ
+            </span>
+          </div>
+
+          <div class="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+            <div class="flex items-center gap-1">
+              <span class="text-yellow-400 text-sm">★</span>
+              <span class="font-semibold text-gray-800">4.8</span>
+              <span class="text-[11px] text-gray-500">คะแนนร้านโดยรวม</span>
+            </div>
+
+            <span class="hidden sm:inline-block w-px h-4 bg-gray-200"></span>
+
+            <span class="text-[11px] text-gray-500">
+              ลูกค้ากลับมาเช่าร้านนี้บ่อย เหมาะกับงานสำคัญและงานทางการ
+            </span>
+          </div>
+        </div>
+
+        <!-- ขวา: ปุ่มไปหน้าร้าน -->
+        <div class="flex flex-col gap-2 w-full sm:w-40">
+          <a href="{% url 'dress:my_store' dress.shop.id %}"
+             class="text-center text-sm font-medium bg-blue-600 text-white px-3 py-2
+                    rounded-lg shadow hover:bg-blue-700 transition">
+            ดูหน้าร้าน
+          </a>
+          <a href="{% url 'dress:shop_chat' dress.shop.id %}"
+             class="text-center text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg
+                    hover:bg-blue-100 border border-blue-100 transition">
+            เเชทกับร้าน
+          </a>
+        </div>
       </div>
+
+      <!-- เงื่อนไขการเช่าระบบกลาง (ปรับสูงให้พอดี) -->
+      <div class="mt-4 bg-white border rounded-xl shadow p-4 overflow-y-auto h-60">
+        <h3 class="text-sm font-semibold text-gray-900 mb-2">
+          เงื่อนไขการเช่าชุดบนระบบ Glam & Borrow (เงื่อนไขระบบกลาง)
+        </h3>
+
+        <h4 class="text-xs font-semibold text-gray-800">การจองและการชำระเงิน</h4>
+        <ul class="text-xs text-gray-600 space-y-1 list-disc pl-4 mb-2">
+          <li>ผู้ใช้งานต้องระบุวันที่ต้องการเช่าและวันคืนชุดให้ชัดเจนก่อนทำการจอง</li>
+          <li>การจองจะสมบูรณ์เมื่อชำระเงินค่าเช่าและค่ามัดจำ (ถ้ามี) ผ่านระบบที่กำหนดเรียบร้อยแล้ว</li>
+        </ul>
+
+        <h4 class="text-xs font-semibold text-gray-800">ระยะเวลาเช่า</h4>
+        <ul class="text-xs text-gray-600 space-y-1 list-disc pl-4 mb-2">
+          <li>ระยะเวลาเช่าคิดเป็น “วันปฏิทิน” ตามวันที่ผู้ใช้เลือกในระบบ</li>
+          <li>การคืนชุดล่าช้าอาจมีการเรียกเก็บค่าปรับตามอัตราที่ร้านค้ากำหนด</li>
+        </ul>
+
+        <h4 class="text-xs font-semibold text-gray-800">ค่ามัดจำและการคืนมัดจำ</h4>
+        <ul class="text-xs text-gray-600 space-y-1 list-disc pl-4 mb-2">
+          <li>ค่ามัดจำจะโอนคืนหลังจากร้านค้าตรวจสอบสภาพชุดเรียบร้อย หากไม่มีความเสียหายหรือการสูญหาย</li>
+        </ul>
+
+        <h4 class="text-xs font-semibold text-gray-800">การจัดส่งและการรับชุด</h4>
+        <ul class="text-xs text-gray-600 space-y-1 list-disc pl-4 mb-2">
+          <li>วิธีการจัดส่งและการรับชุด ขึ้นอยู่กับแต่ละร้านค้า</li>
+          <li>ผู้ใช้งานควรเผื่อเวลาในการจัดส่งล่วงหน้าก่อนวันที่ต้องการใช้งานจริง</li>
+        </ul>
+
+        <h4 class="text-xs font-semibold text-gray-800">ความเสียหายและการรับผิดชอบ</h4>
+        <ul class="text-xs text-gray-600 space-y-1 list-disc pl-4 mb-2">
+          <li>ผู้เช่ามีหน้าที่ดูแลชุดเช่าไม่ให้เกิดความเสียหาย ฉีกขาด หรือเปื้อนรุนแรง</li>
+          <li>หากชุดเสียหายหรือสูญหาย ร้านค้ามีสิทธิ์เรียกเก็บค่าปรับหรือหักจากค่ามัดจำตามความเหมาะสม</li>
+        </ul>
+
+        <p class="mt-1 text-[11px] text-gray-500 border-t pt-2">
+          เมื่อผู้ใช้งานทำการกด “เช่าทันที” หรือทำรายการเช่าผ่านระบบ 
+          ถือว่ายอมรับเงื่อนไขระบบกลางฉบับนี้แล้ว รวมถึงเงื่อนไขเพิ่มเติมของแต่ละร้าน (หากมี)
+        </p>
+      </div>
+
     </div>
 
-    <!-- ขวา: รายละเอียด -->
+    <!-- ขวา: รายละเอียดชุด -->
     <div class="relative">
       <div class="bg-white rounded-lg border shadow p-6 relative">
 
-        <!-- ✅ ปุ่มหัวใจ Favorite -->
+        <!-- ปุ่ม Favorite -->
         <form method="POST" action="{% url 'dress:toggle_favorite' dress.id %}" class="absolute top-4 right-4">
           {% csrf_token %}
           <button type="submit"
@@ -104,14 +205,13 @@
           <input type="text" id="rental_range" name="rental_range"
                  class="w-full border border-gray-300 rounded-lg px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
                  placeholder="เลือกวันเริ่ม - วันสิ้นสุด">
-          <!-- ✅ สรุปจำนวนวัน + ราคาเช่ารวม -->
           <div id="rentSummary" class="text-sm text-gray-700 mt-2 hidden">
-            เลือก <span id="selDays" class="font-semibold">–</span> วัน —
+            เลือก <span id="selDays" class="font-semibold">–</span> วัน — 
             ราคาเช่ารวม <span id="selPrice" class="font-semibold">–</span> บาท
           </div>
         </div>
 
-        <!-- รายละเอียด -->
+        <!-- รายละเอียดชุด -->
         <div class="mt-4 text-sm text-gray-700 space-y-2">
           <p><span class="font-semibold">รายละเอียด:</span> {{ dress.description|default:"-" }}</p>
           <p><span class="font-semibold">ขนาด:</span> {{ dress.size|default:"-" }}</p>
@@ -120,7 +220,7 @@
           <p class="text-xs text-gray-500">หมายเหตุ: ค่ามัดจำจะโอนคืนหลังร้านตรวจรับชุดเรียบร้อย</p>
         </div>
 
-        <!-- ✅ NEW: ตารางแพ็กค่าเช่าตามจำนวนวัน -->
+        <!-- แพ็กค่าเช่า -->
         {% if pack_prices %}
           <div class="mt-5 bg-blue-50/60 border border-blue-200 rounded-lg p-4">
             <h3 class="font-semibold text-blue-900">แพ็กค่าเช่าตามจำนวนวัน</h3>
@@ -133,11 +233,11 @@
                 </div>
               {% endfor %}
             </div>
-            <p class="text-xs text-gray-500 mt-2">* ราคาต่อ <b>1 ชุด</b> (ยังไม่รวมค่ามัดจำและค่าส่ง)</p>
+            <p class="text-xs text-gray-500 mt-2">* ราคาต่อ 1 ชุด (ยังไม่รวมค่ามัดจำและค่าส่ง)</p>
           </div>
         {% endif %}
 
-        <!-- ✅ NEW: ตารางค่าส่งขาไปตามจำนวนชุด -->
+        <!-- ค่าส่ง -->
         {% if shipping_tiers %}
           <div class="mt-4 bg-green-50/60 border border-green-200 rounded-lg p-4">
             <h3 class="font-semibold text-green-900">ค่าส่งขาไป (คิดต่อออเดอร์/ร้านเดียว)</h3>
@@ -178,7 +278,10 @@
               {% endfor %}
               <span class="ml-1 text-gray-700">{{ avg_rating|default:"0.0" }}/5</span>
             </div>
-            <a href="{% url 'dress:review_list' dress.id %}" class="ml-2 bg-gray-100 px-3 py-1 rounded shadow hover:bg-gray-200 text-sm font-medium">ดูรีวิวทั้งหมด</a>
+            <a href="{% url 'dress:review_list' dress.id %}"
+               class="ml-2 bg-gray-100 px-3 py-1 rounded shadow hover:bg-gray-200 text-sm font-medium">
+              ดูรีวิวทั้งหมด
+            </a>
           </div>
 
           <div class="mt-3 space-y-2">
@@ -204,25 +307,26 @@
           </div>
         </div>
 
-        <!-- ✅ ปุ่มเช่า -->
+        <!-- ปุ่มเช่า -->
         <div class="mt-6">
           {% if dress.stock > 0 %}
             <div class="flex flex-wrap gap-3">
               <form id="add-to-cart-form" action="{% url 'dress:add_to_cart' dress.id %}" method="post" class="flex-1">
                 {% csrf_token %}
-                <button type="submit" class="w-full bg-gray-800 text-white py-2 rounded shadow hover:bg-black text-center">
+                <button type="submit"
+                        class="w-full bg-gray-800 text-white py-2 rounded shadow hover:bg-black text-center">
                   เพิ่มลงตะกร้า
                 </button>
               </form>
 
-              <!-- คงลิงก์เดิมไว้ทุกอย่าง -->
-              <a href="{% url 'dress:rent_checkout' dress.id %}" class="flex-1 bg-blue-600 text-white py-2 rounded shadow hover:bg-blue-700 text-center">
+              <a href="{% url 'dress:rent_checkout' dress.id %}"
+                 class="flex-1 bg-blue-600 text-white py-2 rounded shadow hover:bg-blue-700 text-center">
                 เช่าทันที
               </a>
             </div>
           {% else %}
             <div class="bg-red-100 text-red-700 text-center py-3 rounded font-semibold">
-              สินค้าหมด ❌ ไม่สามารถเช่าได้
+              สินค้าหมด ไม่สามารถเช่าได้
             </div>
           {% endif %}
         </div>
@@ -233,7 +337,7 @@
   </div>
 </div>
 
-<!-- ✅ ชุดอื่น ๆ จากร้านเดียวกัน -->
+<!-- ชุดอื่น ๆ จากร้านเดียวกัน -->
 {% if related_dresses %}
   <div class="mt-16 mb-12 px-6 md:px-12">
     <h2 class="text-2xl font-bold mb-6 text-gray-800">ชุดอื่นๆ จากร้าน {{ dress.shop.name }}</h2>
@@ -243,7 +347,7 @@
         {% for item in related_dresses %}
           <div class="bg-white shadow-sm rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300">
             <a href="{% url 'dress:dress_detail' item.id %}">
-              <img src="{{ item.image.url }}" alt="{{ item.name }}" 
+              <img src="{{ item.image.url }}" alt="{{ item.name }}"
                    class="w-full h-64 object-cover hover:scale-105 transition-transform duration-300">
             </a>
             <div class="p-4">
@@ -255,8 +359,8 @@
       </div>
 
       <div class="flex justify-end mt-8">
-        <a href="{% url 'dress:my_store' dress.shop.id %}" 
-           class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg 
+        <a href="{% url 'dress:my_store' dress.shop.id %}"
+           class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg
                   hover:bg-blue-700 hover:shadow-xl transition-all duration-200 font-semibold text-sm md:text-base">
           ไปที่ร้านเพื่อดูชุดทั้งหมด
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
@@ -269,12 +373,8 @@
   </div>
 {% endif %}
 
-<!-- ✅ ส่ง pack_prices เป็น JSON ที่ปลอดภัย -->
 {{ pack_prices|json_script:"packPricesJSON" }}
 
-<!-- ✅ Script Section -->
-
-<!-- เก็บ instance ของ Flatpickr ไว้ใช้งานภายหลัง (ไม่เปลี่ยน UI เดิม) -->
 <script>
   (function() {
     const fp = flatpickr("#rental_range", {
@@ -283,7 +383,7 @@
       dateFormat: "d/m/Y",
       minDate: "today"
     });
-    window.__rentPicker = fp;  // เก็บไว้ใช้ตอนคลิก "เช่าทันที"
+    window.__rentPicker = fp;
   })();
 </script>
 
@@ -346,7 +446,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-/* ====== เพิ่มฟีเจอร์นับวัน + คำนวณราคาเช่ารวม + ไฮไลต์แพ็ก ====== */
+/* นับวัน + คำนวณราคาเช่า */
 (function () {
   const packDataNode = document.getElementById("packPricesJSON");
   const packData = packDataNode ? JSON.parse(packDataNode.textContent || "[]") : [];
@@ -360,7 +460,6 @@ document.head.appendChild(style);
   const DAILY = Number(("{{ dress.daily_price|default:'0' }}").toString().replace(/,/g, "")) || 0;
 
   const input = document.getElementById("rental_range");
-  // ใช้ instance เดียวกับที่เราเก็บไว้
   const fp = window.__rentPicker || (input ? input._flatpickr : null);
 
   const summary = document.getElementById("rentSummary");
@@ -423,7 +522,7 @@ document.head.appendChild(style);
 })();
 </script>
 
-<!-- ✅ Modal แจ้งให้เลือกช่วงวันที่ (สไตล์มืออาชีพ) -->
+<!-- Modal แจ้งเตือนเลือกวันที่ -->
 <div id="dateAlert" class="fixed inset-0 z-50 hidden">
   <div class="absolute inset-0 bg-black/40 backdrop-blur-[1px]" data-close="1"></div>
   <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm">
@@ -444,14 +543,12 @@ document.head.appendChild(style);
   </div>
 </div>
 
-<!-- ✅ จับคลิก "เช่าทันที" แล้วแนบพารามิเตอร์ start/end/days + ใช้ Modal แทน alert -->
 <script>
 (function(){
   const checkoutURL = "{% url 'dress:rent_checkout' dress.id %}";
   const rentLink = document.querySelector('a[href="' + checkoutURL + '"]');
   if (!rentLink) return;
 
-  // modal helpers
   const modal = document.getElementById('dateAlert');
   const closeBtn = document.getElementById('dateAlertClose');
   const openModal  = () => modal.classList.remove('hidden');

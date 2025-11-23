@@ -9,8 +9,7 @@
 </head>
 <body class="bg-gray-50">
 
-
- <!-- Header -->
+<!-- Header -->
 <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
   <div class="w-full px-8 py-9 flex justify-between items-center">
     <h1 class="text-xl font-semibold text-gray-800">การเช่าของฉัน</h1>
@@ -21,307 +20,316 @@
   </div>
 </header>
 
-  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
 
-    <!-- Tabs -->
-    <div class="border-b border-pink-200 flex text-sm font-medium text-gray-500">
-      <button class="tab-btn px-6 py-3 border-b-2 border-pink-500 text-pink-600"
-              data-target="tab-current">
-        กำลังเช่าอยู่
-      </button>
-      <button class="tab-btn px-6 py-3 border-b-2 border-transparent hover:text-pink-500"
-              data-target="tab-upcoming">
-        เช่าในอนาคต
-      </button>
-      <button class="tab-btn px-6 py-3 border-b-2 border-transparent hover:text-pink-500"
-              data-target="tab-completed">
-        เช่าเสร็จแล้ว
-      </button>
-    </div>
+  <!-- Tabs -->
+  <div class="border-b border-pink-200 flex text-sm font-medium text-gray-500">
+    <button class="tab-btn px-6 py-3 border-b-2 border-pink-500 text-pink-600"
+            data-target="tab-current">
+      กำลังเช่าอยู่
+    </button>
+    <button class="tab-btn px-6 py-3 border-b-2 border-transparent hover:text-pink-500"
+            data-target="tab-upcoming">
+      เช่าในอนาคต
+    </button>
+    <button class="tab-btn px-6 py-3 border-b-2 border-transparent hover:text-pink-500"
+            data-target="tab-completed">
+      เช่าเสร็จแล้ว
+    </button>
+  </div>
 
-    <!-- กำลังเช่าอยู่ -->
-    <section id="tab-current" class="tab-panel pt-6">
-      {% if current_rentals %}
-        <div class="space-y-4">
-          {% for order in current_rentals %}
-            <article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-4">
-              <div class="w-24 h-32 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
-                {% if order.dress.image %}
-                  <img src="{{ order.dress.image.url }}" alt="{{ order.dress.name }}"
-                       class="w-full h-full object-cover">
-                {% else %}
-                  <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                    ไม่มีรูป
+  <!-- กำลังเช่าอยู่ -->
+  <section id="tab-current" class="tab-panel pt-6">
+    {% if current_rentals %}
+      <div class="space-y-4">
+        {% for order in current_rentals %}
+          <article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-4">
+            <div class="w-24 h-32 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
+              {% if order.dress.image %}
+                <img src="{{ order.dress.image.url }}" alt="{{ order.dress.name }}"
+                     class="w-full h-full object-cover">
+              {% else %}
+                <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                  ไม่มีรูป
+                </div>
+              {% endif %}
+            </div>
+            <div class="flex-1">
+              <div class="flex justify-between items-start gap-2">
+                <div>
+                  <h2 class="font-semibold text-base text-gray-800">
+                    {{ order.dress.name }}
+                  </h2>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    ร้าน: {{ order.rental_shop.name }}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs text-green-600 font-semibold">
+                    กำลังเช่าอยู่
                   </div>
-                {% endif %}
+                  <div class="text-sm font-semibold text-gray-900">
+                    ฿{{ order.total_price }}
+                  </div>
+                </div>
               </div>
-              <div class="flex-1">
-                <div class="flex justify-between items-start gap-2">
-                  <div>
-                    <h2 class="font-semibold text-base text-gray-800">
-                      {{ order.dress.name }}
-                    </h2>
-                    <p class="text-xs text-gray-500 mt-0.5">
-                      ร้าน: {{ order.rental_shop.name }}
-                    </p>
+
+              <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                <div>
+                  <div class="text-gray-400">วันรับชุด</div>
+                  <div class="font-medium">
+                    {{ order.pickup_date|date:"d/m/Y" }}
                   </div>
-                  <div class="text-right">
+                </div>
+                <div>
+                  <div class="text-gray-400">วันคืนชุด</div>
+                  <div class="font-medium">
+                    {{ order.return_date|date:"d/m/Y" }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- แถวปุ่ม -->
+              <div class="mt-4 flex items-center justify-between text-xs">
+                <div class="text-gray-400">
+                  หมายเลขคำสั่งซื้อ: #{{ order.id }}
+                </div>
+                <div class="flex gap-2">
+                  <a href="{% url 'dress:dress_detail' order.dress.id %}"
+                     class="px-3 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
+                    ดูรายละเอียดชุด
+                  </a>
+                  {% if order.status == "paid" and order.pickup_date > today %}
+                    <form method="post" action="{% url 'dress:cancel_rental' order.id %}">
+                      {% csrf_token %}
+                      <button type="submit"
+                              class="px-3 py-1 rounded-full border border-red-400 text-red-600 hover:bg-red-50 text-xs">
+                        ยกเลิกการเช่า
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              </div>
+
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="flex flex-col items-center justify-center py-16 text-gray-500">
+        <img src="{% static 'img/no-rental.svg' %}" alt="no rental" class="w-32 h-32 mb-4 opacity-80">
+        <div class="font-medium">ยังไม่มีการเช่า</div>
+        <p class="text-xs text-gray-400 mt-1">
+          เมื่อคุณทำการเช่าชุด ระบบจะแสดงรายละเอียดที่นี่
+        </p>
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- เช่าในอนาคต -->
+  <section id="tab-upcoming" class="tab-panel pt-6 hidden">
+    {% if upcoming_rentals %}
+      <div class="space-y-4">
+        {% for order in upcoming_rentals %}
+          <article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-4">
+            <div class="w-24 h-32 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
+              {% if order.dress.image %}
+                <img src="{{ order.dress.image.url }}" alt="{{ order.dress.name }}"
+                     class="w-full h-full object-cover">
+              {% else %}
+                <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                  ไม่มีรูป
+                </div>
+              {% endif %}
+            </div>
+            <div class="flex-1">
+              <div class="flex justify-between items-start gap-2">
+                <div>
+                  <h2 class="font-semibold text-base text-gray-800">
+                    {{ order.dress.name }}
+                  </h2>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    ร้าน: {{ order.rental_shop.name }}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs text-blue-600 font-semibold">
+                    เช่าในอนาคต
+                  </div>
+                  <div class="text-sm font-semibold text-gray-900">
+                    ฿{{ order.total_price }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                <div>
+                  <div class="text-gray-400">วันรับชุด</div>
+                  <div class="font-medium">
+                    {{ order.pickup_date|date:"d/m/Y" }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-gray-400">วันคืนชุด</div>
+                  <div class="font-medium">
+                    {{ order.return_date|date:"d/m/Y" }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- แถวปุ่ม -->
+              <div class="mt-4 flex items-center justify-between text-xs">
+                <div class="text-gray-400">
+                  หมายเลขคำสั่งซื้อ: #{{ order.id }}
+                </div>
+                <div class="flex gap-2">
+                  <a href="{% url 'dress:dress_detail' order.dress.id %}"
+                     class="px-3 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
+                    ดูรายละเอียดชุด
+                  </a>
+                  {% if order.status == "paid" and order.pickup_date > today %}
+                    <form method="post" action="{% url 'dress:cancel_rental' order.id %}">
+                      {% csrf_token %}
+                      <button type="submit"
+                              class="px-3 py-1 rounded-full border border-red-400 text-red-600 hover:bg-red-50 text-xs">
+                        ยกเลิกการเช่า
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              </div>
+
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="flex flex-col items-center justify-center py-16 text-gray-500">
+        <img src="{% static 'img/no-rental.svg' %}" alt="no rental" class="w-32 h-32 mb-4 opacity-80">
+        <div class="font-medium">ยังไม่มีการเช่าล่วงหน้า</div>
+        <p class="text-xs text-gray-400 mt-1">
+          คุณสามารถจองชุดล่วงหน้าได้ ระบบจะแสดงรายการที่นี่
+        </p>
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- เช่าเสร็จแล้ว / รอร้านยืนยัน -->
+  <section id="tab-completed" class="tab-panel pt-6 hidden">
+    {% if completed_rentals %}
+      <div class="space-y-4">
+        {% for order in completed_rentals %}
+          <article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-4">
+            <div class="w-24 h-32 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
+              {% if order.dress.image %}
+                <img src="{{ order.dress.image.url }}" alt="{{ order.dress.name }}"
+                     class="w-full h-full object-cover">
+              {% else %}
+                <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                  ไม่มีรูป
+                </div>
+              {% endif %}
+            </div>
+            <div class="flex-1">
+              <div class="flex justify-between items-start gap-2">
+                <div>
+                  <h2 class="font-semibold text-base text-gray-800">
+                    {{ order.dress.name }}
+                  </h2>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    ร้าน: {{ order.rental_shop.name }}
+                  </p>
+                </div>
+                <div class="text-right">
+                  {# สถานะฝั่งลูกค้า หลังคืนชุด #}
+                  {% if order.status == "returned" %}
                     <div class="text-xs text-green-600 font-semibold">
-                      กำลังเช่าอยู่
+                      ร้านยืนยันรับชุดแล้ว
                     </div>
-                    <div class="text-sm font-semibold text-gray-900">
-                      ฿{{ order.total_price }}
+                  {% elif order.status == "waiting_return" %}
+                    <div class="text-xs text-orange-500 font-semibold">
+                      รอร้านยืนยันการคืนชุด
                     </div>
+                  {% elif order.status == "damaged" %}
+                    <div class="text-xs text-red-500 font-semibold">
+                      พบปัญหาชุด / กำลังตรวจสอบ
+                    </div>
+                  {% else %}
+                    <div class="text-xs text-gray-400 font-semibold">
+                      เช่าเสร็จแล้ว
+                    </div>
+                  {% endif %}
+                  <div class="text-sm font-semibold text-gray-900">
+                    ฿{{ order.total_price }}
                   </div>
                 </div>
-
-                <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
-                  <div>
-                    <div class="text-gray-400">วันรับชุด</div>
-                    <div class="font-medium">
-                      {{ order.pickup_date|date:"d/m/Y" }}
-                    </div>
-                  </div>
-                  <div>
-                    <div class="text-gray-400">วันคืนชุด</div>
-                    <div class="font-medium">
-                      {{ order.return_date|date:"d/m/Y" }}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- แถวปุ่ม -->
-                <div class="mt-4 flex items-center justify-between text-xs">
-                  <div class="text-gray-400">
-                    หมายเลขคำสั่งซื้อ: #{{ order.id }}
-                  </div>
-                  <div class="flex gap-2">
-                    <a href="{% url 'dress:dress_detail' order.dress.id %}"
-                       class="px-3 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
-                      ดูรายละเอียดชุด
-                    </a>
-                    {% if order.status == "paid" and order.pickup_date > today %}
-                      <form method="post" action="{% url 'dress:cancel_rental' order.id %}">
-                        {% csrf_token %}
-                        <button type="submit"
-                                class="px-3 py-1 rounded-full border border-red-400 text-red-600 hover:bg-red-50 text-xs">
-                          ยกเลิกการเช่า
-                        </button>
-                      </form>
-                    {% endif %}
-                  </div>
-                </div>
-
               </div>
-            </article>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="flex flex-col items-center justify-center py-16 text-gray-500">
-          <img src="{% static 'img/no-rental.svg' %}" alt="no rental" class="w-32 h-32 mb-4 opacity-80">
-          <div class="font-medium">ยังไม่มีการเช่า</div>
-          <p class="text-xs text-gray-400 mt-1">
-            เมื่อคุณทำการเช่าชุด ระบบจะแสดงรายละเอียดที่นี่
-          </p>
-        </div>
-      {% endif %}
-    </section>
 
-    <!-- เช่าในอนาคต -->
-    <section id="tab-upcoming" class="tab-panel pt-6 hidden">
-      {% if upcoming_rentals %}
-        <div class="space-y-4">
-          {% for order in upcoming_rentals %}
-            <article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-4">
-              <div class="w-24 h-32 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
-                {% if order.dress.image %}
-                  <img src="{{ order.dress.image.url }}" alt="{{ order.dress.name }}"
-                       class="w-full h-full object-cover">
-                {% else %}
-                  <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                    ไม่มีรูป
+              <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                <div>
+                  <div class="text-gray-400">วันรับชุด</div>
+                  <div class="font-medium">
+                    {{ order.pickup_date|date:"d/m/Y" }}
                   </div>
-                {% endif %}
+                </div>
+                <div>
+                  <div class="text-gray-400">วันคืนชุด</div>
+                  <div class="font-medium">
+                    {{ order.return_date|date:"d/m/Y" }}
+                  </div>
+                </div>
               </div>
-              <div class="flex-1">
-                <div class="flex justify-between items-start gap-2">
-                  <div>
-                    <h2 class="font-semibold text-base text-gray-800">
-                      {{ order.dress.name }}
-                    </h2>
-                    <p class="text-xs text-gray-500 mt-0.5">
-                      ร้าน: {{ order.rental_shop.name }}
-                    </p>
-                  </div>
-                  <div class="text-right">
-                    <div class="text-xs text-blue-600 font-semibold">
-                      เช่าในอนาคต
-                    </div>
-                    <div class="text-sm font-semibold text-gray-900">
-                      ฿{{ order.total_price }}
-                    </div>
-                  </div>
-                </div>
 
-                <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
-                  <div>
-                    <div class="text-gray-400">วันรับชุด</div>
-                    <div class="font-medium">
-                      {{ order.pickup_date|date:"d/m/Y" }}
-                    </div>
-                  </div>
-                  <div>
-                    <div class="text-gray-400">วันคืนชุด</div>
-                    <div class="font-medium">
-                      {{ order.return_date|date:"d/m/Y" }}
-                    </div>
-                  </div>
+              <!-- แถวปุ่ม -->
+              <div class="mt-4 flex items-center justify-between text-xs">
+                <div class="text-gray-400">
+                  หมายเลขคำสั่งซื้อ: #{{ order.id }}
                 </div>
-
-                <!-- แถวปุ่ม -->
-                <div class="mt-4 flex items-center justify-between text-xs">
-                  <div class="text-gray-400">
-                    หมายเลขคำสั่งซื้อ: #{{ order.id }}
-                  </div>
-                  <div class="flex gap-2">
-                    <a href="{% url 'dress:dress_detail' order.dress.id %}"
-                       class="px-3 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
-                      ดูรายละเอียดชุด
-                    </a>
-                    {% if order.status == "paid" and order.pickup_date > today %}
-                      <form method="post" action="{% url 'dress:cancel_rental' order.id %}">
-                        {% csrf_token %}
-                        <button type="submit"
-                                class="px-3 py-1 rounded-full border border-red-400 text-red-600 hover:bg-red-50 text-xs">
-                          ยกเลิกการเช่า
-                        </button>
-                      </form>
-                    {% endif %}
-                  </div>
+                <div class="flex gap-2">
+                  <a href="{% url 'dress:dress_detail' order.dress.id %}"
+                     class="px-3 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
+                    ดูรายละเอียดชุด
+                  </a>
                 </div>
-
               </div>
-            </article>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="flex flex-col items-center justify-center py-16 text-gray-500">
-          <img src="{% static 'img/no-rental.svg' %}" alt="no rental" class="w-32 h-32 mb-4 opacity-80">
-          <div class="font-medium">ยังไม่มีการเช่าล่วงหน้า</div>
-          <p class="text-xs text-gray-400 mt-1">
-            คุณสามารถจองชุดล่วงหน้าได้ ระบบจะแสดงรายการที่นี่
-          </p>
-        </div>
-      {% endif %}
-    </section>
 
-    <!-- เช่าเสร็จแล้ว / รอร้านยืนยัน -->
-    <section id="tab-completed" class="tab-panel pt-6 hidden">
-      {% if completed_rentals %}
-        <div class="space-y-4">
-          {% for order in completed_rentals %}
-            <article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-4">
-              <div class="w-24 h-32 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
-                {% if order.dress.image %}
-                  <img src="{{ order.dress.image.url }}" alt="{{ order.dress.name }}"
-                       class="w-full h-full object-cover">
-                {% else %}
-                  <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                    ไม่มีรูป
-                  </div>
-                {% endif %}
-              </div>
-              <div class="flex-1">
-                <div class="flex justify-between items-start gap-2">
-                  <div>
-                    <h2 class="font-semibold text-base text-gray-800">
-                      {{ order.dress.name }}
-                    </h2>
-                    <p class="text-xs text-gray-500 mt-0.5">
-                      ร้าน: {{ order.rental_shop.name }}
-                    </p>
-                  </div>
-                  <div class="text-right">
-                    {% if order.status == "completed" %}
-                      <div class="text-xs text-gray-400 font-semibold">
-                        เช่าเสร็จแล้ว
-                      </div>
-                    {% else %}
-                      <div class="text-xs text-orange-500 font-semibold">
-                        รอร้านยืนยันการคืนชุด
-                      </div>
-                    {% endif %}
-                    <div class="text-sm font-semibold text-gray-900">
-                      ฿{{ order.total_price }}
-                    </div>
-                  </div>
-                </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="flex flex-col items-center justify-center py-16 text-gray-500">
+        <img src="{% static 'img/no-rental.svg' %}" alt="no rental" class="w-32 h-32 mb-4 opacity-80">
+        <div class="font-medium">ยังไม่มีประวัติการเช่า</div>
+        <p class="text-xs text-gray-400 mt-1">
+          เมื่อคุณเช่าและคืนชุดเรียบร้อยแล้ว จะมีประวัติแสดงที่นี่
+        </p>
+      </div>
+    {% endif %}
+  </section>
 
-                <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
-                  <div>
-                    <div class="text-gray-400">วันรับชุด</div>
-                    <div class="font-medium">
-                      {{ order.pickup_date|date:"d/m/Y" }}
-                    </div>
-                  </div>
-                  <div>
-                    <div class="text-gray-400">วันคืนชุด</div>
-                    <div class="font-medium">
-                      {{ order.return_date|date:"d/m/Y" }}
-                    </div>
-                  </div>
-                </div>
+</main>
 
-                <!-- แถวปุ่ม -->
-                <div class="mt-4 flex items-center justify-between text-xs">
-                  <div class="text-gray-400">
-                    หมายเลขคำสั่งซื้อ: #{{ order.id }}
-                  </div>
-                  <div class="flex gap-2">
-                    <a href="{% url 'dress:dress_detail' order.dress.id %}"
-                       class="px-3 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
-                      ดูรายละเอียดชุด
-                    </a>
-                  </div>
-                </div>
+<script>
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
 
-              </div>
-            </article>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="flex flex-col items-center justify-center py-16 text-gray-500">
-          <img src="{% static 'img/no-rental.svg' %}" alt="no rental" class="w-32 h-32 mb-4 opacity-80">
-          <div class="font-medium">ยังไม่มีประวัติการเช่า</div>
-          <p class="text-xs text-gray-400 mt-1">
-            เมื่อคุณเช่าและคืนชุดเรียบร้อยแล้ว จะมีประวัติแสดงที่นี่
-          </p>
-        </div>
-      {% endif %}
-    </section>
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target;
 
-  </main>
+      tabs.forEach(b => {
+        b.classList.remove('border-pink-500', 'text-pink-600');
+        b.classList.add('border-transparent');
+      });
+      btn.classList.add('border-pink-500', 'text-pink-600');
+      btn.classList.remove('border-transparent');
 
-  <script>
-    const tabs = document.querySelectorAll('.tab-btn');
-    const panels = document.querySelectorAll('.tab-panel');
-
-    tabs.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const target = btn.dataset.target;
-
-        tabs.forEach(b => {
-          b.classList.remove('border-pink-500', 'text-pink-600');
-          b.classList.add('border-transparent');
-        });
-        btn.classList.add('border-pink-500', 'text-pink-600');
-        btn.classList.remove('border-transparent');
-
-        panels.forEach(p => {
-          p.classList.toggle('hidden', p.id !== target);
-        });
+      panels.forEach(p => {
+        p.classList.toggle('hidden', p.id !== target);
       });
     });
-  </script>
+  });
+</script>
 </body>
 </html>

@@ -24,37 +24,111 @@ urlpatterns = [
     path("my-store/<int:store_id>/edit-dress/<int:dress_id>/", views.edit_dress, name="edit_dress"),
     path("my-store/<int:store_id>/delete-dress/<int:dress_id>/", views.delete_dress, name="delete_dress"),
     path("my-store/<int:store_id>/toggle/<int:dress_id>/", views.toggle_availability, name="toggle_availability"),
-    path("my-store/<int:store_id>/back-office/", views.back_office, name="back_office"),
-    path("my-store/<int:store_id>/back-office/finance/",views.back_office_finance,name="back_office_finance"),
-    path("my-store/<int:store_id>/back-office/stats/",views.back_office_stats,name="back_office_stats"),
-     # รายการคำสั่งเช่าตามสถานะ
-    path(
-        "my-store/<int:store_id>/orders/new/",
-        views.back_office_orders_new,
-        name="back_office_orders_new",
-    ),
-    path(
-        "my-store/<int:store_id>/orders/shipping/",
-        views.back_office_orders_shipping,
-        name="back_office_orders_shipping",
-    ),
-    path(
-        "my-store/<int:store_id>/orders/cancelled/",
-        views.back_office_orders_cancelled,
-        name="back_office_orders_cancelled",
-    ),
-    path(
-        "my-store/<int:store_id>/orders/completed/",
-        views.back_office_orders_completed,
-        name="back_office_orders_completed",
-    ),
+    # Chat กับลูกค้า
+    path('chat/shop/<int:shop_id>/', views.shop_chat_view, name='shop_chat'),
+    path('chat/shop/<int:shop_id>/send/', views.shop_chat_send_message, name='shop_chat_send'),
+    path('chat/shop/<int:shop_id>/messages/', views.shop_chat_messages_api, name='shop_chat_messages'),
+    #แชทของร้าน (หลังร้าน)
+    path('shop/inbox/', views.shop_chat_inbox, name='shop_chat_inbox'),
+    path('shop/inbox/thread/<int:thread_id>/', views.shop_chat_thread_view, name='shop_chat_thread'),
+    path('shop/inbox/thread/<int:thread_id>/send/', views.shop_chat_thread_send, name='shop_chat_thread_send'),
+    path('shop/inbox/thread/<int:thread_id>/messages/', views.shop_chat_thread_messages, name='shop_chat_thread_messages'),
 
-    # รีวิวของร้าน
-    path(
-        "my-store/<int:store_id>/reviews/",
-        views.back_office_reviews,
-        name="back_office_reviews",
-    ),
+    path("my-store/<int:store_id>/back-office/", views.back_office, name="back_office"),
+
+
+path(
+    "my-store/<int:store_id>/back-office/finance/",
+    views.back_office_finance,
+    name="back_office_finance",
+),
+path(
+    "my-store/<int:store_id>/back-office/stats/",
+    views.back_office_stats,
+    name="back_office_stats",
+),
+
+path(
+    "my-store/<int:store_id>/orders/<int:order_id>/update-status/",
+    views.back_office_update_order_status,
+    name="back_office_update_order_status",
+),
+
+# ================================
+# รายการคำสั่งเช่าตามสถานะ (หลังร้าน)
+# ================================
+path(
+    "my-store/<int:store_id>/orders/new/",
+    views.back_office_orders_new,
+    name="back_office_orders_new",
+),
+
+path(
+    "my-store/<int:store_id>/orders/pending-payment/",
+    views.back_office_orders_pending_payment,
+    name="back_office_orders_pending_payment",
+),
+
+path(
+    "my-store/<int:store_id>/orders/paid/",
+    views.back_office_orders_paid,
+    name="back_office_orders_paid",
+),
+
+path(
+    "my-store/<int:store_id>/orders/preparing/",
+    views.back_office_orders_preparing,
+    name="back_office_orders_preparing",
+),
+
+path(
+    "my-store/<int:store_id>/orders/shipping/",
+    views.back_office_orders_shipping,
+    name="back_office_orders_shipping",
+),
+
+path(
+    "my-store/<int:store_id>/orders/renting/",
+    views.back_office_orders_renting,
+    name="back_office_orders_renting",
+),
+
+path(
+    "my-store/<int:store_id>/orders/waiting-return/",
+    views.back_office_orders_waiting_return,
+    name="back_office_orders_waiting_return",
+),
+
+path(
+    "my-store/<int:store_id>/orders/returned/",
+    views.back_office_orders_returned,
+    name="back_office_orders_returned",
+),
+
+path(
+    "my-store/<int:store_id>/orders/damaged/",
+    views.back_office_orders_damaged,
+    name="back_office_orders_damaged",
+),
+
+path(
+    "my-store/<int:store_id>/orders/completed/",
+    views.back_office_orders_completed,
+    name="back_office_orders_completed",
+),
+
+path(
+    "my-store/<int:store_id>/orders/cancelled/",
+    views.back_office_orders_cancelled,
+    name="back_office_orders_cancelled",
+),
+
+path(
+    "my-store/<int:store_id>/reviews/",
+    views.back_office_reviews,
+    name="back_office_reviews",
+),
+
     
     #การแจ้งเตือน
     path("notifications/", views.notification_page, name="notifications"),
@@ -116,6 +190,6 @@ urlpatterns = [
 
     # Webhook (ตั้งใน Omise Dashboard ให้ยิงมาที่นี่)
     path("omise/webhook/", views.omise_webhook, name="omise_webhook"),
-
+    # ตรวจสอบสถานะการชำระเงิน (Payment Status API)
     path("payments/status/", views.payment_status_api, name="payment_status_api"),
 ]

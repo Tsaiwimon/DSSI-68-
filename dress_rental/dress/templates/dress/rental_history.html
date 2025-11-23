@@ -3,8 +3,8 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ประวัติการเช่า | Glam & Borrow</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50">
@@ -13,64 +13,108 @@
 <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
   <div class="w-full px-8 py-9 flex justify-between items-center">
     <h1 class="text-xl font-semibold text-gray-800">ประวัติการเช่า</h1>
-    <a href="{% url 'dress:member_home' %}" 
+    <a href="{% url 'dress:member_home' %}"
        class="bg-white text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-100 transition">
-       ← กลับหน้าหลัก
+      ← กลับหน้าหลัก
     </a>
   </div>
 </header>
 
-<!-- Main -->
-<main class="max-w-5xl mx-auto py-10 px-4 space-y-6">
-
+<main class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
   {% if rentals %}
-    {% for rent in rentals %}
-      <div class="bg-pink-50 rounded-lg shadow-md p-4 flex flex-col sm:flex-row justify-between items-center">
-        
-        <!-- ซ้าย: ข้อมูลร้าน + รายการเช่า -->
-        <div class="w-full sm:w-auto flex items-start gap-4">
-          {% if rent.dress.image %}
-            <img src="{{ rent.dress.image.url }}" alt="{{ rent.dress.name }}" 
-                 class="w-24 h-32 object-cover rounded-lg shadow">
-          {% else %}
-            <img src="{% static 'images/placeholder-4x3.jpg' %}" alt="no image" 
-                 class="w-24 h-32 object-cover rounded-lg shadow">
-          {% endif %}
+    <div class="space-y-4">
+      {% for order in rentals %}
+        <article class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex gap-4">
+          <!-- รูปชุด -->
+          <div class="w-24 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+            {% if order.dress.image %}
+              <img src="{{ order.dress.image.url }}"
+                   alt="{{ order.dress.name }}"
+                   class="w-full h-full object-cover">
+            {% else %}
+              <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                ไม่มีรูป
+              </div>
+            {% endif %}
+          </div>
 
-          <div>
-            <p class="font-bold text-gray-900 mb-1">{{ rent.dress.shop.name }} <span class="text-gray-500">></span></p>
-            <p class="text-gray-700 text-sm">{{ rent.dress.name }}</p>
-            <p class="text-gray-800 font-semibold mt-1">฿{{ rent.dress.daily_price|floatformat:0 }}</p>
-            <p class="text-gray-700 text-sm">ขนาด: {{ rent.dress.size|default:"-" }}</p>
+          <!-- ข้อมูลหลัก -->
+          <div class="flex-1">
+            <div class="flex justify-between items-start gap-2">
+              <div>
+                <h2 class="font-semibold text-gray-900 text-sm sm:text-base">
+                  {{ order.dress.name }}
+                </h2>
+                <p class="text-xs text-gray-500 mt-0.5">
+                  ร้าน: {{ order.rental_shop.name }}
+                </p>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  หมายเลขคำสั่งเช่า: #{{ order.id }}
+                </p>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-semibold text-pink-600">
+                  ฿{{ order.total_price|floatformat:2 }}
+                </div>
+                <div class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full
+                            text-[11px] font-medium
+                            {% if order.status == 'returned' %}
+                              bg-green-50 text-green-700
+                            {% elif order.status == 'damaged' %}
+                              bg-red-50 text-red-600
+                            {% else %}
+                              bg-gray-100 text-gray-600
+                            {% endif %}">
+                  {% if order.status == 'returned' %}
+                    คืนชุดแล้ว
+                  {% elif order.status == 'damaged' %}
+                    มีปัญหาชุดชำรุด
+                  {% elif order.status == 'completed' %}
+                    เช่าสำเร็จ
+                  {% else %}
+                    {{ order.status }}
+                  {% endif %}
+                </div>
+              </div>
+            </div>
 
-            <!-- ✅ วันที่เช่าและวันที่คืน -->
-            <div class="mt-2 text-xs text-gray-600 space-y-1">
-              <p><span class="font-medium text-gray-800">วันที่เช่า:</span> {{ rent.start_date|date:"d/m/Y" }}</p>
-              <p><span class="font-medium text-gray-800">วันที่คืน:</span> {{ rent.end_date|date:"d/m/Y" }}</p>
+            <!-- วันที่รับคืน -->
+            <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-500">
+              <div>
+                <span class="font-medium text-gray-700">วันที่รับชุด:</span>
+                <span class="ml-1">
+                  {{ order.pickup_date|date:"d/m/Y" }}
+                </span>
+              </div>
+              <div>
+                <span class="font-medium text-gray-700">วันที่คืนชุด:</span>
+                <span class="ml-1">
+                  {{ order.return_date|date:"d/m/Y" }}
+                </span>
+              </div>
+            </div>
+
+            <!-- ปุ่มดูรายละเอียดชุด -->
+            <div class="mt-4 flex justify-end">
+              <a href="{% url 'dress:dress_detail' order.dress.id %}"
+                 class="inline-flex items-center px-3 py-1.5 text-xs font-medium
+                        text-pink-600 border border-pink-200 rounded-full
+                        hover:bg-pink-50 transition">
+                เช่าอีกครั้ง
+              </a>
             </div>
           </div>
-        </div>
-
-        <!-- ขวา: สถานะและปุ่ม -->
-        <div class="mt-4 sm:mt-0 flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-          <p class="text-gray-800 font-semibold">{{ rent.status|default:"สำเร็จ" }}</p>
-          <div class="flex gap-3">
-            <a href="{% url 'rent_again' rent.dress.id %}" 
-               class="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded shadow">
-              เช่าอีกครั้ง
-            </a>
-            <a href="{% url 'review_form' rent.dress.id %}" 
-               class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded shadow">
-              ให้คะแนน
-            </a>
-          </div>
-        </div>
-      </div>
-    {% endfor %}
+        </article>
+      {% endfor %}
+    </div>
   {% else %}
-    <p class="text-center text-gray-500 mt-20">ยังไม่มีประวัติการเช่า</p>
+    <div class="flex flex-col items-center justify-center py-16 text-gray-500">
+      <p class="font-medium">ยังไม่มีประวัติการเช่า</p>
+      <p class="text-xs text-gray-400 mt-1">
+        เมื่อร้านยืนยันการคืนชุดแล้ว รายการเช่าจะถูกแสดงที่นี่
+      </p>
+    </div>
   {% endif %}
-
 </main>
 
 </body>

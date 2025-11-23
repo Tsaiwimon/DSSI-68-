@@ -10,8 +10,8 @@
 
   <!-- Header -->
   <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow">
-    <div class="max-w-6xl mx-auto flex items-center px-6 py-4">
-      <a href="{% url 'store_dress' store.id %}" class="mr-4 text-gray-600 hover:text-black">←</a>
+    <div class="max-w-6xl mx-auto flex items-center px-10 py-9">
+      <a href="{% url 'dress:store_dress' store.id %}" class="mr-4 text-gray-600 hover:text-black">←</a>
       <h1 class="text-xl font-bold text-gray-700">แก้ไขชุดเช่า</h1>
     </div>
   </header>
@@ -186,7 +186,7 @@
 
         <!-- ปุ่มบันทึกชุด -->
         <div class="col-span-12 flex justify-end space-x-4">
-          <a href="{% url 'store_dress' store.id %}" class="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">ยกเลิก</a>
+          <a href="{% url 'dress:store_dress' store.id %}" class="px-6 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500">ยกเลิก</a>
           <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">บันทึก</button>
         </div>
       </div>

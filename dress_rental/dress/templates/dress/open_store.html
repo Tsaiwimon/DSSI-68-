@@ -8,146 +8,226 @@
 </head>
 <body class="bg-gray-50"> 
 
-  <!-- Header -->
-  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full p-4">
-    <h1 class="text-3xl font-bold text-center">สมัครเปิดร้านเช่า</h1>
-  </header>
-
+<!-- Header -->
+<div class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow p-8 flex justify-between items-center">
+  <h1 class="text-2xl font-bold text-gray-800">
+    สมัครเปิดร้านเช่า
+  </h1>
+  <a href="{% url 'dress:member_home' %}" 
+     class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700">
+     ← กลับหน้าหลัก
+  </a>
+</div>
 
 
   <!-- Main -->
-  <main class="max-w-5xl mx-auto p-8 
-            bg-gradient-to-br from-blue-100 via-blue-200 to-indigo-100 
-            border-2 border-black 
-            shadow-xl 
-            rounded-2xl mt-6">
-
-    <form method="POST" enctype="multipart/form-data" class="space-y-6">
-      {% csrf_token %}
-
-      <!-- ข้อมูลผู้ขาย -->
-      <div>
-        <h2 class="text-lg font-bold mb-4">ข้อมูลผู้ขาย</h2>
-        <div class="grid grid-cols-2 gap-4">
-          <input type="text" name="fullname" placeholder="ชื่อ-นามสกุล"
-                 class="border-2 border-black px-3 py-2 rounded-lg w-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
-          <input type="text" name="phone" placeholder="เบอร์โทรศัพท์"
-                 class="border-2 border-black px-3 py-2 rounded-lg w-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
-          <input type="email" name="email" placeholder="อีเมล (ใช้สำหรับติดต่อ)"
-                 class="border-2 border-black px-3 py-2 rounded-lg w-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
-          <input type="password" name="password" placeholder="รหัสผ่าน"
-                 class="border-2 border-black px-3 py-2 rounded-lg w-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
-        </div>
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 mb-12">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 px-6 sm:px-8 py-8">
+      
+      <!-- หัวฟอร์ม -->
+      <div class="mb-8">
+        <h2 class="text-2xl font-semibold text-gray-900">แบบฟอร์มสมัครเปิดร้านเช่า</h2>
+        <p class="mt-2 text-sm text-gray-600">
+          กรอกข้อมูลให้ครบถ้วน เพื่อให้ทีมงานตรวจสอบและอนุมัติการเปิดร้านของคุณในระบบ Glam &amp; Borrow
+        </p>
       </div>
 
-      <!-- ข้อมูลร้านค้า -->
-      <div>
-        <h2 class="text-lg font-bold mb-4">ข้อมูลร้านค้า</h2>
-        <div class="grid grid-cols-2 gap-4">
-          <input type="text" name="shop_name" placeholder="ชื่อร้าน"
-                 class="border-2 border-black px-3 py-2 rounded-lg w-full col-span-2 shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+      <form method="POST" enctype="multipart/form-data" class="space-y-10">
+        {% csrf_token %}
 
-          <!-- ประเภทชุด -->
-          <div class="col-span-2">
-            <h3 class="font-semibold mb-2">ประเภทชุดที่ให้เช่า</h3>
-            <div class="flex flex-wrap gap-3">
-              <label class="px-4 py-2 bg-white border-2 border-black rounded-lg cursor-pointer shadow-sm hover:bg-blue-100">
-                <input type="checkbox" name="category" value="ชุดเดรส" class="hidden peer">
-                <span class="peer-checked:text-white peer-checked:bg-blue-500 px-2 py-1 rounded">ชุดเดรส</span>
-              </label>
-              <label class="px-4 py-2 bg-white border-2 border-black rounded-lg cursor-pointer shadow-sm hover:bg-blue-100">
-                <input type="checkbox" name="category" value="ชุดคาเฟ่" class="hidden peer">
-                <span class="peer-checked:text-white peer-checked:bg-blue-500 px-2 py-1 rounded">ชุดคาเฟ่</span>
-              </label>
-              <label class="px-4 py-2 bg-white border-2 border-black rounded-lg cursor-pointer shadow-sm hover:bg-blue-100">
-                <input type="checkbox" name="category" value="ชุดว่ายน้ำ" class="hidden peer">
-                <span class="peer-checked:text-white peer-checked:bg-blue-500 px-2 py-1 rounded">ชุดว่ายน้ำ</span>
-              </label>
-              <label class="px-4 py-2 bg-white border-2 border-black rounded-lg cursor-pointer shadow-sm hover:bg-blue-100">
-                <input type="checkbox" name="category" value="ชุดทางการ" class="hidden peer">
-                <span class="peer-checked:text-white peer-checked:bg-blue-500 px-2 py-1 rounded">ชุดทางการ</span>
-              </label>
-              <label class="px-4 py-2 bg-white border-2 border-black rounded-lg cursor-pointer shadow-sm hover:bg-blue-100">
-                <input type="checkbox" name="category" value="ถ่ายแบบ" class="hidden peer">
-                <span class="peer-checked:text-white peer-checked:bg-blue-500 px-2 py-1 rounded">ถ่ายแบบ</span>
-              </label>
-              <label class="px-4 py-2 bg-white border-2 border-black rounded-lg cursor-pointer shadow-sm hover:bg-blue-100">
-                <input type="checkbox" name="category" value="พรีเวดดิ้ง" class="hidden peer">
-                <span class="peer-checked:text-white peer-checked:bg-blue-500 px-2 py-1 rounded">พรีเวดดิ้ง</span>
-              </label>
+        <!-- ข้อมูลผู้ขาย -->
+        <section>
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">ข้อมูลผู้ขาย</h3>
+            <span class="text-xs text-gray-400">ใช้สำหรับติดต่อและยืนยันตัวตนผู้ขาย</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล</label>
+              <input type="text" name="fullname" placeholder="ชื่อ-นามสกุล"
+                     class="border border-gray-300 px-3 py-2 rounded-lg w-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label>
+              <input type="text" name="phone" placeholder="เบอร์โทรศัพท์"
+                     class="border border-gray-300 px-3 py-2 rounded-lg w-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
+              <input type="email" name="email" placeholder="อีเมล (ใช้สำหรับติดต่อ)"
+                     class="border border-gray-300 px-3 py-2 rounded-lg w-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่านสำหรับเข้าสู่ระบบร้านค้า</label>
+              <input type="password" name="password" placeholder="รหัสผ่าน"
+                     class="border border-gray-300 px-3 py-2 rounded-lg w-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none">
             </div>
           </div>
+        </section>
 
-          <!-- จังหวัด -->
-          <div>
-            <h3 class="font-semibold mb-2">จังหวัด/พื้นที่ให้บริการ</h3>
-            <textarea name="province" placeholder="ที่ตั้งร้าน/จังหวัด/พื้นที่ให้บริการ"
-                      class="border-2 border-black px-3 py-2 rounded-lg w-full h-24 shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"></textarea>
+        <hr class="border-gray-200">
+
+        <!-- ข้อมูลร้านค้า -->
+        <section>
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">ข้อมูลร้านค้า</h3>
+            <span class="text-xs text-gray-400">ข้อมูลนี้จะแสดงในหน้าร้านของคุณ</span>
           </div>
 
-          <!-- รูปโปรไฟล์ -->
-          <div>
-            <h3 class="font-semibold mb-2">รูปโปรไฟล์ร้าน</h3>
-            <input type="file" name="shop_logo"
-                   class="border-2 border-black w-full p-2 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          <div class="space-y-6">
+            <!-- ชื่อร้าน -->
+            <div class="max-w-xl">
+              <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อร้าน</label>
+              <input type="text" name="shop_name" placeholder="ชื่อร้าน"
+                     class="border border-gray-300 px-3 py-2 rounded-lg w-full shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none">
+            </div>
+
+            <!-- ประเภทชุด (เขียน label ตรง ๆ ป้องกัน error template) -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                ประเภทชุดที่ให้เช่า (เลือกได้มากกว่า 1)
+              </label>
+              <div class="flex flex-wrap gap-3">
+
+                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 bg-white text-sm cursor-pointer shadow-sm hover:border-blue-400 hover:bg-blue-50">
+                  <input type="checkbox" name="category" value="ชุดเดรส"
+                         class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                  <span class="text-gray-800">ชุดเดรส</span>
+                </label>
+
+                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 bg-white text-sm cursor-pointer shadow-sm hover:border-blue-400 hover:bg-blue-50">
+                  <input type="checkbox" name="category" value="ชุดคาเฟ่"
+                         class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                  <span class="text-gray-800">ชุดคาเฟ่</span>
+                </label>
+
+                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 bg-white text-sm cursor-pointer shadow-sm hover:border-blue-400 hover:bg-blue-50">
+                  <input type="checkbox" name="category" value="ชุดว่ายน้ำ"
+                         class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                  <span class="text-gray-800">ชุดว่ายน้ำ</span>
+                </label>
+
+                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 bg-white text-sm cursor-pointer shadow-sm hover:border-blue-400 hover:bg-blue-50">
+                  <input type="checkbox" name="category" value="ชุดทางการ"
+                         class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                  <span class="text-gray-800">ชุดทางการ</span>
+                </label>
+
+                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 bg-white text-sm cursor-pointer shadow-sm hover:border-blue-400 hover:bg-blue-50">
+                  <input type="checkbox" name="category" value="ถ่ายแบบ"
+                         class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                  <span class="text-gray-800">ถ่ายแบบ</span>
+                </label>
+
+                <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 bg-white text-sm cursor-pointer shadow-sm hover:border-blue-400 hover:bg-blue-50">
+                  <input type="checkbox" name="category" value="พรีเวดดิ้ง"
+                         class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                  <span class="text-gray-800">พรีเวดดิ้ง</span>
+                </label>
+
+              </div>
+            </div>
+
+            <!-- จังหวัด + โลโก้ -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">จังหวัด / พื้นที่ให้บริการ</label>
+                <textarea name="province" placeholder="ที่ตั้งร้าน, จังหวัด, เขต/อำเภอ, พื้นที่ให้บริการ"
+                          class="border border-gray-300 px-3 py-2 rounded-lg w-full h-28 shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none"></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">รูปโปรไฟล์ร้าน</label>
+                <p class="text-xs text-gray-500 mb-2">
+                  แนะนำขนาดรูป 1:1 (สี่เหลี่ยมจัตุรัส) อย่างน้อย 600 x 600 พิกเซล
+                </p>
+                <input type="file" name="shop_logo"
+                       class="border border-gray-300 w-full p-2 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none">
+              </div>
+            </div>
+
+            <!-- คำอธิบายร้าน -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">คำอธิบายร้าน</label>
+              <textarea name="fee" placeholder="จุดเด่นของร้าน, สไตล์ชุด, กฎกติกาในการเช่า, เวลาให้บริการ ฯลฯ"
+                        class="border border-gray-300 px-3 py-2 rounded-lg w-full h-28 shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <hr class="border-gray-200">
+
+        <!-- การส่งสินค้า -->
+        <section>
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">รูปแบบการส่งสินค้า</h3>
           </div>
 
-          <!-- คำอธิบายร้าน -->
-          <div class="col-span-2">
-            <h3 class="font-semibold mb-2">คำอธิบายร้าน</h3>
-            <textarea name="fee" placeholder="จุดเด่นของร้าน, กฎกติกาของร้าน"
-                      class="border-2 border-black px-3 py-2 rounded-lg w-full h-24 shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none"></textarea>
+          <div class="flex flex-wrap gap-4">
+            <label class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white cursor-pointer shadow-sm hover:border-blue-400 hover:bg-blue-50">
+              <input type="radio" name="delivery" value="นัดรับที่ร้านเท่านั้น"
+                     class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+              <span class="text-sm text-gray-800">นัดรับที่ร้านเท่านั้น</span>
+            </label>
+            <label class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white cursor-pointer shadow-sm hover:border-blue-400 hover:bg-blue-50">
+              <input type="radio" name="delivery" value="จัดส่ง"
+                     class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+              <span class="text-sm text-gray-800">จัดส่ง (ไปรษณีย์ / ขนส่งเอกชน ฯลฯ)</span>
+            </label>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <!-- การส่งสินค้า -->
-      <div>
-        <h2 class="text-lg font-bold mb-2">รูปแบบการส่งสินค้า</h2>
-        <div class="flex gap-6">
-          <label class="flex items-center gap-2">
-            <input type="radio" name="delivery" value="นัดรับที่ร้านเท่านั้น"
-                   class="form-radio text-blue-500 border-black"> นัดรับที่ร้านเท่านั้น
-          </label>
-          <label class="flex items-center gap-2">
-            <input type="radio" name="delivery" value="จัดส่ง"
-                   class="form-radio text-blue-500 border-black"> จัดส่ง
-          </label>
-        </div>
-      </div>
+        <hr class="border-gray-200">
 
-      <!-- เอกสาร -->
-      <div>
-        <h2 class="text-lg font-bold mb-2">แนบเอกสาร</h2>
-        <div class="grid grid-cols-2 gap-6">
-          <label class="flex items-center gap-2 border-2 border-black p-3 rounded-lg bg-white shadow cursor-pointer">
-            <span class="text-xl">🪪</span>
-            <input type="file" name="id_card"
-                   class="w-full text-sm text-gray-600">
-            <span class="text-sm text-gray-600">บัตรประชาชน</span>
-          </label>
-          <label class="flex items-center gap-2 border-2 border-black p-3 rounded-lg bg-white shadow cursor-pointer">
-            <span class="text-xl">📘</span>
-            <input type="file" name="bank_book"
-                   class="w-full text-sm text-gray-600">
-            <span class="text-sm text-gray-600">หน้าสมุดบัญชีธนาคาร</span>
-          </label>
-        </div>
-      </div>
+        <!-- เอกสารยืนยันตัวตน -->
+        <section>
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">แนบเอกสารยืนยันตัวตน</h3>
+            <span class="text-xs text-gray-400">ไฟล์รูปภาพ หรือ PDF ก็ได้</span>
+          </div>
 
-      <!-- ปุ่ม -->
-      <div class="flex justify-center mt-6">
-        <button type="submit"
-                 class="w-1/3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-lg font-bold py-3 rounded-xl shadow border-2 border-black hover:from-blue-600 hover:to-indigo-700 transition">
-          เสร็จสิ้น
-        </button>
-      </div>
-    </form>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="border border-gray-300 rounded-xl bg-white shadow-sm p-4 flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-xl">
+                🪪
+              </div>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900">บัตรประชาชน</p>
+                <p class="text-xs text-gray-500 mb-2">
+                  ถ่ายให้เห็นข้อมูลชัดเจนทั้งชื่อ–นามสกุล และเลขบัตร
+                </p>
+                <input type="file" name="id_card"
+                       class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg px-2 py-1 bg-gray-50 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none">
+              </div>
+            </div>
+
+            <div class="border border-gray-300 rounded-xl bg-white shadow-sm p-4 flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-xl">
+                📘
+              </div>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900">หน้าสมุดบัญชีธนาคาร</p>
+                <p class="text-xs text-gray-500 mb-2">
+                  ชื่อบัญชีต้องตรงกับชื่อผู้ขาย เพื่อใช้รับเงินโอนจากระบบ
+                </p>
+                <input type="file" name="bank_book"
+                       class="w-full text-xs text-gray-600 border border-gray-300 rounded-lg px-2 py-1 bg-gray-50 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ปุ่มส่ง -->
+        <div class="pt-4 flex justify-center">
+          <button type="submit"
+                  class="w-full sm:w-1/2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-lg font-semibold py-3 rounded-xl shadow-md hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            ส่งคำขอสมัครเปิดร้าน
+          </button>
+        </div>
+
+      </form>
+    </div>
   </main>
 
 </body>
 </html>
-
-
-
-

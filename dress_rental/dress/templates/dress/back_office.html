@@ -24,16 +24,30 @@
 
 <body class="bg-gray-50">
 
-<!-- Header (คงดีไซน์เดิม) -->
+<!-- Header -->
 <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
   <div class="flex items-center justify-between px-10 py-10">
-    <!-- ชื่อหน้า -->
     <div class="flex items-center space-x-3">
       <h1 class="text-2xl font-bold text-gray-900">ระบบหลังร้าน</h1>
     </div>
 
-    <!-- Store Logo + Name + Settings -->
-    <div class="flex items-center space-x-3 relative">
+    <div class="flex items-center space-x-4 relative">
+      <!-- ไอคอนแจ้งเตือนแชท -->
+      <a href="{% url 'dress:shop_chat_inbox' %}" class="relative inline-flex items-center justify-center">
+        <!-- ไอคอน bubble แชท -->
+        <div class="w-9 h-9 rounded-full bg-white shadow flex items-center justify-center hover:bg-gray-100 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 10h8M8 14h5m-9 3l1.5-3A6 6 0 016 6h12a2 2 0 012 2v4a6 6 0 01-6 6H9l-4 3z" />
+          </svg>
+        </div>
+        {% if unread_chat_count and unread_chat_count > 0 %}
+          <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+            {{ unread_chat_count }}
+          </span>
+        {% endif %}
+      </a>
+
       {% if store.shop_logo %}
         <img src="{{ store.shop_logo.url }}" alt="logo" class="w-12 h-12 rounded-full object-cover">
       {% else %}
@@ -41,7 +55,6 @@
       {% endif %}
       <span class="font-semibold text-lg">{{ store.name }}</span>
 
-      <!-- ปุ่มฟันเฟือง -->
       <button id="settingsButton" onclick="toggleDropdown()"
               class="text-gray-700 hover:text-gray-900 focus:outline-none">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -52,8 +65,8 @@
         </svg>
       </button>
 
-      <!-- เมนูดรอปดาว -->
-      <div id="settingsDropdown" class="hidden absolute right-0 top-14 bg-white rounded-lg shadow-lg border border-gray-200 w-48">
+      <div id="settingsDropdown"
+           class="hidden absolute right-0 top-14 bg-white rounded-lg shadow-lg border border-gray-200 w-48">
         <ul class="py-2 text-sm text-gray-700">
           <li><a href="#" class="block px-4 py-2 hover:bg-gray-100">ดูโปรไฟล์</a></li>
           <li><a href="#" class="block px-4 py-2 hover:bg-gray-100">การตั้งค่า</a></li>
@@ -81,10 +94,10 @@
   </a>
 </div>
 
-<!-- Main Content -->
+<!-- Main -->
 <main class="max-w-5xl mx-auto px-4 py-10 space-y-10">
 
-  <!-- ข้อมูลร้าน -->
+  <!-- บล็อกข้อมูลร้าน -->
   <section class="bg-white shadow-md rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between">
     <div class="flex items-center space-x-4">
       <img src="{% if store.shop_logo %}{{ store.shop_logo.url }}{% else %}{% static 'img/shop-avatar.png' %}{% endif %}"
@@ -95,23 +108,44 @@
       </div>
     </div>
 
-    <a href="{% url 'dress:public_store' store.id %}"
-       class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-6 py-2 rounded-md shadow mt-4 md:mt-0 transition">
-       ดูร้านค้า
-    </a>
+    <!-- ปุ่มฝั่งขวา: กล่องข้อความ + ดูร้านค้า -->
+    <div class="flex gap-2">
+      <!-- ปุ่มกล่องข้อความ -->
+      <a href="{% url 'dress:shop_chat_inbox' %}"
+         class="px-4 py-2 bg-pink-500 text-white rounded-lg text-sm hover:bg-pink-600 inline-flex items-center gap-2">
+        <!-- icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 10h8M8 14h5m-9 3l1.5-3A6 6 0 016 6h12a2 2 0 012 2v4a6 6 0 01-6 6H9l-4 3z" />
+        </svg>
+        <span>กล่องข้อความ</span>
+        {% if unread_chat_count and unread_chat_count > 0 %}
+          <span class="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-white text-pink-600 text-xs font-semibold">
+            {{ unread_chat_count }}
+          </span>
+        {% endif %}
+      </a>
+
+      <!-- ปุ่มดูร้านค้า -->
+      <a href="{% url 'dress:public_store' store.id %}"
+         class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-6 py-2 rounded-md shadow mt-4 md:mt-0 transition">
+        ดูร้านค้า
+      </a>
+    </div>
   </section>
 
-  <!-- สถิติการเช่าชุด -->
+  <!-- สรุปออเดอร์หลัก 5 หมวด -->
   <section>
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold text-gray-800">ข้อมูลการเช่าชุดล่าสุด</h3>
       <p class="text-xs text-gray-500">
-        สรุปสถานะคำสั่งเช่าทั้งหมดของร้านแบบรวดเร็ว
+        ภาพรวมสถานะคำสั่งเช่าทั้งหมดของร้าน
       </p>
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-      <!-- คำเช่าใหม่ -->
+    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-4">
+
+      <!-- 1. คำเช่าใหม่ / รอจัดการ -->
       <a href="{% url 'dress:back_office_orders_new' store.id %}"
          class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
                 hover:shadow-md hover:-translate-y-0.5 transform transition block">
@@ -119,21 +153,41 @@
           <span class="text-2xl">🛒</span>
         </div>
         <p class="text-2xl font-bold text-blue-700">{{ new_count }}</p>
-        <p class="text-gray-600 text-sm mt-1">คำเช่าใหม่</p>
+        <p class="text-gray-800 text-sm mt-1 font-semibold">คำเช่าใหม่ / รอจัดการ</p>
+        <p class="text-gray-400 text-xs mt-1">
+          ออเดอร์ที่เพิ่งเข้ามา รอชำระเงินหรือเพิ่งชำระสำเร็จ
+        </p>
       </a>
 
-      <!-- สถานะการจัดส่ง -->
-      <a href="{% url 'dress:back_office_orders_shipping' store.id %}"
+      <!-- 2. เตรียมจัดส่งและจัดส่ง -->
+      <a href="{% url 'dress:back_office_orders_preparing' store.id %}"
          class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
                 hover:shadow-md hover:-translate-y-0.5 transform transition block">
         <div class="w-10 h-10 mx-auto mb-2 rounded-full bg-indigo-50 flex items-center justify-center">
           <span class="text-2xl">🚚</span>
         </div>
         <p class="text-2xl font-bold text-indigo-700">{{ shipping_count }}</p>
-        <p class="text-gray-600 text-sm mt-1">สถานะการจัดส่ง</p>
+        <p class="text-gray-800 text-sm mt-1 font-semibold">เตรียมจัดส่งและจัดส่ง</p>
+        <p class="text-gray-400 text-xs mt-1">
+          ออเดอร์ที่อยู่ระหว่างแพ็กของหรือจัดส่งให้ลูกค้า
+        </p>
       </a>
 
-      <!-- ถูกยกเลิก -->
+      <!-- 3. เช่าสำเร็จ / คืนชุดแล้ว -->
+      <a href="{% url 'dress:back_office_orders_returned' store.id %}"
+         class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
+                hover:shadow-md hover:-translate-y-0.5 transform transition block">
+        <div class="w-10 h-10 mx-auto mb-2 rounded-full bg-green-50 flex items-center justify-center">
+          <span class="text-2xl">✅</span>
+        </div>
+        <p class="text-2xl font-bold text-green-700">{{ completed_count }}</p>
+        <p class="text-gray-800 text-sm mt-1 font-semibold">เช่าสำเร็จ / คืนชุดแล้ว</p>
+        <p class="text-gray-400 text-xs mt-1">
+          ออเดอร์ที่จบกระบวนการเช่าและคืนชุดเรียบร้อย
+        </p>
+      </a>
+
+      <!-- 4. ออเดอร์ยกเลิก -->
       <a href="{% url 'dress:back_office_orders_cancelled' store.id %}"
          class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
                 hover:shadow-md hover:-translate-y-0.5 transform transition block">
@@ -141,34 +195,30 @@
           <span class="text-2xl">❌</span>
         </div>
         <p class="text-2xl font-bold text-red-600">{{ cancelled_count }}</p>
-        <p class="text-gray-600 text-sm mt-1">ที่ถูกยกเลิก</p>
+        <p class="text-gray-800 text-sm mt-1 font-semibold">ออเดอร์ยกเลิก</p>
+        <p class="text-gray-400 text-xs mt-1">
+          ออเดอร์ที่ถูกยกเลิกหรือมีปัญหาการเช่า
+        </p>
       </a>
 
-      <!-- เช่าสำเร็จ -->
-      <a href="{% url 'dress:back_office_orders_completed' store.id %}"
-         class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
-                hover:shadow-md hover:-translate-y-0.5 transform transition block">
-        <div class="w-10 h-10 mx-auto mb-2 rounded-full bg-green-50 flex items-center justify-center">
-          <span class="text-2xl">✅</span>
-        </div>
-        <p class="text-2xl font-bold text-green-700">{{ completed_count }}</p>
-        <p class="text-gray-600 text-sm mt-1">เช่าสำเร็จ</p>
-      </a>
-
-      <!-- รีวิว -->
+      <!-- 5. รีวิวทั้งหมดของร้าน -->
       <a href="{% url 'dress:back_office_reviews' store.id %}"
          class="bg-white border border-gray-100 p-4 rounded-2xl text-center shadow-sm
                 hover:shadow-md hover:-translate-y-0.5 transform transition block">
         <div class="w-10 h-10 mx-auto mb-2 rounded-full bg-yellow-50 flex items-center justify-center">
           <span class="text-2xl">⭐</span>
         </div>
-        <p class="text-2xl font-bold text-yellow-600">{{ review_count }}</p>
-        <p class="text-gray-600 text-sm mt-1">รีวิว</p>
+        <p class="text-2xl font-bold text-yellow-500">{{ review_count|default:"0" }}</p>
+        <p class="text-gray-800 text-sm mt-1 font-semibold">รีวิวทั้งหมดของร้าน</p>
+        <p class="text-gray-400 text-xs mt-1">
+          ดูความคิดเห็นและคะแนนจากลูกค้าทุกออเดอร์ในร้านของคุณ
+        </p>
       </a>
+
     </div>
   </section>
 
-  <!-- ปุ่มเมนูหลักหลังร้าน -->
+  <!-- เมนูหลักหลังร้าน -->
   <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <a href="{% url 'dress:store_dress' store.id %}"
        class="bg-white border border-gray-200 rounded-2xl shadow p-6 text-center

@@ -27,7 +27,7 @@
 <!-- Main -->
 <main class="max-w-6xl mx-auto py-8 px-6">
   {% for shop, data in grouped_cart.items %}
-    <div class="mb-6 bg-pink-50 rounded-lg shadow p-4 shop-group" data-shop="{{ shop.name }}">
+    <div class="mb-6 bg-white-50 rounded-lg shadow p-4 shop-group" data-shop="{{ shop.name }}">
       <h2 class="font-bold text-lg mb-4">{{ shop.name }} <span class="text-gray-500">></span></h2>
 
       {% for item in data.items %}

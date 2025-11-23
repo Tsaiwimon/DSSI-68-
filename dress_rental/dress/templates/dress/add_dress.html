@@ -179,7 +179,7 @@
 
       <!-- ปุ่มบันทึกชุด -->
       <div class="col-span-2 flex justify-center space-x-4 mt-6">
-        <a href="{% url 'store_dress' store.id %}" class="px-6 py-2 bg-gray-500 text-white rounded">ยกเลิก</a>
+        <a href="{% url 'dress:store_dress' store.id %}" class="px-6 py-2 bg-gray-500 text-white rounded">ยกเลิก</a>
         <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded">บันทึก</button>
       </div>
     </form>

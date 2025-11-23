@@ -22,29 +22,18 @@ from django.utils import timezone
 from django.db.models.functions import TruncDate
 
 
+
 from .models import (
     Shop, Dress, Category, Review, Favorite, CartItem, Rental, UserProfile,
     PriceTemplate, PriceTemplateItem, ShippingRule, ShippingBracket,
     RentalOrder,Notification,StoreTransaction,WithdrawalRequest, # ใช้สำหรับระบบ "การเช่าของฉัน"
-)
+    ShopChatThread, ShopChatMessage,)  # แชททั่วไปก่อนเช่า
 
 # รูป QR fallback (กรณีไม่มีคีย์/เกิดข้อผิดพลาด)
 FALLBACK_QR_URL = "/static/img/mock-qr.svg"
 
 
-def create_notification(user, title, message, type="order", order=None, sender_shop=None):
-    """
-    helper สร้าง Notification
-    - type: order / payment / reminder / shop_message / system
-    """
-    return Notification.objects.create(
-        user=user,
-        title=title,
-        message=message,
-        type=type,
-        related_order=order,
-        sender_shop=sender_shop,
-    )
+
 
 
 
@@ -165,9 +154,9 @@ def member_home(request):
     })
 
 
-# =========================
+# =======================================================================================================
 # ร้านค้า (เจ้าของร้าน)
-# =========================
+# =======================================================================================================
 @login_required(login_url="dress:login")
 def open_store(request):
     if request.method == "POST":
@@ -223,41 +212,7 @@ def store_dress(request, store_id):
     })
 
 
-# รีวิวของร้าน (หลังร้าน)
-@login_required(login_url='dress:login')
-def store_reviews(request, store_id):
-    store = get_object_or_404(Shop, id=store_id, owner=request.user)
 
-    # ดึงรีวิวทั้งหมดของร้าน
-    reviews = (
-        Review.objects
-        .filter(dress__rental_shop=store)
-        .select_related('dress', 'user')
-        .order_by('-created_at')
-    )
-
-    # ถ้ามีการกดปุ่มตอบกลับ
-    if request.method == "POST":
-        review_id = request.POST.get("review_id")
-        reply_text = request.POST.get("reply", "").strip()
-
-        review = get_object_or_404(
-            Review,
-            id=review_id,
-            dress__rental_shop=store
-        )
-
-        review.shop_reply = reply_text
-        review.replied_at = timezone.now()
-        review.save()
-
-        return redirect('dress:store_reviews', store_id=store.id)
-
-    context = {
-        "store": store,
-        "reviews": reviews,
-    }
-    return render(request, "dress/back_office_reviews.html", context)
 
 
 @login_required(login_url="dress:login")
@@ -497,9 +452,9 @@ def api_update_price_template(request, store_id: int, tpl_id: int):
     })
 
 
-# =========================
+# ======================================================================================
 # จัดการสินค้า
-# =========================
+# ======================================================================
 @login_required(login_url="dress:login")
 def delete_dress(request, store_id, dress_id):
     shop = get_object_or_404(Shop, id=store_id, owner=request.user)
@@ -559,9 +514,9 @@ def send_shop_message(request, order_id):
     return redirect("dress:back_office", store_id=order.rental_shop.id)
 
 
-# =========================
-# รายละเอียดสินค้า + รีวิว
-# =========================
+# ==============================================================================================
+# รายละเอียดสินค้า + รีวิว   ผู้เช่า
+# ==============================================================================================
 def review_list(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
     sort = request.GET.get('sort', 'newest')
@@ -686,9 +641,9 @@ def review_delete(request, dress_id, review_id):
     return redirect('dress:review_list', dress_id=dress.id)
 
 
-# =========================
+# =============================================================================================
 # Favorites
-# =========================
+# =============================================================================================
 @login_required(login_url="dress:login")
 def add_to_favorite(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
@@ -726,9 +681,9 @@ def favorite_count_api(request):
     return JsonResponse({'count': count})
 
 
-# =========================
+# =============================================================================================
 # Cart
-# =========================
+# =============================================================================================
 @login_required(login_url="dress:login")
 def cart_view(request):
     cart_items = CartItem.objects.filter(user=request.user).select_related("dress", "dress__shop")
@@ -858,19 +813,47 @@ def update_quantity(request):
     return JsonResponse({"status": "error", "message": "Invalid request"}, status=405)
 
 
-# =========================
+# ================================================================================================
 # ประวัติ/โปรไฟล์
-# =========================
+# ================================================================================================
 @login_required(login_url="dress:login")
 def rental_history_view(request):
-    rentals = Rental.objects.filter(user=request.user).select_related("dress", "dress__shop")
-    return render(request, "dress/rental_history.html", {"rentals": rentals})
+    """
+    แสดงประวัติการเช่าของลูกค้า
+    - เอาเฉพาะออเดอร์ที่สิ้นสุดการเช่าจริง ๆ แล้ว
+      เช่น คืนชุดแล้ว / completed เดิม / damaged (ถ้าต้องการให้เห็นในประวัติ)
+    """
+    orders = (
+        RentalOrder.objects
+        .filter(
+            user=request.user,
+            status__in=[
+                RentalOrder.STATUS_RETURNED,   # คืนชุดแล้ว
+                "completed",                   # กันเคสข้อมูลเก่า
+                RentalOrder.STATUS_DAMAGED,    # ถ้าต้องการให้ขึ้นในประวัติด้วย
+            ],
+        )
+        .select_related("dress", "rental_shop")
+        .order_by("-return_date", "-created_at")
+    )
+
+    context = {
+        "rentals": orders,   # ใช้ชื่อ rentals เหมือนเดิม เพื่อให้ template เดิมยังใช้ได้
+    }
+    return render(request, "dress/rental_history.html", context)
+
 
 # ระบบแจ้งเตือน
 @login_required(login_url="dress:login")
 def notification_page(request):
-    notifications = Notification.objects.filter(user=request.user)
+    notifications = (
+        Notification.objects
+        .filter(user=request.user)
+        .select_related("related_order", "sender_shop")
+        .order_by("-created_at")
+    )
     return render(request, "dress/notification.html", {"notifications": notifications})
+
 
 
 # ระบบ "การเช่าของฉัน"
@@ -878,30 +861,43 @@ def notification_page(request):
 def rental_list_view(request):
     """
     หน้า 'การเช่าของฉัน'
-    แบ่งเป็น:
-      - current_rentals  : กำลังเช่าอยู่ (today อยู่ระหว่าง pickup-return)
-      - upcoming_rentals : เช่าในอนาคต (today ก่อนวันรับ)
-      - completed_rentals: เช่าเสร็จแล้ว (today หลังวันคืน)
     """
     today = timezone.localdate()
 
+    # 1) กำลังเช่าอยู่
     current_rentals = RentalOrder.objects.filter(
         user=request.user,
-        status='paid',
+        status__in=[
+            RentalOrder.STATUS_PAID,        # จ่ายแล้ว แต่ยังไม่ถึงวันรับ
+            RentalOrder.STATUS_IN_RENTAL,   # รับชุดแล้ว → อยู่ระหว่างการเช่า
+            RentalOrder.STATUS_SHIPPING,    # ร้านกดส่งแล้ว
+            RentalOrder.STATUS_PREPARING,   # ร้านกำลังเตรียมส่ง
+        ],
         pickup_date__lte=today,
         return_date__gte=today,
     ).select_related("dress", "rental_shop").order_by("pickup_date")
 
+    # 2) เช่าในอนาคต
     upcoming_rentals = RentalOrder.objects.filter(
         user=request.user,
-        status='paid',
+        status__in=[
+            RentalOrder.STATUS_PAID,
+            RentalOrder.STATUS_PREPARING,
+            RentalOrder.STATUS_SHIPPING,
+        ],
         pickup_date__gt=today,
     ).select_related("dress", "rental_shop").order_by("pickup_date")
 
+    # 3) เช่าเสร็จแล้ว
     completed_rentals = RentalOrder.objects.filter(
         user=request.user,
-        status__in=['paid', 'completed'],
-        return_date__lt=today,
+        status__in=[
+            RentalOrder.STATUS_RETURNED,   # คืนชุดแล้ว
+            RentalOrder.STATUS_WAITING_RETURN,
+            RentalOrder.STATUS_DAMAGED,
+            "completed",                   # กันข้อมูลเก่า
+        ],
+        return_date__lte=today,
     ).select_related("dress", "rental_shop").order_by("-return_date")
 
     context = {
@@ -911,6 +907,7 @@ def rental_list_view(request):
         "today": today,
     }
     return render(request, "dress/rental_list.html", context)
+
 
 
 #ยกเลิกการเช่า
@@ -973,21 +970,68 @@ def update_profile(request):
 def how_to_rent(request):
     return render(request, "dress/how_to_rent.html")
 
+
+#==============================================================================================
 # หน้าควบคุมหลังร้าน
+#==============================================================================================
 @login_required(login_url='dress:login')
 def back_office(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
-    today = timezone.localdate()
 
     orders_qs = RentalOrder.objects.filter(rental_shop=store)
 
-    # ปรับเกณฑ์ได้ตาม logic ของระบบคุณ
-    new_count = orders_qs.filter(status='paid', pickup_date__gte=today).count()
-    shipping_count = orders_qs.filter(status='shipping').count()
-    cancelled_count = orders_qs.filter(status='cancelled').count()
-    completed_count = orders_qs.filter(status='completed').count()
+    # 1) คำเช่าใหม่ / รอจัดการ
+    new_count = orders_qs.filter(
+        status__in=[
+            RentalOrder.STATUS_NEW,
+            RentalOrder.STATUS_WAITING_PAY,
+            RentalOrder.STATUS_PAID,
+        ]
+    ).count()
 
-    review_count = Review.objects.filter(dress__shop=store).count()
+    # 2) เตรียมจัดส่งและจัดส่ง
+    shipping_count = orders_qs.filter(
+        status__in=[
+            RentalOrder.STATUS_PREPARING,
+            RentalOrder.STATUS_SHIPPING,
+        ]
+    ).count()
+
+    # 3) เช่าสำเร็จ / คืนชุดแล้ว
+    completed_count = orders_qs.filter(
+        status__in=[
+            RentalOrder.STATUS_IN_RENTAL,
+            RentalOrder.STATUS_WAITING_RETURN,
+            RentalOrder.STATUS_RETURNED,
+        ]
+    ).count()
+
+    # 4) ออเดอร์ยกเลิก / มีปัญหา
+    cancelled_count = orders_qs.filter(
+        status__in=[
+            RentalOrder.STATUS_CANCELLED,
+            RentalOrder.STATUS_DAMAGED,
+            "cancelled",
+            "damaged",
+        ]
+    ).count()
+
+    # 5) รีวิวทั้งหมดของร้าน
+    reviews_qs = Review.objects.filter(dress__shop=store)
+    review_count = reviews_qs.count()
+
+    # 6) ห้องแชทที่มีข้อความล่าสุดมาจากลูกค้า (ถือว่ายังไม่ได้อ่าน)
+    threads = (
+        ShopChatThread.objects
+        .filter(shop=request.user)
+        .prefetch_related("messages")
+    )
+
+    unread_chat_count = 0
+    for t in threads:
+        last_msg = t.messages.order_by("-created_at").first()
+        if last_msg and last_msg.sender_id != request.user.id:
+            unread_chat_count += 1
 
     context = {
         "store": store,
@@ -996,8 +1040,141 @@ def back_office(request, store_id):
         "cancelled_count": cancelled_count,
         "completed_count": completed_count,
         "review_count": review_count,
+        "unread_chat_count": unread_chat_count,
     }
-    return render(request, 'dress/back_office.html', context)
+    return render(request, "dress/back_office.html", context)
+
+
+
+
+
+@login_required(login_url="dress:login")
+@require_POST
+def back_office_update_order_status(request, store_id, order_id):
+    """
+    อัปเดตสถานะคำสั่งเช่าจากปุ่มในหน้าหลังร้าน เช่น
+    - set_preparing       -> เตรียมจัดส่ง
+    - set_shipping        -> จัดส่งเรียบร้อย
+    - set_in_rental       -> อยู่ระหว่างการเช่า (ลูกค้ารับชุดแล้ว)
+    - set_waiting_return  -> รอคืนชุด
+    - set_returned        -> คืนชุดแล้ว
+    - set_damaged         -> พบปัญหาชุดชำรุด
+    - set_cancelled       -> ออเดอร์ยกเลิก
+    """
+    store = get_object_or_404(Shop, id=store_id, owner=request.user)
+    order = get_object_or_404(RentalOrder, id=order_id, rental_shop=store)
+
+    action = request.POST.get("action")
+
+    # map ค่าที่มาจากปุ่ม -> สถานะในระบบ
+    ACTION_TO_STATUS = {
+        "set_preparing":      RentalOrder.STATUS_PREPARING,
+        "set_shipping":       RentalOrder.STATUS_SHIPPING,
+        "set_in_rental":      RentalOrder.STATUS_IN_RENTAL,     # อยู่ระหว่างการเช่า
+        "set_waiting_return": RentalOrder.STATUS_WAITING_RETURN,
+        "set_returned":       RentalOrder.STATUS_RETURNED,
+        "set_damaged":        RentalOrder.STATUS_DAMAGED,
+        "set_cancelled":      RentalOrder.STATUS_CANCELLED,
+    }
+
+    target_status = ACTION_TO_STATUS.get(action)
+
+    if not target_status:
+        messages.error(request, "ไม่พบคำสั่งที่ต้องการเปลี่ยนสถานะ")
+        # ถ้าไม่มี HTTP_REFERER ให้กลับไปหลังร้านหลัก
+        referer = request.META.get("HTTP_REFERER")
+        if referer:
+            return redirect(referer)
+        return redirect("dress:back_office", store_id=store.id)
+
+    # เปลี่ยนสถานะจริงในฐานข้อมูล
+    order.status = target_status
+    order.save()
+
+    # ============================
+    # แจ้งเตือนลูกค้าเมื่อสถานะเปลี่ยน
+    # ============================
+    # title สำหรับ Notification
+    notif_title_map = {
+        RentalOrder.STATUS_PREPARING:      "ร้านกำลังเตรียมชุดของคุณ",
+        RentalOrder.STATUS_SHIPPING:       "ร้านได้จัดส่งชุดของคุณแล้ว",
+        RentalOrder.STATUS_IN_RENTAL:      "คุณได้รับชุดเรียบร้อยแล้ว",
+        RentalOrder.STATUS_WAITING_RETURN: "ใกล้ถึงกำหนดคืนชุด",
+        RentalOrder.STATUS_RETURNED:       "ร้านยืนยันการคืนชุดแล้ว",
+        RentalOrder.STATUS_DAMAGED:        "พบปัญหาชุดเช่าของคุณ",
+        RentalOrder.STATUS_CANCELLED:      "คำสั่งเช่าถูกยกเลิก",
+    }
+
+    # message สำหรับ Notification
+    notif_message_map = {
+        RentalOrder.STATUS_PREPARING: (
+            f"ร้าน {store.name} ได้ยืนยันการเช่าและกำลังเตรียมชุดให้คุณ "
+            "เมื่อจัดส่งแล้วคุณจะได้รับการแจ้งเตือนอีกครั้ง"
+        ),
+        RentalOrder.STATUS_SHIPPING: (
+            f"ร้าน {store.name} ได้จัดส่งชุดหมายเลขคำสั่งเช่า #{order.id} แล้ว "
+            "โปรดรอรับพัสดุตามช่องทางที่คุณเลือก"
+        ),
+        RentalOrder.STATUS_IN_RENTAL: (
+            f"ร้าน {store.name} ยืนยันว่าคุณได้รับชุดสำหรับคำสั่งเช่า #{order.id} แล้ว "
+            "ระบบเริ่มนับวันเช่าตามช่วงวันที่ที่คุณเลือก"
+        ),
+        RentalOrder.STATUS_WAITING_RETURN: (
+            f"ถึงกำหนดคืนชุดสำหรับคำสั่งเช่า #{order.id} แล้ว "
+            "โปรดเตรียมส่งคืนตามเงื่อนไขของร้าน {store.name}"
+        ),
+        RentalOrder.STATUS_RETURNED: (
+            f"ร้าน {store.name} ยืนยันว่าคุณคืนชุดสำหรับคำสั่งเช่า #{order.id} แล้ว "
+            "ขอบคุณที่ใช้บริการ"
+        ),
+        RentalOrder.STATUS_DAMAGED: (
+            f"ร้าน {store.name} แจ้งว่าพบปัญหาชุดชำรุดในคำสั่งเช่า #{order.id} "
+            "กรุณาติดต่อร้านเพื่อชี้แจงรายละเอียดเพิ่มเติม"
+        ),
+        RentalOrder.STATUS_CANCELLED: (
+            f"คำสั่งเช่า #{order.id} ถูกยกเลิกแล้ว "
+            "หากมีข้อสงสัยกรุณาติดต่อร้าน {store.name}"
+        ),
+    }
+
+    notif_title = notif_title_map.get(target_status, "อัปเดตสถานะคำสั่งเช่า")
+    notif_message = notif_message_map.get(target_status, "ร้านได้อัปเดตสถานะคำสั่งเช่าของคุณแล้ว")
+
+    # สร้าง Notification ให้ลูกค้าคนที่เช่าชุดนี้
+    create_notification(
+        user=order.user,
+        title=notif_title,
+        message=notif_message,
+        type="order",
+        order=order,
+        sender_shop=store,
+    )
+    # ============================ จบส่วนแจ้งเตือน ============================
+
+    # สร้างข้อความแจ้งเตือนสำหรับแถบ messages ของระบบ (ในหลังบ้าน)
+    status_text_map = {
+        RentalOrder.STATUS_PREPARING: "ยืนยันให้เช่าและย้ายไปสถานะ 'กำลังเตรียมจัดส่ง' แล้ว",
+        RentalOrder.STATUS_SHIPPING: "ออเดอร์ถูกย้ายไปสถานะ 'จัดส่งเรียบร้อย' แล้ว",
+        RentalOrder.STATUS_IN_RENTAL: "ออเดอร์ถูกย้ายไปสถานะ 'อยู่ระหว่างการเช่า' แล้ว",
+        RentalOrder.STATUS_WAITING_RETURN: "ออเดอร์ถูกย้ายไปสถานะ 'รอคืนชุด' แล้ว",
+        RentalOrder.STATUS_RETURNED: "ออเดอร์ถูกย้ายไปสถานะ 'คืนชุดแล้ว' แล้ว",
+        RentalOrder.STATUS_DAMAGED: "ออเดอร์ถูกย้ายไปสถานะ 'พบปัญหาชุดชำรุด' แล้ว",
+        RentalOrder.STATUS_CANCELLED: "ออเดอร์ถูกย้ายไปสถานะ 'ออเดอร์ยกเลิก' แล้ว",
+    }
+
+    msg = status_text_map.get(target_status, "อัปเดตสถานะคำสั่งเช่าเรียบร้อยแล้ว")
+    messages.success(request, msg)
+
+    # กลับไป "หน้าเดิม" ที่กดปุ่ม (เช่น /my-store/1/orders/paid/)
+    referer = request.META.get("HTTP_REFERER")
+    if referer:
+        return redirect(referer)
+
+    # กันพลาด ถ้าไม่มี referer ให้กลับไปหลังร้าน
+    return redirect("dress:back_office", store_id=store.id)
+
+
+
 
 
 @login_required(login_url='dress:login')
@@ -1005,9 +1182,18 @@ def back_office_orders_new(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
     today = timezone.localdate()
 
+    # คำเช่าใหม่: new + waiting_payment + paid ที่ยังไม่ถึงวันรับ
     orders = (
         RentalOrder.objects
-        .filter(rental_shop=store, status='paid', pickup_date__gte=today)
+        .filter(
+            rental_shop=store,
+            status__in=[
+                RentalOrder.STATUS_NEW,
+                RentalOrder.STATUS_WAITING_PAY,
+                RentalOrder.STATUS_PAID,
+            ],
+            pickup_date__gte=today,
+        )
         .select_related('user', 'dress')
         .order_by('-pickup_date', '-created_at')
     )
@@ -1016,7 +1202,179 @@ def back_office_orders_new(request, store_id):
         "store": store,
         "page_title": "คำเช่าใหม่",
         "orders": orders,
-        "active_tab": "new",           # เพิ่มบรรทัดนี้
+        "active_tab": "new",
+    }
+    return render(request, "dress/back_office_orders.html", context)
+
+
+@login_required(login_url='dress:login')
+def back_office_orders_pending_payment(request, store_id):
+    """รอชำระเงิน (ลูกค้าเลือกชำระที่หน้าร้าน / ยังไม่จ่าย)"""
+    store = get_object_or_404(Shop, id=store_id, owner=request.user)
+
+    orders = (
+        RentalOrder.objects
+        .filter(
+            rental_shop=store,
+            status=RentalOrder.STATUS_WAITING_PAY,
+        )
+        .select_related('user', 'dress')
+        .order_by('-pickup_date', '-created_at')
+    )
+
+    context = {
+        "store": store,
+        "page_title": "รอชำระเงิน",
+        "orders": orders,
+        "active_tab": "pending_payment",
+    }
+    return render(request, "dress/back_office_orders.html", context)
+
+
+@login_required(login_url='dress:login')
+def back_office_orders_paid(request, store_id):
+    """ชำระเงินสำเร็จ แต่ยังไม่ได้เริ่มเตรียมจัดส่ง"""
+    store = get_object_or_404(Shop, id=store_id, owner=request.user)
+
+    orders = (
+        RentalOrder.objects
+        .filter(
+            rental_shop=store,
+            status=RentalOrder.STATUS_PAID,
+        )
+        .select_related('user', 'dress')
+        .order_by('-pickup_date', '-created_at')
+    )
+
+    context = {
+        "store": store,
+        "page_title": "ชำระเงินสำเร็จ",
+        "orders": orders,
+        "active_tab": "paid",
+    }
+    return render(request, "dress/back_office_orders.html", context)
+
+
+@login_required(login_url='dress:login')
+def back_office_orders_preparing(request, store_id):
+    """กำลังเตรียมจัดส่ง"""
+    store = get_object_or_404(Shop, id=store_id, owner=request.user)
+
+    orders = (
+        RentalOrder.objects
+        .filter(
+            rental_shop=store,
+            status=RentalOrder.STATUS_PREPARING,
+        )
+        .select_related('user', 'dress')
+        .order_by('-pickup_date', '-created_at')
+    )
+
+    context = {
+        "store": store,
+        "page_title": "กำลังเตรียมจัดส่ง",
+        "orders": orders,
+        "active_tab": "preparing",
+    }
+    return render(request, "dress/back_office_orders.html", context)
+
+
+@login_required(login_url='dress:login')
+def back_office_orders_renting(request, store_id):
+    """อยู่ระหว่างการเช่า (ลูกค้ารับชุดไปแล้ว ยังไม่ถึงกำหนดคืน)"""
+    store = get_object_or_404(Shop, id=store_id, owner=request.user)
+
+    orders = (
+        RentalOrder.objects
+        .filter(
+            rental_shop=store,
+            status=RentalOrder.STATUS_IN_RENTAL,   # ← แก้ตรงนี้
+        )
+        .select_related('user', 'dress')
+        .order_by('-pickup_date', '-created_at')
+    )
+
+    context = {
+        "store": store,
+        "page_title": "อยู่ระหว่างการเช่า",
+        "orders": orders,
+        "active_tab": "renting",
+    }
+    return render(request, "dress/back_office_orders.html", context)
+
+
+
+@login_required(login_url='dress:login')
+def back_office_orders_waiting_return(request, store_id):
+    """รอคืนชุด (ถึงกำหนดคืนแล้ว / ใกล้ถึงกำหนด)"""
+    store = get_object_or_404(Shop, id=store_id, owner=request.user)
+
+    orders = (
+        RentalOrder.objects
+        .filter(
+            rental_shop=store,
+            status=RentalOrder.STATUS_WAITING_RETURN,
+        )
+        .select_related('user', 'dress')
+        .order_by('-pickup_date', '-created_at')
+    )
+
+    context = {
+        "store": store,
+        "page_title": "รอคืนชุด",
+        "orders": orders,
+        # สำคัญ 2 ตัวนี้ เพื่อให้ template แสดงแท็บกลุ่ม "การเช่า"
+        "active_group": "rent",
+        "active_tab": "awaiting_return",
+    }
+    return render(request, "dress/back_office_orders.html", context)
+
+
+
+@login_required(login_url='dress:login')
+def back_office_orders_returned(request, store_id):
+    """คืนชุดแล้ว (เช่าสำเร็จจริง ๆ)"""
+    store = get_object_or_404(Shop, id=store_id, owner=request.user)
+
+    orders = (
+        RentalOrder.objects
+        .filter(
+            rental_shop=store,
+            status=RentalOrder.STATUS_RETURNED,
+        )
+        .select_related('user', 'dress')
+        .order_by('-return_date', '-created_at')
+    )
+
+    context = {
+        "store": store,
+        "page_title": "คืนชุดแล้ว",
+        "orders": orders,
+        "active_tab": "returned",
+    }
+    return render(request, "dress/back_office_orders.html", context)
+
+
+@login_required(login_url='dress:login')
+def back_office_orders_damaged(request, store_id):
+    """พบปัญหาชุดชำรุด / มีค่าปรับ"""
+    store = get_object_or_404(Shop, id=store_id, owner=request.user)
+
+    orders = (
+        RentalOrder.objects
+        .filter(
+            rental_shop=store,
+            status=RentalOrder.STATUS_DAMAGED,
+        )
+        .select_related('user', 'dress')
+        .order_by('-return_date', '-created_at')
+    )
+
+    context = {
+        "store": store,
+        "page_title": "พบปัญหาชุดชำรุด",
+        "orders": orders,
+        "active_tab": "damaged",
     }
     return render(request, "dress/back_office_orders.html", context)
 
@@ -1025,9 +1383,16 @@ def back_office_orders_new(request, store_id):
 def back_office_orders_shipping(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
 
+    # สถานะการจัดส่ง: เตรียมจัดส่ง + จัดส่งเรียบร้อย
     orders = (
         RentalOrder.objects
-        .filter(rental_shop=store, status='shipping')
+        .filter(
+            rental_shop=store,
+            status__in=[
+                RentalOrder.STATUS_PREPARING,
+                RentalOrder.STATUS_SHIPPING,
+            ],
+        )
         .select_related('user', 'dress')
         .order_by('-pickup_date', '-created_at')
     )
@@ -1036,7 +1401,7 @@ def back_office_orders_shipping(request, store_id):
         "store": store,
         "page_title": "สถานะการจัดส่ง",
         "orders": orders,
-        "active_tab": "shipping",      # เพิ่มบรรทัดนี้
+        "active_tab": "shipping",
     }
     return render(request, "dress/back_office_orders.html", context)
 
@@ -1047,7 +1412,13 @@ def back_office_orders_cancelled(request, store_id):
 
     orders = (
         RentalOrder.objects
-        .filter(rental_shop=store, status='cancelled')
+        .filter(
+            rental_shop=store,
+            status__in=[
+                RentalOrder.STATUS_CANCELLED,  # สถานะใหม่
+                "cancelled",                   # ข้อมูลเก่า
+            ],
+        )
         .select_related('user', 'dress')
         .order_by('-pickup_date', '-created_at')
     )
@@ -1056,7 +1427,7 @@ def back_office_orders_cancelled(request, store_id):
         "store": store,
         "page_title": "ที่ถูกยกเลิก",
         "orders": orders,
-        "active_tab": "cancelled",     # เพิ่มบรรทัดนี้
+        "active_tab": "cancelled",
     }
     return render(request, "dress/back_office_orders.html", context)
 
@@ -1065,9 +1436,16 @@ def back_office_orders_cancelled(request, store_id):
 def back_office_orders_completed(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
 
+    # เช่าสำเร็จ: คืนชุดแล้ว (และเผื่อ status เดิม completed)
     orders = (
         RentalOrder.objects
-        .filter(rental_shop=store, status='completed')
+        .filter(
+            rental_shop=store,
+            status__in=[
+                RentalOrder.STATUS_RETURNED,  # คืนชุดแล้ว
+                "completed",                  # สถานะเดิม
+            ],
+        )
         .select_related('user', 'dress')
         .order_by('-return_date', '-created_at')
     )
@@ -1076,7 +1454,7 @@ def back_office_orders_completed(request, store_id):
         "store": store,
         "page_title": "เช่าสำเร็จ",
         "orders": orders,
-        "active_tab": "completed",     # เพิ่มบรรทัดนี้
+        "active_tab": "completed",
     }
     return render(request, "dress/back_office_orders.html", context)
 
@@ -1128,8 +1506,10 @@ def back_office_reviews(request, store_id):
     }
     return render(request, "dress/back_office_reviews.html", context)
 
+
 # การเงินหลังร้าน
 COMMISSION_RATE = Decimal("0.10")  # ค่าคอมแพลตฟอร์ม 10% (ปรับได้เอง)
+
 
 @login_required(login_url='dress:login')
 def back_office_finance(request, store_id):
@@ -1138,9 +1518,19 @@ def back_office_finance(request, store_id):
     today = timezone.localdate()
 
     # ออเดอร์ที่ "สร้างรายได้" ของร้านนี้
+    # นับทุกสถานะที่ถือว่าจ่ายเงินแล้ว ยกเว้น cancelled
     income_orders_qs = RentalOrder.objects.filter(
         rental_shop=store,
-        status__in=["paid", "completed"],
+        status__in=[
+            RentalOrder.STATUS_PAID,
+            RentalOrder.STATUS_PREPARING,
+            RentalOrder.STATUS_SHIPPING,
+            RentalOrder.STATUS_IN_RENTAL,
+            RentalOrder.STATUS_WAITING_RETURN,
+            RentalOrder.STATUS_RETURNED,
+            RentalOrder.STATUS_DAMAGED,
+            "completed",  # กันข้อมูลเก่า
+        ],
     )
 
     # helper คำนวณยอดรวมสุทธิ (หลังหักค่าคอม)
@@ -1210,7 +1600,7 @@ def back_office_finance(request, store_id):
     }
     return render(request, "dress/back_office_finance.html", context)
 
-# หน้าสถิติหลังร้าน
+
 @login_required(login_url='dress:login')
 def back_office_stats(request, store_id):
     store = get_object_or_404(Shop, pk=store_id)
@@ -1219,8 +1609,21 @@ def back_office_stats(request, store_id):
     orders = RentalOrder.objects.filter(rental_shop=store)
 
     total_orders = orders.count()
-    completed_orders = orders.filter(status="paid").count()
-    cancelled_orders = orders.filter(status="cancelled").count()
+
+    # นับ "เช่าสำเร็จ" = คืนชุดแล้ว หรือสถานะเดิม completed
+    completed_orders = orders.filter(
+        status__in=[
+            RentalOrder.STATUS_RETURNED,
+            "completed",
+        ]
+    ).count()
+
+    cancelled_orders = orders.filter(
+        status__in=[
+            RentalOrder.STATUS_CANCELLED,
+            "cancelled",
+        ]
+    ).count()
 
     # รายได้รวมจาก StoreTransaction
     transactions = StoreTransaction.objects.filter(store=store)
@@ -1233,13 +1636,19 @@ def back_office_stats(request, store_id):
     avg_rating = reviews.aggregate(avg=Avg("rating"))["avg"] or 0
     reviews_count = reviews.count()
 
-    # ชุดยอดนิยม
+    # ชุดยอดนิยม: นับออเดอร์ที่มีสถานะจบการเช่าจริง ๆ
     top_dresses = (
         Dress.objects.filter(shop=store)
         .annotate(
             success_count=Count(
                 "rental_orders",
-                filter=Q(rental_orders__status="paid")
+                filter=Q(
+                    rental_orders__status__in=[
+                        RentalOrder.STATUS_RETURNED,
+                        RentalOrder.STATUS_PAID,
+                        "completed",
+                    ]
+                ),
             )
         )
         .filter(success_count__gt=0)
@@ -1249,7 +1658,7 @@ def back_office_stats(request, store_id):
     # ออเดอร์ล่าสุด
     recent_orders = orders.order_by("-created_at")[:10]
 
-    # --------- ส่วนเพิ่ม: ข้อมูลสำหรับกราฟรายได้ 30 วันที่ผ่านมา ---------
+    # --------- ข้อมูลสำหรับกราฟรายได้ 30 วันที่ผ่านมา ---------
     today = timezone.now().date()
     start_date = today - timedelta(days=30)
 
@@ -1265,7 +1674,7 @@ def back_office_stats(request, store_id):
     revenue_labels = [item["day"].strftime("%d/%m") for item in revenue_qs]
     revenue_data = [float(item["total"] or 0) for item in revenue_qs]
 
-    # --------- ส่วนเพิ่ม: ข้อมูลสำหรับกราฟออเดอร์ตามสถานะ ---------
+    # --------- ข้อมูลสำหรับกราฟออเดอร์ตามสถานะ ---------
     status_qs = (
         orders.values("status")
         .annotate(count=Count("id"))
@@ -1297,10 +1706,9 @@ def back_office_stats(request, store_id):
 
 
 
-
-
-
-
+# ==============================================================================================
+# ร้านค้าสาธารณะย(ยังไม่สร้าง)
+#==============================================================================================
 def public_store(request, store_id):
     store = get_object_or_404(Shop, id=store_id)
     selected_category = request.GET.get('category', 'ทั้งหมด')
@@ -1382,7 +1790,7 @@ def api_create_price_template(request, store_id: int):
         "id": tpl.id, "name": tpl.name, "max_days": tpl.max_days
     }})
 
-
+#บันทึกกฎค่าส่งของร้าน
 @login_required(login_url="dress:login")
 @require_POST
 def api_save_shipping_rule(request, store_id: int):
@@ -1430,9 +1838,9 @@ def api_save_shipping_rule(request, store_id: int):
     return JsonResponse({"ok": True})
 
 
-# =========================
-# Helper สำหรับเช็คเอาต์/ชำระเงิน
-# =========================
+# ==============================================================================================
+# Helper สำหรับเช็คเอาต์/ชำระเงิน  คำนวณวันที่ และค่าส่งตามจำนวนสินค้าที่เช่า
+# ==============================================================================================
 def _parse_date(s):
     try:
         return datetime.strptime(s, "%Y-%m-%d").date()
@@ -1461,9 +1869,9 @@ def _calc_shipping_from_tiers(tiers, qty):
     return fee
 
 
-# =========================
-# เช็คเอาต์
-# =========================
+# ==============================================================================================
+# เช็คเอาต์   หน้าสรุปเช็คเอาต์การเช่าชุด” ก่อนจะไปหน้าชำระเงิน โดยคำนวณค่าเช่าตามจำนวนวัน + มัดจำ + ค่าส่ง
+# ==============================================================================================
 @login_required(login_url="dress:login")
 def rent_checkout(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
@@ -1720,7 +2128,7 @@ def create_promptpay_charge(request, dress_id):
             "status": "pending",
             "qr_image": FALLBACK_QR_URL,
             "charge_id": "chrg_mock_" + str(int(time.time())),
-            "expires_at": int(time.time()) + 45 * 60,
+            "expires_at": int(time.time()) + 10 * 60,
             "method": method,
             "amount": int(round(amount_baht)),
         }
@@ -1761,7 +2169,7 @@ def create_promptpay_charge(request, dress_id):
             "status": charge.status or "pending",
             "qr_image": qr_url or FALLBACK_QR_URL,
             "charge_id": charge.id,
-            "expires_at": exp_unix or (int(time.time()) + 45 * 60),
+            "expires_at": exp_unix or (int(time.time()) + 10 * 60),
             "method": method,
             "amount": int(round(amount_baht)),
         }
@@ -1773,7 +2181,7 @@ def create_promptpay_charge(request, dress_id):
             "status": "pending",
             "qr_image": FALLBACK_QR_URL,
             "charge_id": "chrg_fallback_" + str(int(time.time())),
-            "expires_at": int(time.time()) + 45 * 60,
+            "expires_at": int(time.time()) + 10 * 60,
             "method": method,
             "amount": int(round(amount_baht)),
             "note": f"omise_error:{str(e)}",
@@ -1840,6 +2248,14 @@ def rent_success(request, dress_id):
         if order is None:
             total_price = Decimal(str(amount or (rental_fee + deposit + shipping)))
 
+            # กำหนดสถานะเริ่มต้นตามวิธีการชำระเงิน
+            # - pay_at_store  → รอชำระเงิน
+            # - อื่น ๆ (promptpay) → ชำระเงินสำเร็จ
+            if pay_method == "pay_at_store":
+                initial_status = RentalOrder.STATUS_WAITING_PAY
+            else:
+                initial_status = RentalOrder.STATUS_PAID
+
             order = RentalOrder.objects.create(
                 user=request.user,
                 dress=dress,
@@ -1847,7 +2263,7 @@ def rent_success(request, dress_id):
                 pickup_date=start_date,
                 return_date=end_date,
                 total_price=total_price,
-                status='paid',                     # sandbox ถือว่าจ่ายแล้ว
+                status=initial_status,
                 omise_charge_id=charge_id or None,
             )
 
@@ -1871,11 +2287,15 @@ def rent_success(request, dress_id):
     return render(request, "dress/rent_success.html", ctx)
 
 
+
+# ---- Omise Webhook (Sandbox/Dev) -----------------------------------
+
+
 # ---- Omise Webhook (Sandbox/Dev) -----------------------------------
 @csrf_exempt
 def omise_webhook(request):
     """
-    รับ Webhook จาก Omise (Sandbox)
+    รับ Webhook จาก Omise (Sandbox / Live)
     ใน dev/staging เราเพียงแค่รับไว้และตอบ 200 กลับ เพื่อให้ Omise ไม่ส่งซ้ำ
     คุณสามารถต่อยอด: อัปเดตสถานะคำสั่งซื้อ/บันทึก charge_id ลงฐานข้อมูล ฯลฯ
     """
@@ -1893,6 +2313,8 @@ def omise_webhook(request):
     charge_id = (data.get("id") or "") if isinstance(data, dict) else ""
 
     # TODO: map charge_id -> ออเดอร์ แล้วอัปเดตสถานะใน DB ตาม event_key
+    # เช่น ถ้า event_key == "charge.complete" และสถานะเป็น paid
+    # ก็ไปค้น RentalOrder ที่ผูกกับ charge_id แล้วตั้ง status = 'paid'
 
     return JsonResponse({"ok": True, "event": event_key, "charge_id": charge_id})
 
@@ -1902,18 +2324,20 @@ def omise_webhook(request):
 def payment_status_api(request):
     """
     โพลล์เช็กสถานะชำระเงินด้วย charge_id
-    GET /dress/payment-status/?charge_id=chrg_xxx
+    GET /dress/payments/status/?charge_id=chrg_xxx
     คืนค่า: {"ok": True, "status": "paid|pending|failed|expired", "charge_id": "..."}
     """
     charge_id = (request.GET.get("charge_id") or "").strip()
     if not charge_id:
         return JsonResponse({"ok": False, "error": "missing charge_id"}, status=400)
 
+    # ตั้งค่า key
     omise.api_public = settings.OMISE_PUBLIC_KEY or ""
     omise.api_secret = settings.OMISE_SECRET_KEY or ""
 
+    # ถ้ายังไม่ได้ตั้งค่า key (เช่น dev ที่ไม่อยากยิง Omise จริง)
+    # ให้ถือว่า "จ่ายสำเร็จ" ทันทีเป็นโหมด mock
     if not (omise.api_public and omise.api_secret):
-        # โหมดไม่มีคีย์ (mock) ให้ถือว่าชำระสำเร็จเมื่อถูกเรียก
         return JsonResponse({"ok": True, "status": "paid", "charge_id": charge_id})
 
     try:
@@ -1922,3 +2346,294 @@ def payment_status_api(request):
         return JsonResponse({"ok": True, "status": status, "charge_id": charge_id})
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=500)
+    
+
+
+# ============================================================
+# Helper: สร้าง Notification ให้ผู้ใช้
+# ============================================================
+def create_notification(user, title, message, type="order", order=None, sender_shop=None):
+    """
+    helper สร้าง Notification
+    - type: order / payment / reminder / shop_message / system
+    """
+    return Notification.objects.create(
+        user=user,
+        title=title,
+        message=message,
+        type=type,
+        related_order=order,
+        sender_shop=sender_shop,
+    )
+
+
+# ============================================================
+# Chat: General (Pre-Order) Member ↔ Shop  (ฝั่งลูกค้า)
+# ============================================================
+
+@login_required
+def shop_chat_view(request, shop_id):
+    """
+    หน้าแชทหลักสำหรับลูกค้าที่ต้องการสอบถามร้านก่อนเช่า
+    - shop_id = id ของโมเดล Shop
+    - customer = request.user
+    1 คู่ (customer, shop_user) ใช้ห้องแชทเดียวกัน
+    """
+    customer = request.user
+
+    # ดึงร้านและเจ้าของร้าน
+    shop_obj = get_object_or_404(Shop, pk=shop_id)
+    shop_user = shop_obj.owner
+
+    # ถ้ากดมาจากหน้ารายละเอียดชุด จะมี dress_id ติดมาด้วย
+    dress_obj = None
+    dress_id = request.GET.get("dress_id")
+    if dress_id:
+        try:
+            from .models import Dress
+            dress_obj = Dress.objects.get(pk=dress_id, shop=shop_obj)
+        except Dress.DoesNotExist:
+            dress_obj = None
+
+    # สร้างหรือดึงห้องเดิม
+    thread, created = ShopChatThread.objects.get_or_create(
+        customer=customer,
+        shop=shop_user,
+    )
+
+    messages_qs = thread.messages.select_related("sender").all()
+
+    context = {
+        "thread": thread,
+        "shop_obj": shop_obj,
+        "shop_user": shop_user,
+        "messages": messages_qs,
+        "dress_obj": dress_obj,
+    }
+    return render(request, "dress/shop_chat.html", context)
+
+
+@login_required
+@require_POST
+def shop_chat_send_message(request, shop_id):
+    """
+    ส่งข้อความจากฝั่งลูกค้า (หน้าร้าน)
+    shop_id = id ของโมเดล Shop
+
+    รองรับทั้ง:
+    - ข้อความอย่างเดียว
+    - รูปอย่างเดียว
+    - ข้อความ + รูป
+    """
+    customer = request.user
+
+    # หา Shop และ user เจ้าของร้าน
+    shop_obj = get_object_or_404(Shop, pk=shop_id)
+    shop_user = shop_obj.owner
+
+    # หา/สร้างห้องแชท
+    thread, created = ShopChatThread.objects.get_or_create(
+        customer=customer,
+        shop=shop_user,
+    )
+
+    # ดึงข้อมูลจากฟอร์ม
+    message_text = request.POST.get("message", "").strip()
+    image_file = request.FILES.get("image")  # ชื่อ field ใน <input type="file" name="image">
+
+    # ถ้าไม่มีทั้งข้อความและรูป → error
+    if not message_text and not image_file:
+        return JsonResponse({"error": "empty_message"}, status=400)
+
+    # สร้าง message (ข้อความอาจว่างได้)
+    msg = ShopChatMessage.objects.create(
+        thread=thread,
+        sender=customer,
+        message=message_text or "",
+        image=image_file,
+        created_at=timezone.now(),
+    )
+
+    return JsonResponse(
+        {
+            "id": msg.id,
+            "sender": customer.get_full_name() or customer.username,
+            "message": msg.message,
+            "created_at": msg.created_at.strftime("%Y-%m-%d %H:%M"),
+            "image_url": msg.image.url if msg.image else "",
+            "is_me": True,
+        }
+    )
+
+
+
+@login_required
+@require_GET
+def shop_chat_messages_api(request, shop_id):
+    """
+    ดึงข้อความทั้งหมดในห้องแชททั่วไป (ใช้กับ AJAX ถ้าต้องการ)
+    เวอร์ชันนี้รองรับฝั่งลูกค้าเป็นหลัก
+    - รองรับทั้งข้อความและรูปภาพ (image)
+    """
+    user = request.user
+
+    # หา Shop และ user เจ้าของร้านจาก shop_id
+    shop_obj = get_object_or_404(Shop, pk=shop_id)
+    shop_user = shop_obj.owner
+
+    # หา thread ของคู่ (customer, shop)
+    try:
+        thread = ShopChatThread.objects.get(customer=user, shop=shop_user)
+    except ShopChatThread.DoesNotExist:
+        return JsonResponse({"messages": []})
+
+    messages_qs = thread.messages.select_related("sender").all()
+
+    data = []
+    for m in messages_qs:
+        data.append(
+            {
+                "id": m.id,
+                "sender": m.sender.get_full_name() or m.sender.username,
+                "is_me": m.sender_id == user.id,
+                "message": m.message,
+                "created_at": m.created_at.strftime("%Y-%m-%d %H:%M"),
+                "image_url": m.image.url if getattr(m, "image", None) else "",
+            }
+        )
+
+    return JsonResponse({"messages": data})
+
+
+
+
+# ============================================================
+# Chat Inbox: กล่องข้อความของร้าน (Pre-Order Chat) (ฝั่งร้านเช่า)
+# ============================================================
+
+@login_required
+def shop_chat_inbox(request):
+    """
+    กล่องข้อความของร้าน
+    แสดงห้องแชททั้งหมดที่ shop = request.user
+    พร้อมแนบข้อความล่าสุดและสถานะยังไม่ได้อ่าน
+    """
+    user = request.user
+
+    threads = (
+        ShopChatThread.objects
+        .filter(shop=user)
+        .select_related("customer")
+        .prefetch_related("messages")
+        .order_by("-created_at")
+    )
+
+    # ใส่ attribute ชั่วคราวให้แต่ละ thread
+    for t in threads:
+        last_msg = t.messages.order_by("-created_at").first()
+        if last_msg:
+            t.last_message = last_msg.message
+            t.last_message_time = last_msg.created_at
+            t.has_unread = last_msg.sender_id != user.id
+        else:
+            t.last_message = ""
+            t.last_message_time = None
+            t.has_unread = False
+
+    shop_obj = Shop.objects.filter(owner=user).first()
+
+    context = {
+        "threads": threads,
+        "shop_obj": shop_obj,
+    }
+    return render(request, "dress/shop_chat_inbox.html", context)
+
+
+@login_required
+def shop_chat_thread_view(request, thread_id):
+    """
+    ร้านเปิดห้องแชทคุยกับลูกค้า (หลังร้าน)
+    ตรวจสอบสิทธิ์: ต้องเป็น shop หรือ customer ใน thread นี้เท่านั้น
+    """
+    user = request.user
+    thread = get_object_or_404(ShopChatThread, id=thread_id)
+
+    if user != thread.shop and user != thread.customer:
+        return HttpResponseBadRequest("คุณไม่มีสิทธิ์ในห้องแชทนี้")
+
+    messages_qs = thread.messages.select_related("sender").all()
+
+    context = {
+        "thread": thread,
+        "customer": thread.customer,
+        "shop_user": thread.shop,
+        "messages": messages_qs,
+    }
+    return render(request, "dress/shop_chat_shop.html", context)
+
+
+@login_required
+@require_POST
+def shop_chat_thread_send(request, thread_id):
+    """
+    ส่งข้อความในห้องแชทฝั่งหลังร้าน (ใช้ได้ทั้งลูกค้าและร้าน)
+    """
+    user = request.user
+    thread = get_object_or_404(ShopChatThread, id=thread_id)
+
+    if user != thread.shop and user != thread.customer:
+        return JsonResponse({"error": "permission_denied"}, status=403)
+
+    message_text = request.POST.get("message", "").strip()
+    image_file = request.FILES.get('image')
+    if not message_text:
+        return JsonResponse({"error": "empty_message"}, status=400)
+
+    msg = ShopChatMessage.objects.create(
+        thread=thread,
+        sender=user,
+        message=message_text or "",
+        image=image_file,
+        created_at=timezone.now(),
+    )
+
+    return JsonResponse(
+        {
+            "id": msg.id,
+            "sender": user.get_full_name() or user.username,
+            "message": msg.message,
+            "created_at": msg.created_at.strftime("%Y-%m-%d %H:%M"),
+            'image_url': msg.image.url if msg.image else "",
+            'is_me': True,
+        }
+    )
+
+
+@login_required
+@require_GET
+def shop_chat_thread_messages(request, thread_id):
+    """
+    ดึงข้อความทั้งหมดในห้องแชทฝั่งหลังร้าน (สำหรับ refresh แบบ AJAX)
+    """
+    user = request.user
+    thread = get_object_or_404(ShopChatThread, id=thread_id)
+
+    if user != thread.shop and user != thread.customer:
+        return JsonResponse({"error": "permission_denied"}, status=403)
+
+    messages_qs = thread.messages.select_related("sender").all()
+
+    data = []
+    for m in messages_qs:
+        data.append(
+            {
+                "id": m.id,
+                "sender": m.sender.get_full_name() or m.sender.username,
+                "is_me": m.sender_id == user.id,
+                "message": m.message,
+                "created_at": m.created_at.strftime("%Y-%m-%d %H:%M"),
+                'image_url': m.image.url if m.image else "",
+            }
+        )
+
+    return JsonResponse({"messages": data})

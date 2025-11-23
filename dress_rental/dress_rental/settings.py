@@ -31,7 +31,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'dress',
-    'django_extensions',  # dev helper (มีอยู่แล้ว)
+    'django_extensions',  
 ]
 
 MIDDLEWARE = [
