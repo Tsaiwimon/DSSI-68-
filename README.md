@@ -1,43 +1,42 @@
 # DSSI-68-
 ระบบเว็บเช่าชุดออนไลน์
-ระบบเว็บเช่าชุดออนไลน์ (Dress Rental Platform)
 
-โปรเจกต์นี้เป็นระบบเช่าชุดออนไลน์แบบครบวงจร ประกอบด้วยฟีเจอร์
+**โปรเจกต์นี้เป็นระบบเช่าชุดออนไลน์แบบครบวงจร ประกอบด้วยฟีเจอร์**
 
-ระบบจัดการร้านค้า (Back-Office)
+- ระบบจัดการร้านค้า (Back-Office)
 
-ระบบเช่าชุด / คำนวณราคา / ตระกร้า
+- ระบบเช่าชุด / คำนวณราคา / ตระกร้า
 
-ระบบรีวิว
+- ระบบรีวิว
 
-ระบบโปรไฟล์ร้าน
+- ระบบโปรไฟล์ร้าน
 
-ระบบจัดการสถานะคำสั่งเช่า
+- ระบบจัดการสถานะคำสั่งเช่า
 
-ระบบคำนวณสถิติหลังร้าน
+- ระบบคำนวณสถิติหลังร้าน
 
-ระบบชำระเงิน (รองรับ PromptPay หรือ Cash on Delivery แล้วแต่ตั้งค่า)
+- ระบบชำระเงิน (รองรับ PromptPay หรือ Cash on Delivery แล้วแต่ตั้งค่า)
 
-พัฒนาโดยใช้
+# พัฒนาโดยใช้
 
-Python 3.x
+- Python 3.x
 
-Django
+- Django
 
-SQLite / PostgreSQL
+- SQLite / PostgreSQL
 
-HTML + TailwindCSS
+- HTML + TailwindCSS
 
-JavaScript
-
+- JavaScript
 
 
 
-1) การติดตั้งและรันโปรเจกต์ (Setup & Run)
+
+# 1) การติดตั้งและรันโปรเจกต์ (Setup & Run)
 
 คู่มือนี้ใช้สำหรับรันโปรเจกต์บนเครื่องเพื่อพัฒนา (Development Mode)
 
-2) เตรียมเครื่องก่อนเริ่ม
+# 2) เตรียมเครื่องก่อนเริ่ม
 
 โปรดติดตั้งเครื่องมือดังนี้
 
@@ -45,7 +44,7 @@ Python 3.x
 
 Git
 
-ตรวจสอบว่าเครื่องติดตั้งแล้ว:
+**ตรวจสอบว่าเครื่องติดตั้งแล้ว:**
 
 python --version
 git --version
@@ -53,14 +52,14 @@ git --version
 
 หมายเหตุ: macOS / Linux บางเครื่องต้องใช้คำสั่ง python3
 
-3) Clone โปรเจกต์จาก GitHub
+# 3) Clone โปรเจกต์จาก GitHub
 git clone https://github.com/USERNAME/REPOSITORY.git
 cd REPOSITORY
 
 
 เปลี่ยน USERNAME/REPOSITORY ให้ตรงกับโปรเจกต์จริง
 
-4) สร้าง Virtual Environment
+# 4) สร้าง Virtual Environment
 Windows
 python -m venv .venv
 .venv\Scripts\activate
@@ -69,11 +68,11 @@ macOS / Linux
 python3 -m venv .venv
 source .venv/bin/activate
 
-5) ติดตั้ง Dependencies
+# 5) ติดตั้ง Dependencies
 pip install --upgrade pip
 pip install -r requirements.txt
 
-6) ตั้งค่าไฟล์ Environment (.env)
+# 6) ตั้งค่าไฟล์ Environment (.env)
 
 หากมีไฟล์ .env.example ให้คัดลอก:
 
@@ -92,31 +91,31 @@ SECRET_KEY
 
 หากไม่มี ให้สร้างไฟล์ .env เองตามตัวอย่างที่โปรเจกต์กำหนด
 
-7) สร้างฐานข้อมูลและรัน Migrations
+# 7) สร้างฐานข้อมูลและรัน Migrations
 python manage.py migrate
 
 
 คำสั่งนี้จะสร้างตารางทั้งหมดในฐานข้อมูล
 
-8) สร้าง Superuser (แอดมินระบบ)
+# 8) สร้าง Superuser (แอดมินระบบ)
 python manage.py createsuperuser
 
 
-ข้อมูลที่ต้องกรอก:
+**ข้อมูลที่ต้องกรอก:** 
 
-Username
+- Username
 
-Email (ไม่บังคับ)
+- Email (ไม่บังคับ)
 
-Password
+- Password
 
-ใช้สำหรับเข้า /admin/ เพื่อจัดการข้อมูล
+**ใช้สำหรับเข้า /admin/ เพื่อจัดการข้อมูล**
 
-9) โหลดข้อมูลตัวอย่าง (ถ้ามี)
+# 9) โหลดข้อมูลตัวอย่าง (ถ้ามี)
 
 หากโปรเจกต์มีไฟล์ Fixture เช่น:
 
 python manage.py loaddata sample_data.json
 
-10) รันเซิร์ฟเวอร์เพื่อพัฒนา
+# 10) รันเซิร์ฟเวอร์เพื่อพัฒนา
 python manage.py runserver
