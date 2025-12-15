@@ -1,0 +1,122 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ชุดในคลังของร้าน {{ store.name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-50">
+
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+    <div class="flex items-center justify-between px-10 py-10">
+      <h1 class="text-2xl font-bold text-gray-800 text-left w-full">
+        ชุดในคลังของร้าน {{ store.name }}
+      </h1>
+
+      <a href="{% url 'dress:add_dress' store.id %}" 
+         class="px-7 py-2.5 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition whitespace-nowrap">
+         + เพิ่มชุดใหม่
+      </a>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="flex justify-center space-x-3 bg-white shadow py-3 px-4">
+    <a href="{% url 'dress:my_store' store.id %}" 
+       class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
+      หน้าร้าน
+    </a>
+
+    <a href="{% url 'dress:store_dress' store.id %}" 
+       class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
+      รายการสินค้า
+    </a>
+
+    <!-- แท็บชุดในคลัง (หน้า current) -->
+    <a href="{% url 'dress:store_dress_archive' store.id %}" 
+       class="flex-1 text-center py-3 rounded-lg bg-black text-white font-semibold hover:bg-gray-800 transition">
+      ชุดในคลัง
+    </a>
+
+    <a href="{% url 'dress:back_office' store.id %}" 
+       class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
+      หลังร้าน
+    </a>
+  </div>
+
+  <!-- Summary -->
+  <div class="max-w-6xl mx-auto mt-6 px-6">
+    <p class="font-semibold text-gray-800">
+      ชุดในคลัง: {{ total_dresses }} รายการ
+    </p>
+  </div>
+
+  <!-- Category Filter -->
+  <div class="flex flex-wrap gap-3 max-w-6xl mx-auto px-6 mt-4">
+    <a href="?category=ทั้งหมด"
+       class="px-4 py-2 rounded-lg border shadow text-sm font-medium {% if not selected_category or selected_category == 'ทั้งหมด' %}bg-gray-800 text-white{% else %}bg-white{% endif %}">
+       ทั้งหมด
+    </a>
+    {% for c in categories %}
+      <a href="?category={{ c.name }}"
+         class="px-4 py-2 rounded-lg border shadow text-sm font-medium {% if selected_category == c.name %}bg-yellow-100 border-yellow-400{% else %}bg-white{% endif %}">
+        {{ c.name }}
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Archived Dress List -->
+  <main class="max-w-6xl mx-auto mt-8 px-4 pb-10">
+    {% if dresses %}
+      <div class="space-y-4">
+        {% for dress in dresses %}
+          <div class="flex items-center bg-white shadow p-4 rounded-lg justify-between hover:shadow-lg transition">
+            
+            <!-- รูปสินค้า -->
+            <div class="flex items-center space-x-4">
+              {% if dress.image %}
+                <img src="{{ dress.image.url }}" alt="{{ dress.name }}" class="w-24 h-32 object-cover rounded-md">
+              {% else %}
+                <img src="{% static 'images/product-placeholder.png' %}" alt="ไม่มีรูป" class="w-24 h-32 object-cover rounded-md">
+              {% endif %}
+              <div>
+                <h2 class="font-semibold text-gray-800">{{ dress.name }}</h2>
+                <p class="text-sm text-gray-600">ราคาเช่า: {{ dress.daily_price }}/วัน</p>
+                <p class="text-sm mt-1 text-gray-500">
+                  อยู่ในคลัง (ลูกค้าไม่เห็น)
+                </p>
+              </div>
+            </div>
+
+            <!-- ปุ่มต่าง ๆ -->
+            <div class="flex space-x-2">
+              <!-- แก้ไข -->
+              <a href="{% url 'dress:edit_dress' store.id dress.id %}"
+                 class="px-3 py-1 border rounded hover:bg-gray-100 transition">
+                แก้ไข
+              </a>
+
+              <!-- นำกลับหน้าร้าน -->
+              <form method="POST" action="{% url 'dress:unarchive_dress' store.id dress.id %}">
+                {% csrf_token %}
+                <button type="submit"
+                        class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition">
+                  นำกลับหน้าร้าน
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-center text-gray-500 mt-10">
+        ยังไม่มีชุดในคลัง
+      </p>
+    {% endif %}
+  </main>
+
+</body>
+</html>

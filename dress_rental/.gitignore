@@ -6,10 +6,13 @@ media/
 staticfiles/
 
 .env
-.env.*
+.env.local
+.env.development
+.env.production
 
 .vscode/
 .idea/
+
 db.sqlite3
 
 .DS_Store

@@ -68,10 +68,10 @@
       <div id="settingsDropdown"
            class="hidden absolute right-0 top-14 bg-white rounded-lg shadow-lg border border-gray-200 w-48">
         <ul class="py-2 text-sm text-gray-700">
-          <li><a href="#" class="block px-4 py-2 hover:bg-gray-100">ดูโปรไฟล์</a></li>
-          <li><a href="#" class="block px-4 py-2 hover:bg-gray-100">การตั้งค่า</a></li>
+          <li><a href="{% url 'dress:store_profile' store.id %}" class="block px-4 py-2 hover:bg-gray-100">ดูโปรไฟล์</a></li>
+          <li><a href="{% url 'dress:store_settings' store.id %}" class="block px-4 py-2 hover:bg-gray-100">การตั้งค่า</a></li>
           <li><hr class="my-1 border-gray-200"></li>
-          <li><a href="#" class="block px-4 py-2 text-red-500 hover:bg-red-50">ออกจากระบบ</a></li>
+          <li><a href="{% url 'dress:logout' %}" class="block px-4 py-2 text-red-500 hover:bg-red-50">ออกจากระบบ</a></li>
         </ul>
       </div>
     </div>
@@ -127,7 +127,7 @@
       </a>
 
       <!-- ปุ่มดูร้านค้า -->
-      <a href="{% url 'dress:public_store' store.id %}"
+      <a href="{% url 'dress:store_store' store.id %}"
          class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-6 py-2 rounded-md shadow mt-4 md:mt-0 transition">
         ดูร้านค้า
       </a>

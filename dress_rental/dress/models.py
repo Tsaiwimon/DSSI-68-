@@ -88,7 +88,7 @@ class WithdrawalRequest(models.Model):
 
 # ============================================================
 # Model: StoreTransaction
-# บันทึกธุรกรรมระหว่างระบบกับร้าน (ยอดรวม / ค่าคอม / ยอดสุทธิ)
+# เก็บ “ธุรกรรมการเงิน” ระหว่างระบบกับร้าน ในแต่ละออเดอร์
 # ============================================================
 class StoreTransaction(models.Model):
     store = models.ForeignKey("Shop", on_delete=models.CASCADE)
@@ -99,9 +99,9 @@ class StoreTransaction(models.Model):
         blank=True,
     )
 
-    gross_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    commission_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    net_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    gross_amount = models.DecimalField(max_digits=10, decimal_places=2) # ยอดรวมก่อนหักค่าคอม
+    commission_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0) # ค่าคอมมิชชั่นที่หัก
+    net_amount = models.DecimalField(max_digits=10, decimal_places=2) # ยอดสุทธิที่โอนให้ร้าน
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -113,7 +113,7 @@ class StoreTransaction(models.Model):
 
 # ============================================================
 # Model: Shop
-# ร้านเช่าชุดในระบบ
+# แทน “ร้านเช่าชุด” ในระบบ
 # ============================================================
 class Shop(models.Model):
     owner = models.ForeignKey(
@@ -128,6 +128,37 @@ class Shop(models.Model):
     fee = models.TextField(blank=True, null=True)  # ข้อความกติกา/โน้ต (ไม่ใช้คำนวณ)
     created_at = models.DateTimeField(auto_now_add=True)
 
+
+
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+    STATUS_SUSPENDED = "suspended"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "รออนุมัติ"),
+        (STATUS_APPROVED, "อนุมัติแล้ว"),
+        (STATUS_REJECTED, "ปฏิเสธ"),
+        (STATUS_SUSPENDED, "ระงับ"),
+    ]
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        db_index=True,
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_shops",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    reject_reason = models.TextField(blank=True, default="")
+
+
     # จำนวนวันเช่าสูงสุดค่าเริ่มต้นระดับร้าน (สินค้า override ได้)
     max_rental_days = models.PositiveIntegerField(
         default=8,
@@ -141,7 +172,7 @@ class Shop(models.Model):
         return self.name
 
     # คำนวณค่าส่งขาไปตามจำนวนชิ้นจากกติกาของร้าน
-    def outbound_shipping_fee_for_qty(self, qty: int) -> Decimal:
+    def outbound_shipping_fee_for_qty(self, qty: int) -> Decimal:   
         rule = getattr(self, "shipping_rule", None)  # reverse ของ OneToOne ShippingRule
         if not rule:
             return Decimal("0.00")
@@ -364,7 +395,7 @@ class PriceTemplateItem(models.Model):
 
 # ============================================================
 # Model: Dress
-# รายการชุดที่ปล่อยเช่า
+# เก็บข้อมูล “ชุดที่ปล่อยเช่า”
 # ============================================================
 class Dress(models.Model):
     shop = models.ForeignKey(
@@ -407,6 +438,12 @@ class Dress(models.Model):
         default=1,
         verbose_name="จำนวนสินค้า",
         validators=[MinValueValidator(0)],
+    )
+
+    # ฟิลด์ใหม่: เก็บลงคลัง / ซ่อนจากลูกค้า
+    is_archived = models.BooleanField(
+        default=False,
+        verbose_name="เก็บลงคลัง / ซ่อนจากลูกค้า",
     )
 
     categories = models.ManyToManyField(Category, blank=True)
@@ -489,9 +526,10 @@ class Dress(models.Model):
         }
 
 
+
 # ============================================================
 # Model: DressPriceOverride
-# ราคาแพ็ก override รายชิ้น (หากไม่ใช้ template ของร้าน)
+# ตั้งราคาแพ็ก override เฉพาะชุด (ไม่ใช้ราคาจากเทมเพลตของร้าน)
 # ============================================================
 class DressPriceOverride(models.Model):
     product = models.ForeignKey(
@@ -523,7 +561,7 @@ class DressPriceOverride(models.Model):
 
 # ============================================================
 # Model: DressImage
-# รูปภาพเพิ่มเติมของชุด
+# เก็บรูปเพิ่มเติมของชุด (มากกว่า 1 รูป)
 # ============================================================
 class DressImage(models.Model):
     dress = models.ForeignKey(
@@ -565,6 +603,21 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.dress.name} ({self.rating}⭐)"
+
+
+
+# เพิ่มเติม: รูปภาพรีวิวหลายรูป
+class ReviewImage(models.Model):
+    review = models.ForeignKey(
+        Review,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    image = models.ImageField(upload_to="review_images/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Image for review {self.review_id}"
 
 
 # ============================================================
@@ -653,7 +706,7 @@ class ShippingBracket(models.Model):
 
 # ============================================================
 # Model: Rental
-# การเช่าจริง 1 เรคอร์ด = 1 ชุด (มีคำนวณค่าคอมฯ และยอดที่ต้องโอนให้ร้าน)
+# ตัวแทน “การเช่ารายชิ้นแบบละเอียด” (ใช้คำนวณ commission และยอดโอนให้ร้าน)
 # ============================================================
 class Rental(models.Model):
     class Status(models.TextChoices):
@@ -821,6 +874,14 @@ class Notification(models.Model):
         help_text="ถ้าเป็นข้อความจากร้าน ระบุร้านที่ส่ง",
     )
 
+    chat_thread = models.ForeignKey(
+        "ShopChatThread",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="notifications",
+    )
+
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -829,6 +890,9 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.title} -> {self.user}"
+    
+
+
 
 
 # ============================================================
@@ -978,4 +1042,60 @@ class ShopChatMessage(models.Model):
     @property
     def has_image(self):
         return bool(self.image)
+    
+
+
+
+
+
+class Order(models.Model):
+    STATUS_CHOICES = (
+        ("pending_payment", "รอชำระเงิน"),
+        ("paid", "ชำระเงินแล้ว"),
+        ("cancelled", "ยกเลิก"),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    shop = models.ForeignKey("Shop", on_delete=models.CASCADE)
+
+    start_date = models.DateField()
+    end_date = models.DateField()
+    days = models.PositiveIntegerField()
+
+    rental_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    deposit_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    grand_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending_payment")
+
+    # สำหรับ Omise
+    omise_charge_id = models.CharField(max_length=100, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Order #{self.id}"
+    
+
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, related_name="items", on_delete=models.CASCADE)
+    dress = models.ForeignKey("Dress", on_delete=models.CASCADE)
+
+    qty = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    line_total = models.DecimalField(max_digits=10, decimal_places=2)
+
+    pricing_source = models.CharField(max_length=20)
+
+    def __str__(self):
+        return f"{self.dress.name} x {self.qty}"
+
+    
+
+
+
+
 

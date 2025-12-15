@@ -9,7 +9,7 @@
 <body class="bg-gray-50">
 
 <!-- แถบหัว -->
-<div class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-100 shadow-sm p-4 flex justify-between items-center">
+<div class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-100 shadow-sm p-8 flex justify-between items-center">
     <h1 class="text-lg font-semibold text-gray-800">คะแนนรีวิว ({{ reviews.count }})</h1>
     <div class="flex gap-2">
         <a href="{% url 'dress:dress_detail' dress.id %}"
@@ -113,13 +113,7 @@
             </div>
             {% endif %}
 
-            <!-- ปุ่มดูรายละเอียดใต้รีวิว (ยังไม่ต้องลิงก์ไปไหน) -->
-            <div class="flex justify-end mt-3">
-                <button type="button"
-                        class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50">
-                    ดูรายละเอียด
-                </button>
-            </div>
+      
 
             <!-- ปุ่มแก้ไข / ลบ สำหรับเจ้าของรีวิว -->
             {% if user == review.user %}

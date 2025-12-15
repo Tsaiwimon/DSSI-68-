@@ -68,7 +68,10 @@
     <div>
       <img src="{{ dress.image.url }}" alt="{{ dress.name }}"
            class="rounded-lg shadow-lg w-full max-h-[480px] object-cover">
-      <p class="mt-2 text-gray-500 text-sm">{{ dress.rent_count }} เช่าแล้ว</p>
+      <!-- ใช้ total_rented -->
+      <p class="mt-2 text-gray-500 text-sm">
+        เช่าไปแล้ว {{ total_rented }} ครั้ง
+      </p>
 
       <button class="mt-4 bg-yellow-400 text-gray-900 px-4 py-2 rounded shadow hover:bg-yellow-500 font-medium flex items-center space-x-2">
         <i class="fa-solid fa-camera"></i><span>ลองชุดด้วย AI</span>
@@ -120,7 +123,7 @@
 
         <!-- ขวา: ปุ่มไปหน้าร้าน -->
         <div class="flex flex-col gap-2 w-full sm:w-40">
-          <a href="{% url 'dress:my_store' dress.shop.id %}"
+          <a href="{% url 'dress:public_store' dress.shop.id %}"
              class="text-center text-sm font-medium bg-blue-600 text-white px-3 py-2
                     rounded-lg shadow hover:bg-blue-700 transition">
             ดูหน้าร้าน
@@ -216,7 +219,11 @@
           <p><span class="font-semibold">รายละเอียด:</span> {{ dress.description|default:"-" }}</p>
           <p><span class="font-semibold">ขนาด:</span> {{ dress.size|default:"-" }}</p>
           <p><span class="font-semibold">มัดจำ:</span> ฿ {{ dress.deposit|default:"0" }}</p>
-          <p><span class="font-semibold">จำนวนคงเหลือ:</span> {{ dress.stock }} ชุด</p>
+          <!-- ใช้ remaining_stock + total_rented -->
+          <p><span class="font-semibold">จำนวนคงเหลือ:</span> {{ remaining_stock }} ชุด</p>
+          <p class="text-xs text-gray-500">
+            เคยถูกเช่าไปแล้วทั้งหมด {{ total_rented }} ครั้ง
+          </p>
           <p class="text-xs text-gray-500">หมายเหตุ: ค่ามัดจำจะโอนคืนหลังร้านตรวจรับชุดเรียบร้อย</p>
         </div>
 
@@ -309,7 +316,7 @@
 
         <!-- ปุ่มเช่า -->
         <div class="mt-6">
-          {% if dress.stock > 0 %}
+          {% if remaining_stock > 0 %}
             <div class="flex flex-wrap gap-3">
               <form id="add-to-cart-form" action="{% url 'dress:add_to_cart' dress.id %}" method="post" class="flex-1">
                 {% csrf_token %}
@@ -359,7 +366,7 @@
       </div>
 
       <div class="flex justify-end mt-8">
-        <a href="{% url 'dress:my_store' dress.shop.id %}"
+        <a href="{% url 'dress:public_store' dress.shop.id %}"
            class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg
                   hover:bg-blue-700 hover:shadow-xl transition-all duration-200 font-semibold text-sm md:text-base">
           ไปที่ร้านเพื่อดูชุดทั้งหมด
@@ -521,6 +528,62 @@ document.head.appendChild(style);
   }
 })();
 </script>
+
+{% if messages %}
+  <!-- Modal แจ้งเตือนปิดการเช่า -->
+  <div id="rentClosedModal"
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-[90%]">
+      <div class="px-5 py-4 border-b">
+        <h3 class="text-lg font-semibold text-gray-900">
+          ไม่สามารถเช่าชุดนี้ได้
+        </h3>
+      </div>
+      <div class="px-5 py-4">
+        <p class="text-sm text-gray-700">
+          {% for message in messages %}
+            {{ message }}{% if not forloop.last %}<br>{% endif %}
+          {% endfor %}
+        </p>
+      </div>
+      <div class="px-5 py-3 border-t flex justify-end">
+        <button id="rentClosedModalClose"
+                class="inline-flex items-center rounded-lg px-4 py-2
+                       bg-gray-800 text-white text-sm font-medium
+                       hover:bg-black transition">
+          ตกลง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const modal = document.getElementById("rentClosedModal");
+      const closeBtn = document.getElementById("rentClosedModalClose");
+
+      if (!modal) return;
+
+      function closeModal() {
+        modal.classList.add("hidden");
+      }
+
+      closeBtn?.addEventListener("click", closeModal);
+
+      modal.addEventListener("click", function (e) {
+        if (e.target === modal) {
+          closeModal();
+        }
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          closeModal();
+        }
+      });
+    });
+  </script>
+{% endif %}
 
 <!-- Modal แจ้งเตือนเลือกวันที่ -->
 <div id="dateAlert" class="fixed inset-0 z-50 hidden">

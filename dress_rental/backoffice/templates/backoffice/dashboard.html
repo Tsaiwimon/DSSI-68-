@@ -1,0 +1,36 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}ภาพรวมระบบ{% endblock %}
+{% block page_subtitle %}สรุปข้อมูลทั้งหมดของคุณไว้ที่เดียว{% endblock %}
+
+{% block content %}
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+    <div class="bg-white rounded-xl shadow p-6">
+      <div class="text-neutral-600">ผู้ใช้งานทั้งหมด</div>
+      <div class="text-3xl font-bold mt-2">{{ total_users }}</div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-6">
+      <div class="text-neutral-600">ร้านทั้งหมด</div>
+      <div class="text-3xl font-bold mt-2">{{ total_shops }}</div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-6">
+      <div class="text-neutral-600">ชุดทั้งหมด</div>
+      <div class="text-3xl font-bold mt-2">{{ total_dresses }}</div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-6">
+      <div class="text-neutral-600">ร้านรออนุมัติ</div>
+      <div class="text-3xl font-bold mt-2">{{ pending_shops }}</div>
+
+      <a href="{% url 'backoffice:shop_pending_list' %}"
+         class="inline-block mt-4 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+        ไปหน้าอนุมัติร้าน
+      </a>
+    </div>
+
+  </div>
+{% endblock %}

@@ -7,6 +7,9 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # ใช้อันเดียวพอ และมี namespace ชัดเจน
     path("", include(("dress.urls", "dress"), namespace="dress")),
+
+
+    path("backoffice/", include("backoffice.urls")),
 ]
 
 if settings.DEBUG:

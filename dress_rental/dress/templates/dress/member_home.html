@@ -39,11 +39,25 @@
 
         <!-- ✅ Icons (3 ไอคอน) -->
         <div class="flex space-x-6 items-center text-xl relative">
+
+          <!-- 🔔 การแจ้งเตือน -->
+          <a href="{% url 'dress:notification' %}" class="hover:text-pink-500 relative" title="การแจ้งเตือน">
+            <i class="ph ph-bell cursor-pointer"></i>
+            {% if unread_notifications_count > 0 %}
+            <span class="absolute -top-2 -right-3 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">
+              {{ unread_notifications_count }}
+            </span>
+            {% endif %}
+          </a>
+
+          
           <!-- 🛒 ตะกร้า -->
           <a href="{% url 'dress:cart_view' %}" class="hover:text-pink-500 relative" title="ดูตะกร้าสินค้า">
             <i class="ph ph-shopping-cart cursor-pointer"></i>
             <span id="cart-count" class="absolute -top-2 -right-3 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 hidden">0</span>
           </a>
+
+          
 
           <!-- ❤️ หัวใจ -->
           <a href="{% url 'dress:favorite_list' %}" class="hover:text-pink-500 relative" title="ดูรายการที่ถูกใจทั้งหมด">

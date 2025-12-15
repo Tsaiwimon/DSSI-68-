@@ -1,5 +1,8 @@
-from django.urls import path
+from django.urls import path, reverse_lazy
 from . import views
+from django.contrib.auth import views as auth_views
+
+
 
 app_name = "dress"
 
@@ -13,6 +16,34 @@ urlpatterns = [
     path("logout/", views.logout_view, name="logout"),
     path("redirect/", views.login_redirect, name="login_redirect"),
 
+    path("password-reset/",
+         auth_views.PasswordResetView.as_view(
+             template_name="dress/password_reset.html",
+             success_url=reverse_lazy("dress:password_reset_done"),
+         ),
+         name="password_reset"),
+
+    path("password-reset/done/",
+         auth_views.PasswordResetDoneView.as_view(
+             template_name="dress/password_reset_done.html",
+         ),
+         name="password_reset_done"),
+
+    path("reset/<uidb64>/<token>/",
+         auth_views.PasswordResetConfirmView.as_view(
+             template_name="dress/password_reset_confirm.html",
+             success_url=reverse_lazy("dress:password_reset_complete"),
+         ),
+         name="password_reset_confirm"),
+
+    path("reset/done/",
+         auth_views.PasswordResetCompleteView.as_view(
+             template_name="dress/password_reset_complete.html",
+         ),
+         name="password_reset_complete"),
+
+
+
     # Member
     path("member/", views.member_home, name="member_home"),
 
@@ -20,6 +51,7 @@ urlpatterns = [
     path("open-store/", views.open_store, name="open_store"),
     path("my-store/<int:store_id>/", views.my_store, name="my_store"),
     path("my-store/<int:store_id>/dresses/", views.store_dress, name="store_dress"),
+    path("my-store/<int:store_id>/dresses/archive/",views.store_dress_archive,name="store_dress_archive",),
     path("my-store/<int:store_id>/add-dress/", views.add_dress, name="add_dress"),
     path("my-store/<int:store_id>/edit-dress/<int:dress_id>/", views.edit_dress, name="edit_dress"),
     path("my-store/<int:store_id>/delete-dress/<int:dress_id>/", views.delete_dress, name="delete_dress"),
@@ -34,7 +66,12 @@ urlpatterns = [
     path('shop/inbox/thread/<int:thread_id>/send/', views.shop_chat_thread_send, name='shop_chat_thread_send'),
     path('shop/inbox/thread/<int:thread_id>/messages/', views.shop_chat_thread_messages, name='shop_chat_thread_messages'),
 
+    path('my-store/<int:store_id>/settings/', views.store_settings, name='store_settings'),
+
+    path("my-store/<int:store_id>/profile/", views.store_profile, name="store_profile"),
+
     path("my-store/<int:store_id>/back-office/", views.back_office, name="back_office"),
+
 
 
 path(
@@ -130,13 +167,43 @@ path(
 ),
 
     
+# ย้ายชุดเข้า/ออกจากคลัง (archive/unarchive)
+path(
+    "my-store/<int:store_id>/dress/<int:dress_id>/archive/",
+    views.archive_dress,
+    name="archive_dress",
+),
+path(
+    "my-store/<int:store_id>/dress/<int:dress_id>/unarchive/",
+    views.unarchive_dress,
+    name="unarchive_dress",
+),
+
+
+
+
+# toggle เปิด/ปิดให้เช่า (มุมมองร้าน)
+    path(
+        "my-store/<int:store_id>/store/dress/<int:dress_id>/toggle/",
+        views.toggle_dress_availability,
+        name="toggle_dress_availability",
+    ),
+
+
+
+  
+
     #การแจ้งเตือน
     path("notifications/", views.notification_page, name="notifications"),
     path("orders/<int:order_id>/send-message/", views.send_shop_message, name="send_shop_message"),
     
 
-    # หน้าร้านสาธารณะ
+    # ฝั่งลูกค้า (สาธารณะ)
     path("store/<int:store_id>/", views.public_store, name="public_store"),
+
+    # ฝั่งร้าน (เจ้าของร้าน)
+    path("my-store/<int:store_id>/store/", views.store_page, name="store_store"),
+    
 
     # รายละเอียดชุด + เช็คเอาต์
     path("dress/<int:dress_id>/", views.dress_detail, name="dress_detail"),
@@ -147,6 +214,10 @@ path(
     path("dress/<int:dress_id>/reviews/create/", views.review_create, name="review_create"),
     path("dress/<int:dress_id>/reviews/<int:review_id>/edit/", views.review_edit, name="review_edit"),
     path("dress/<int:dress_id>/reviews/<int:review_id>/delete/", views.review_delete, name="review_delete"),
+
+    
+
+
 
     # Favorites
     path("dress/<int:dress_id>/favorite/", views.add_to_favorite, name="add_to_favorite"),
@@ -170,6 +241,7 @@ path(
     path("profile/", views.profile_page, name="profile_page"),
     path("profile/update/", views.update_profile, name="update_profile"),
     path("how-to-rent/", views.how_to_rent, name="how_to_rent"),
+    
 
     # Price Template APIs (canonical ภายใต้ /stores/)
     path("stores/<int:store_id>/price-templates/create/", views.api_create_price_template, name="api_create_price_template"),
@@ -192,4 +264,32 @@ path(
     path("omise/webhook/", views.omise_webhook, name="omise_webhook"),
     # ตรวจสอบสถานะการชำระเงิน (Payment Status API)
     path("payments/status/", views.payment_status_api, name="payment_status_api"),
+
+path(
+    "dress/<int:dress_id>/review/",
+    views.review_edit,          
+    name="review_form",         
+),
+
+    # Cart Checkout
+    path("checkout/", views.cart_checkout, name="cart_checkout"),
+    path("checkout/confirm/", views.cart_checkout_confirm, name="checkout_confirm"),
+    path("checkout/pay/", views.cart_payment_start, name="cart_payment_start"),
+    path("payment/order/<int:order_id>/", views.payment_page_by_order, name="payment_by_order"),
+
+    path("payment/order/<int:order_id>/paid-test/", views.payment_mark_paid_test, name="payment_mark_paid_test"),
+    path("payment/success/<int:order_id>/", views.payment_success, name="payment_success"),
+
+
+    path("orders/<int:order_id>/", views.order_detail, name="order_detail"),
+
+
+
+    path("shop/pending/", views.shop_pending_notice, name="shop_pending_notice"),
+
+
+    
 ]
+
+
+handler403 = "dress.views.handler403"

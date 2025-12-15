@@ -14,10 +14,10 @@
   <div class="w-full px-8 py-9 flex justify-between items-center">
     <h1 class="text-2xl font-bold text-gray-800">ตะกร้าสินค้า ({{ cart_items.count }})</h1>
     <div class="flex items-center gap-4">
-      <a href="{% url 'dress:member_home' %}" class="flex items-center text-gray-700 hover:text-pink-600 transition">
+      <a href="{% url 'dress:member_home' %}" class="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition">
         ← กลับหน้าหลัก
       </a>
-      <button id="edit-btn" class="bg-gray-200 text-gray-800 px-4 py-1 rounded hover:bg-gray-300 transition">
+      <button id="edit-btn" class="bg-white text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-100 transition">
         แก้ไข
       </button>
     </div>
@@ -27,17 +27,22 @@
 <!-- Main -->
 <main class="max-w-6xl mx-auto py-8 px-6">
   {% for shop, data in grouped_cart.items %}
-    <div class="mb-6 bg-white-50 rounded-lg shadow p-4 shop-group" data-shop="{{ shop.name }}">
+    <div class="mb-6 bg-white-50 rounded-lg shadow p-4 shop-group" data-shop="{{ shop.name }}" data-shop-id="{{ shop.id }}">
       <h2 class="font-bold text-lg mb-4">{{ shop.name }} <span class="text-gray-500">></span></h2>
 
       {% for item in data.items %}
         <div class="flex items-center justify-between border-b py-3 item-row" data-item-id="{{ item.id }}">
           <div class="flex items-start gap-4">
-            <!-- ✅ Checkbox -->
-            <input type="checkbox" class="edit-checkbox hidden w-5 h-5 accent-pink-500" data-id="{{ item.id }}">
+            <!-- Checkbox (ใช้เลือก ลบ/ย้าย/ชำระเงิน) -->
+            <input
+              type="checkbox"
+              class="edit-checkbox hidden w-5 h-5 accent-pink-500"
+              data-id="{{ item.id }}"
+              data-store-id="{{ shop.id }}"
+            >
 
             <!-- รูป -->
-            <a href="{% url 'dress:dress_detail' item.dress.id %}" 
+            <a href="{% url 'dress:dress_detail' item.dress.id %}"
                class="transition transform hover:scale-105 hover:shadow-lg cursor-pointer rounded-lg">
               {% if item.dress.image %}
                 <img src="{{ item.dress.image.url }}" alt="{{ item.dress.name }}" class="w-20 h-24 object-cover rounded-lg">
@@ -48,27 +53,24 @@
 
             <!-- ข้อมูลสินค้า -->
             <div>
-              <a href="{% url 'dress:dress_detail' item.dress.id %}" 
+              <a href="{% url 'dress:dress_detail' item.dress.id %}"
                  class="font-medium text-gray-800 hover:text-pink-600 transition cursor-pointer">
                 {{ item.dress.name }}
               </a>
-              <p><span class="font-semibold">ขนาด:</span> {{ item.dress.size|default:"-" }}</p>
 
-              <!-- ✅ ปุ่มดูรายละเอียด (เพิ่มใหม่ให้ทุกชุดมีของตัวเอง) -->
-              <a href="{% url 'dress:dress_detail' item.dress.id %}" 
+              <p><span class="font-semibold">ขนาด:</span> {{ item.dress.size|default:"-" }}</p>
+              <p class="text-sm text-gray-600 mt-1">จำนวน: <span class="font-semibold">1</span> ชุด</p>
+
+              <a href="{% url 'dress:dress_detail' item.dress.id %}"
                  class="inline-block mt-1 bg-pink-100 text-pink-600 px-3 py-1 rounded hover:bg-pink-200 transition text-xs font-medium">
                 ดูรายละเอียด
               </a>
             </div>
           </div>
 
-          <!-- จำนวน + ราคา -->
-          <div class="flex items-center gap-4">
-            <div class="flex items-center space-x-1">
-              <button class="decrease-btn bg-gray-200 text-gray-700 px-2 rounded" data-id="{{ item.id }}">-</button>
-              <input type="text" readonly value="{{ item.quantity }}" class="quantity-input w-10 text-center border border-gray-300 rounded">
-              <button class="increase-btn bg-gray-200 text-gray-700 px-2 rounded" data-id="{{ item.id }}">+</button>
-            </div>
+          <!-- ราคา/วัน (เช่า 1 ชุดต่อรายการ) -->
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-500">ราคา/วัน</span>
             <p class="font-semibold text-pink-600 item-total" data-price="{{ item.dress.daily_price }}">
               ฿{{ item.dress.daily_price|floatformat:2 }}
             </p>
@@ -76,7 +78,7 @@
         </div>
       {% endfor %}
 
-      <!-- ✅ แถวล่าง: รวมร้าน -->
+      <!-- รวมร้าน (ราคา/วัน) -->
       <div class="mt-3 flex justify-end items-center">
         <p class="font-semibold text-pink-700 shop-total">
           รวมร้าน {{ shop.name }}: ฿{{ data.total|floatformat:2 }}
@@ -87,7 +89,7 @@
     <p class="text-center text-gray-500 mt-10">ยังไม่มีสินค้าในตะกร้า</p>
   {% endfor %}
 
-  <!-- ✅ ปุ่มโหมดแก้ไข -->
+  <!-- ปุ่มโหมดแก้ไข -->
   <div id="edit-actions" class="hidden mt-8 text-right space-x-3">
     <button id="delete-selected" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
       ลบที่เลือก
@@ -100,22 +102,43 @@
     </button>
   </div>
 
-  <!-- ✅ รวมทั้งหมด -->
+  <!-- รวมทั้งหมด -->
   <div class="mt-10 flex justify-between items-center border-t pt-6">
     <div></div>
     <div class="text-right">
       <p class="text-lg text-gray-600">
-        ยอดรวมทั้งหมด:
-        <span id="selected-total" class="font-bold text-pink-600">฿{{ total_price|floatformat:2 }}</span>
+        ยอดรวมตามที่เลือก (ราคา/วัน):
+        <span id="selected-total" class="font-bold text-pink-600">฿0.00</span>
       </p>
-      <button id="checkout-btn" class="mt-2 bg-blue-600 text-white px-8 py-2 rounded hover:bg-blue-700">
+
+      <button id="checkout-btn"
+              data-checkout-url="{% url 'dress:cart_checkout' %}"
+              class="mt-2 bg-blue-600 text-white px-8 py-2 rounded hover:bg-blue-700">
         ชำระเงิน
       </button>
     </div>
   </div>
 </main>
 
-<!-- ✅ Script -->
+<!-- Modal: เลือกได้แค่ร้านเดียว (ตอนกดชำระเงินเท่านั้น) -->
+<div id="storeLimitModal" class="fixed inset-0 hidden items-center justify-center z-50">
+  <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+
+  <div class="relative bg-white w-full max-w-md rounded-xl shadow-lg p-6">
+    <h3 class="text-lg font-semibold text-gray-800">แจ้งเตือน</h3>
+    <p class="text-sm text-gray-600 mt-2">
+      เลือกชำระเงินได้เฉพาะสินค้าที่อยู่ร้านเดียวกันเท่านั้น
+    </p>
+
+    <div class="mt-5 flex justify-end">
+      <button id="closeStoreLimitModal"
+        class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700">
+        ตกลง
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const editBtn = document.getElementById("edit-btn");
@@ -125,31 +148,121 @@ document.addEventListener("DOMContentLoaded", () => {
   const deleteBtn = document.getElementById("delete-selected");
   const moveBtn = document.getElementById("move-favorite");
   const totalText = document.getElementById("selected-total");
+  const checkoutBtn = document.getElementById("checkout-btn");
 
   let editMode = false;
 
-  // ✅ toggle โหมดแก้ไข
+  // ===== Modal เปิด/ปิด =====
+  const modal = document.getElementById("storeLimitModal");
+  const closeModalBtn = document.getElementById("closeStoreLimitModal");
+
+  function openModal() {
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+
+  function closeModal() {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+
+  closeModalBtn.addEventListener("click", closeModal);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // ===== csrf =====
+  const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || "";
+
+  // ===== toggle โหมดแก้ไข (แสดง checkbox) =====
   editBtn.addEventListener("click", () => {
     editMode = !editMode;
     checkboxes.forEach(cb => cb.classList.toggle("hidden", !editMode));
     editActions.classList.toggle("hidden", !editMode);
     editBtn.textContent = editMode ? "กลับ" : "แก้ไข";
+    updateSelectedTotal();
   });
 
-  // ✅ ยกเลิก
+  // ===== ยกเลิก =====
   cancelBtn.addEventListener("click", () => {
     editMode = false;
     checkboxes.forEach(cb => { cb.checked = false; cb.classList.add("hidden"); });
     editActions.classList.add("hidden");
     editBtn.textContent = "แก้ไข";
+    updateSelectedTotal();
   });
 
-  // ✅ csrf
-  const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || "";
+  // ===== คำนวณรวมร้าน (ราคา/วัน) =====
+  function recalcAllTotals() {
+    document.querySelectorAll(".shop-group").forEach(shop => {
+      let shopTotal = 0;
 
-  // ✅ ลบที่เลือก
+      shop.querySelectorAll(".item-row").forEach(item => {
+        const price = parseFloat(item.querySelector(".item-total").dataset.price || "0");
+        const qty = 1; // เช่า 1 ชุดต่อรายการ
+        shopTotal += (price * qty);
+      });
+
+      shop.querySelector(".shop-total").textContent =
+        "รวมร้าน " + shop.dataset.shop + ": ฿" + shopTotal.toFixed(2);
+    });
+  }
+
+  // ===== ยอดรวมตามที่เลือก (ราคา/วัน) =====
+  function updateSelectedTotal() {
+    let selectedTotal = 0;
+    const checked = Array.from(checkboxes).filter(cb => cb.checked);
+
+    checked.forEach(cb => {
+      const row = cb.closest(".item-row");
+      if (!row) return;
+
+      const price = parseFloat(row.querySelector(".item-total").dataset.price || "0");
+      const qty = 1; // เช่า 1 ชุดต่อรายการ
+      selectedTotal += price * qty;
+    });
+
+    totalText.textContent = "฿" + selectedTotal.toFixed(2);
+  }
+
+  checkboxes.forEach(cb => cb.addEventListener("change", updateSelectedTotal));
+
+  // ===== Utilities: selected ids / stores =====
+  function getSelectedIds() {
+    return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.dataset.id);
+  }
+
+  function getSelectedStores() {
+    const stores = new Set();
+    Array.from(checkboxes).filter(cb => cb.checked).forEach(cb => {
+      stores.add(cb.dataset.storeId);
+    });
+    return stores;
+  }
+
+  // ===== กดชำระเงิน: เช็คร้านเดียวกันเฉพาะตอนกด =====
+  checkoutBtn.addEventListener("click", () => {
+    const selectedIds = getSelectedIds();
+
+    if (!selectedIds.length) {
+      alert("กรุณาเลือกสินค้าที่ต้องการชำระเงิน");
+      return;
+    }
+
+    const stores = getSelectedStores();
+    if (stores.size > 1) {
+      openModal();
+      return;
+    }
+
+    const checkoutUrl = checkoutBtn.dataset.checkoutUrl; // {% url 'dress:cart_checkout' %}
+    const qs = selectedIds.map(id => `ids=${encodeURIComponent(id)}`).join("&");
+    window.location.href = `${checkoutUrl}?${qs}`;
+  });
+
+  // ===== ลบที่เลือก =====
   deleteBtn.addEventListener("click", () => {
-    const selectedIds = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.dataset.id);
+    const selectedIds = getSelectedIds();
     if (!selectedIds.length) return alert("กรุณาเลือกสินค้าที่ต้องการลบ");
     if (!confirm("ต้องการลบสินค้าที่เลือกหรือไม่?")) return;
 
@@ -160,9 +273,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }).then(() => location.reload());
   });
 
-  // ✅ ย้ายไปถูกใจ
+  // ===== ย้ายไปถูกใจ =====
   moveBtn.addEventListener("click", () => {
-    const selectedIds = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.dataset.id);
+    const selectedIds = getSelectedIds();
     if (!selectedIds.length) return alert("กรุณาเลือกสินค้าที่ต้องการย้ายไปถูกใจ");
 
     fetch("/cart/move_to_favorite/", {
@@ -172,54 +285,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }).then(() => location.reload());
   });
 
-  // ✅ อัปเดตจำนวนแบบเรียลไทม์
-  function recalcTotals() {
-    let overallTotal = 0;
-    document.querySelectorAll(".shop-group").forEach(shop => {
-      let shopTotal = 0;
-      shop.querySelectorAll(".item-row").forEach(item => {
-        const price = parseFloat(item.querySelector(".item-total").dataset.price);
-        const qty = parseInt(item.querySelector(".quantity-input").value);
-        const subtotal = price * qty;
-        shopTotal += subtotal;
-        item.querySelector(".item-total").textContent = "฿" + subtotal.toFixed(2);
-      });
-      shop.querySelector(".shop-total").textContent =
-        "รวมร้าน " + shop.dataset.shop + ": ฿" + shopTotal.toFixed(2);
-      overallTotal += shopTotal;
-    });
-    totalText.textContent = "฿" + overallTotal.toFixed(2);
-  }
-
-  async function updateQuantity(id, action, quantityInput) {
-    const res = await fetch("/cart/update_quantity/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-      body: JSON.stringify({ id, action })
-    });
-    const data = await res.json();
-    if (data.status === "ok") {
-      quantityInput.value = data.new_quantity;
-      recalcTotals();
-    }
-  }
-
-  document.querySelectorAll(".increase-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.id;
-      const quantityInput = btn.parentElement.querySelector(".quantity-input");
-      updateQuantity(id, "increase", quantityInput);
-    });
-  });
-
-  document.querySelectorAll(".decrease-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.id;
-      const quantityInput = btn.parentElement.querySelector(".quantity-input");
-      updateQuantity(id, "decrease", quantityInput);
-    });
-  });
+  // เริ่มต้น
+  recalcAllTotals();
+  updateSelectedTotal();
 });
 </script>
+
 </body>
 </html>

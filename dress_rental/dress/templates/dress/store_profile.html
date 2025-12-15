@@ -1,0 +1,199 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>โปรไฟล์ร้าน - {{ store.name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+
+  <!-- Header เหมือนหลังร้าน -->
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-100 shadow-sm">
+    <div class="max-w-6xl mx-auto px-9 py-9 flex items-center justify-between">
+
+      <!-- ซ้าย: ปุ่มกลับหลังร้าน + ชื่อหน้า -->
+      <div class="flex items-center space-x-3">
+        <a href="{% url 'dress:back_office' store_id %}"
+           class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300
+                  bg-white/60 text-sm text-gray-700 hover:bg-white">
+          ← กลับไปหลังร้าน
+        </a>
+        <h1 class="text-xl font-semibold text-gray-800">
+          โปรไฟล์ร้าน
+        </h1>
+      </div>
+
+      <!-- ขวา: ชื่อร้าน + โลโก้ -->
+      <div class="flex items-center space-x-3">
+        <span class="text-sm text-gray-800 font-medium">
+          {{ store.name }}
+        </span>
+        {% if store.shop_logo %}
+          <img src="{{ store.shop_logo.url }}" alt="{{ store.name }}"
+               class="w-9 h-9 rounded-full object-cover">
+        {% else %}
+          <img src="{% static 'images/store-placeholder.png' %}"
+               alt="store placeholder"
+               class="w-9 h-9 rounded-full object-cover">
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <!-- เนื้อหา -->
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-6">
+
+    <!-- บล็อกบน: ปก + โลโก้ + ข้อมูลหลัก -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <!-- ภาพปก -->
+      <div class="h-40 bg-gray-200 relative">
+        {% if store.cover_image %}
+          <img src="{{ store.cover_image.url }}" alt="{{ store.name }}"
+               class="w-full h-full object-cover">
+        {% endif %}
+
+        <!-- โลโก้ร้านซ้อนบนปก -->
+        <div class="absolute -bottom-10 left-6 flex items-end space-x-4">
+          <div class="w-20 h-20 rounded-full border-4 border-white bg-gray-200 overflow-hidden">
+            {% if store.shop_logo %}
+              <img src="{{ store.shop_logo.url }}" alt="{{ store.name }}"
+                   class="w-full h-full object-cover">
+            {% else %}
+              <img src="{% static 'images/store-placeholder.png' %}"
+                   alt="store placeholder"
+                   class="w-full h-full object-cover">
+            {% endif %}
+          </div>
+          <div class="pb-3">
+            <h2 class="text-xl font-semibold text-gray-900">
+              {{ store.name }}
+            </h2>
+            <p class="text-xs text-gray-500">
+              เจ้าของ: {{ store.owner.username }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- เนื้อหาด้านล่างของบล็อก -->
+      <div class="pt-12 px-6 pb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- คอลัมน์ซ้าย: คำอธิบาย -->
+        <div class="md:col-span-2 space-y-3">
+          <h3 class="text-sm font-semibold text-gray-800">เกี่ยวกับร้าน</h3>
+          <p class="text-sm text-gray-700 whitespace-pre-line">
+            {% if store.description %}
+              {{ store.description }}
+            {% else %}
+              ยังไม่ได้ระบุข้อมูลคำอธิบายร้าน
+            {% endif %}
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-4">
+            <div>
+              <p class="font-semibold text-gray-800 mb-1">ข้อมูลติดต่อ</p>
+              <p class="text-gray-700">
+                เบอร์โทร:
+                {% if store.phone %}
+                  {{ store.phone }}
+                {% else %}
+                  -
+                {% endif %}
+              </p>
+              <p class="text-gray-700">
+                Line ID:
+                {% if store.line_id %}
+                  {{ store.line_id }}
+                {% else %}
+                  -
+                {% endif %}
+              </p>
+            </div>
+            <div>
+              <p class="font-semibold text-gray-800 mb-1">ที่อยู่ร้าน</p>
+              <p class="text-gray-700 whitespace-pre-line">
+                {% if store.address %}
+                  {{ store.address }}
+                {% else %}
+                  ยังไม่ได้ระบุที่อยู่
+                {% endif %}
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- คอลัมน์ขวา: สถิติ -->
+        <div class="space-y-3">
+          <h3 class="text-sm font-semibold text-gray-800 mb-1">สถิติร้าน</h3>
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-pink-50 border border-pink-100 rounded-xl py-3">
+              <p class="text-base font-semibold text-pink-600">{{ total_dresses }}</p>
+              <p class="text-gray-600 mt-1">จำนวนชุด</p>
+            </div>
+            <div class="bg-blue-50 border border-blue-100 rounded-xl py-3">
+              <p class="text-base font-semibold text-blue-600">{{ total_orders }}</p>
+              <p class="text-gray-600 mt-1">ออเดอร์ทั้งหมด</p>
+            </div>
+            <div class="bg-yellow-50 border border-yellow-100 rounded-xl py-3">
+              <p class="text-base font-semibold text-yellow-600">{{ total_reviews }}</p>
+              <p class="text-gray-600 mt-1">รีวิว</p>
+            </div>
+          </div>
+
+          {% if store.map_url %}
+            <div class="mt-4">
+              <a href="{{ store.map_url }}" target="_blank"
+                 class="inline-flex items-center px-3 py-1.5 text-xs rounded-lg border border-gray-300 hover:bg-gray-50">
+                เปิดแผนที่ร้านใน Google Maps
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- บล็อกล่าง: ชุดล่าสุดของร้าน -->
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-gray-800">
+          ชุดล่าสุดของร้าน
+        </h3>
+        <a href="#"
+           class="text-xs text-pink-600 hover:underline">
+          ดูสินค้าทั้งหมด
+        </a>
+      </div>
+
+      {% if latest_dresses %}
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {% for dress in latest_dresses %}
+            <div class="border border-gray-100 rounded-xl overflow-hidden bg-white hover:shadow-sm transition">
+              <div class="h-40 bg-gray-100">
+                {% if dress.image %}
+                  <img src="{{ dress.image.url }}" alt="{{ dress.name }}"
+                       class="w-full h-full object-cover">
+                {% endif %}
+              </div>
+              <div class="p-3 space-y-1">
+                <p class="text-sm font-medium text-gray-800 truncate">
+                  {{ dress.name }}
+                </p>
+                <p class="text-xs text-gray-500">
+                  ราคาเช่า {{ dress.daily_price }} บาท
+                </p>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-gray-500">
+          ยังไม่มีสินค้าที่จะแสดง
+        </p>
+      {% endif %}
+    </section>
+
+  </main>
+
+</body>
+</html>

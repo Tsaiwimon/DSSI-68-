@@ -1,0 +1,178 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ชำระเงิน | Glam & Borrow</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-50">
+
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <div class="w-full px-8 py-9 flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">ชำระเงิน</h1>
+      <p class="text-sm text-gray-600 mt-1">สแกน QR เพื่อชำระเงิน ระบบจะอัปเดตสถานะเมื่อชำระสำเร็จ</p>
+    </div>
+
+    <a href="javascript:history.back()" class="text-gray-700 hover:text-pink-600 transition">
+      ← กลับ
+    </a>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto py-10 px-6">
+
+  <div class="bg-white rounded-lg shadow p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    <!-- LEFT: สรุป -->
+    <div>
+      <div class="inline-flex items-center px-3 py-1 rounded bg-green-100 text-green-700 text-sm font-semibold">
+        PromptPay / โอนเงิน
+      </div>
+
+      <h2 class="mt-4 text-lg font-bold text-gray-800">รายละเอียดคำสั่งซื้อ</h2>
+
+      <div class="mt-4 space-y-2 text-sm text-gray-700">
+        <div class="flex justify-between">
+          <span>เลขที่ออเดอร์</span>
+          <span class="font-semibold">#{{ order.id }}</span>
+        </div>
+
+        {% if order.shop %}
+        <div class="flex justify-between">
+          <span>ร้าน</span>
+          <span class="font-semibold">{{ order.shop.name }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.start_date and order.end_date %}
+        <div class="flex justify-between">
+          <span>ช่วงเช่า</span>
+          <span class="font-semibold">{{ order.start_date }} - {{ order.end_date }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.days %}
+        <div class="flex justify-between">
+          <span>จำนวนวัน</span>
+          <span class="font-semibold">{{ order.days }} วัน</span>
+        </div>
+        {% endif %}
+
+        {% if order.status %}
+        <div class="flex justify-between">
+          <span>สถานะ</span>
+          <span class="font-semibold">{{ order.status }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="mt-6 border-t pt-4 space-y-2 text-sm text-gray-700">
+        {% if order.rental_total is not None %}
+        <div class="flex justify-between">
+          <span>ค่าเช่า</span>
+          <span class="font-semibold">฿{{ order.rental_total|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.deposit_total is not None %}
+        <div class="flex justify-between">
+          <span>ค่ามัดจำ</span>
+          <span class="font-semibold">฿{{ order.deposit_total|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.shipping_fee is not None %}
+        <div class="flex justify-between">
+          <span>ค่าส่ง</span>
+          <span class="font-semibold">฿{{ order.shipping_fee|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+
+        <div class="flex justify-between text-base text-gray-800 pt-3 border-t">
+          <span class="font-bold">ยอดชำระ</span>
+          <span class="font-bold text-pink-600">฿{{ order.grand_total|floatformat:2 }}</span>
+        </div>
+
+        <p class="text-xs text-gray-500 mt-2">
+          หมายเหตุ: ระบบยืนยันการชำระเงินจากฝั่ง Omise (Webhook) หากยังไม่ตัดยอด ให้รอสักครู่แล้วรีเฟรชหน้า
+        </p>
+      </div>
+    </div>
+
+    <!-- RIGHT: QR -->
+    <div>
+      <h2 class="text-lg font-bold text-gray-800">สแกนเพื่อชำระ</h2>
+
+      <div class="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <div class="text-sm text-gray-700 space-y-2">
+          <div class="flex justify-between">
+            <span>ช่องทาง</span>
+            <span class="font-semibold">PromptPay (Omise)</span>
+          </div>
+
+          {% if charge %}
+          <div class="flex justify-between">
+            <span>เลขที่อ้างอิง (Charge)</span>
+            <span class="font-semibold">{{ charge.id }}</span>
+          </div>
+          {% endif %}
+
+          {% if expires_at %}
+          <div class="flex justify-between">
+            <span>หมดอายุ</span>
+            <span class="font-semibold">{{ expires_at }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mt-4 flex justify-center">
+        {% if qr_url %}
+          <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <img src="{{ qr_url }}" alt="PromptPay QR" class="w-64 h-64 object-contain">
+          </div>
+        {% else %}
+          <div class="w-full bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 text-sm">
+            ยังไม่พบ QR Code กรุณารีเฟรช หรือเช็คการสร้าง Charge ใน view
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <a href="javascript:location.reload()"
+           class="w-full text-center bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 transition">
+          รีเฟรชสถานะ
+        </a>
+
+        <a href="{% url 'dress:cart_view' %}"
+           class="w-full text-center bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition">
+          กลับไปตะกร้า
+        </a>
+      </div>
+
+      <!-- ปุ่มจำลองการชำระเงิน -->
+      <div class="mt-3">
+        <form method="POST" action="{% url 'dress:payment_mark_paid_test' order.id %}">
+          {% csrf_token %}
+          <button type="submit"
+                  class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition">
+            ฉันชำระเงินแล้ว
+          </button>
+        </form>
+        <p class="text-xs text-gray-500 mt-2">
+          ใช้สำหรับโหมดทดสอบเท่านั้น: กดแล้วจะอัปเดตสถานะ Order เป็น paid ทันที
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+</main>
+
+</body>
+</html>

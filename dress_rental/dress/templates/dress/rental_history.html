@@ -94,8 +94,16 @@
               </div>
             </div>
 
-            <!-- ปุ่มดูรายละเอียดชุด -->
+            <!-- ปุ่มรีวิว + เช่าอีกครั้ง -->
             <div class="mt-4 flex justify-end">
+              {% if order.status == 'returned' %}
+                <a href="{% url 'dress:review_create' order.dress.id %}"
+                   class="inline-flex items-center px-3 py-1.5 text-xs font-medium
+                          text-green-600 border border-green-200 rounded-full
+                          hover:bg-green-50 transition mr-2">
+                  รีวิวชุดนี้
+                </a>
+              {% endif %}
               <a href="{% url 'dress:dress_detail' order.dress.id %}"
                  class="inline-flex items-center px-3 py-1.5 text-xs font-medium
                         text-pink-600 border border-pink-200 rounded-full

@@ -42,30 +42,21 @@
       <!-- ขวา: เมนูและไอคอน -->
       <div class="flex items-center space-x-10 ml-auto pr-2 md:pr-6">
         <nav class="flex space-x-6 font-medium text-gray-800 items-center">
-          <a href="javascript:history.back();" class="hover:underline">ย้อนกลับ</a>
-          <a href="{% url 'how_to_rent' %}" class="hover:underline">วิธีเช่า</a>
-
-          <!-- ✅ ปุ่มกลับเข้าร้าน -->
-          <a href="{% url 'back_office' store.id %}"  
-             class="bg-black text-white px-4 py-1.5 rounded-lg hover:bg-gray-800 transition text-sm font-medium">
-             กลับเข้าร้าน
+          <a href="javascript:history.back();" class="bg-white text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-100 transition">
+            ← ย้อนกลับ
           </a>
 
           {% if not user.is_authenticated %}
-            <!-- 🧍 ผู้ใช้ทั่วไป -->
-            <a href="{% url 'login' %}" class="hover:underline">เข้าสู่ระบบ</a>
+            <a href="{% url 'dress:login' %}" class="hover:underline">เข้าสู่ระบบ</a>
 
           {% elif user.role == 'member' %}
-            <!-- 👤 สมาชิก -->
             <a href="{% url 'open_store' %}" class="hover:underline">สมัครเปิดร้าน</a>
 
           {% elif user.role == 'store' %}
-            <!-- 🏪 ร้านค้า -->
             <a href="{% url 'back_office' store.id %}" class="hover:underline">จัดการร้าน</a>
             <a href="{% url 'logout' %}" class="hover:text-red-500 font-semibold">ออกจากระบบ</a>
 
           {% elif user.role == 'admin' %}
-            <!-- 🛠️ แอดมิน -->
             <a href="{% url 'admin_dashboard' %}" class="hover:underline">แดชบอร์ด</a>
             <a href="{% url 'manage_users' %}" class="hover:underline">ผู้ใช้ทั้งหมด</a>
             <a href="{% url 'logout' %}" class="hover:text-red-500 font-semibold">ออกจากระบบ</a>
@@ -73,7 +64,7 @@
         </nav>
 
         {% if user.is_authenticated and user.role == 'member' %}
-          <!-- ✅ Icons เฉพาะสมาชิก -->
+          <!-- Icons เฉพาะสมาชิก -->
           <div class="flex items-center space-x-6 text-xl relative">
             <!-- ตะกร้า -->
             <a href="{% url 'cart_view' %}" class="hover:text-pink-500 relative" title="ดูตะกร้าสินค้า">
@@ -109,8 +100,8 @@
     </div>
   </header>
 
-  <!-- Header Store -->
-  <section class="max-w-6xl mx-auto mt-6 px-4 flex items-center justify-between">
+  <!-- Header Store (ปรับให้ตรงกับ grid: max-w-7xl px-6) -->
+  <section class="max-w-7xl mx-auto mt-6 px-6 flex items-center justify-between">
     <div class="flex items-center space-x-4">
       {% if store.shop_logo %}
         <img src="{{ store.shop_logo.url }}" alt="logo" class="w-16 h-16 rounded-full object-cover">
@@ -126,16 +117,16 @@
     <div class="flex items-center space-x-3">
       <span class="text-yellow-500 text-lg">⭐</span>
       <span class="font-semibold text-gray-800">คะแนน : 4.5</span>
-      <a href="#" class="ml-4 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition">แชท</a>
+      <a href="{% url 'dress:shop_chat' store.id %}" class="ml-4 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition">แชท</a>
     </div>
   </section>
 
-  <!-- Categories -->
-  <section class="max-w-6xl mx-auto mt-8 px-4">
+  <!-- Categories (ปรับให้ตรงกับ grid: max-w-7xl px-6) -->
+  <section class="max-w-7xl mx-auto mt-8 px-6">
     <h3 class="text-gray-800 font-semibold mb-3">หมวดหมู่</h3>
     <div class="flex flex-wrap gap-3">
       <a href="?category=ทั้งหมด"
-         class="px-4 py-2 rounded-lg border text-sm font-medium transition 
+         class="px-4 py-2 rounded-lg border text-sm font-medium transition
          {% if not selected_category or selected_category == 'ทั้งหมด' %}
            bg-black text-white
          {% else %}
@@ -143,7 +134,7 @@
          {% endif %}">ชุดทั้งหมด</a>
       {% for c in categories %}
         <a href="?category={{ c.name }}"
-           class="px-4 py-2 rounded-lg border text-sm font-medium transition 
+           class="px-4 py-2 rounded-lg border text-sm font-medium transition
            {% if selected_category == c.name %}
              bg-gray-200 border-gray-400
            {% else %}
@@ -153,13 +144,13 @@
     </div>
   </section>
 
-  <!-- ✅ Product Grid -->
+  <!-- Product Grid -->
   <main class="max-w-7xl mx-auto px-6 mt-10 pt-1 pb-6">
     {% if dresses %}
       <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
         {% for d in dresses %}
           <div class="relative bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition">
-            <a href="{% url 'dress_detail' d.id %}">
+            <a href="{% url 'dress:dress_detail' d.id %}">
               {% if d.image %}
                 <img src="{{ d.image.url }}" alt="{{ d.name }}" class="w-full h-72 object-cover">
               {% else %}
@@ -178,7 +169,7 @@
     {% endif %}
   </main>
 
-  <!-- ✅ Script -->
+  <!-- Script -->
   <script>
     const userBtn = document.getElementById("userMenuBtn");
     const userDropdown = document.getElementById("userDropdown");

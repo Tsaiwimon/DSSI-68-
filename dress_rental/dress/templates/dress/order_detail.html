@@ -1,0 +1,167 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>รายละเอียดออเดอร์ #{{ order.id }} | Glam & Borrow</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-50">
+
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <div class="w-full px-8 py-9 flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">รายละเอียดออเดอร์</h1>
+      <p class="text-sm text-gray-600 mt-1">เลขที่ออเดอร์: <span class="font-semibold">#{{ order.id }}</span></p>
+    </div>
+
+    <a href="javascript:history.back()" class="text-gray-700 hover:text-pink-600 transition">
+      ← กลับ
+    </a>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto py-10 px-6">
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- LEFT: รายการสินค้า -->
+    <div class="lg:col-span-2 bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-bold text-gray-800">รายการสินค้า</h2>
+
+      <div class="mt-5 divide-y">
+        {% for it in items %}
+          <div class="py-4 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="w-16 h-20 rounded-lg overflow-hidden bg-gray-100">
+                {% if it.dress.image %}
+                  <img src="{{ it.dress.image.url }}" class="w-full h-full object-cover" alt="{{ it.dress.name }}">
+                {% else %}
+                  <img src="{% static 'images/placeholder-4x3.jpg' %}" class="w-full h-full object-cover" alt="{{ it.dress.name }}">
+                {% endif %}
+              </div>
+
+              <div>
+                <p class="font-medium text-gray-800">{{ it.dress.name }}</p>
+
+                {% if it.qty %}
+                  <p class="text-sm text-gray-600 mt-1">จำนวน: <span class="font-semibold">x{{ it.qty }}</span></p>
+                {% endif %}
+
+                {% if it.pricing_source %}
+                  <p class="text-xs text-gray-500 mt-1">แหล่งราคา: <span class="font-semibold">{{ it.pricing_source }}</span></p>
+                {% endif %}
+
+                {% if it.unit_price %}
+                  <p class="text-xs text-gray-500 mt-1">ราคา/หน่วย: ฿{{ it.unit_price|floatformat:2 }}</p>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="text-right">
+              <p class="text-sm text-gray-500">รวม</p>
+              <p class="font-semibold text-pink-600">
+                ฿{{ it.line_total|default:0|floatformat:2 }}
+              </p>
+            </div>
+          </div>
+        {% empty %}
+          <div class="py-6 text-sm text-gray-600">ไม่พบรายการสินค้าในออเดอร์นี้</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- RIGHT: สรุปออเดอร์ -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-lg font-bold text-gray-800">สรุปออเดอร์</h2>
+
+      <div class="mt-4 space-y-2 text-sm text-gray-700">
+        {% if order.shop %}
+        <div class="flex justify-between">
+          <span>ร้าน</span>
+          <span class="font-semibold">{{ order.shop.name }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.start_date and order.end_date %}
+        <div class="flex justify-between">
+          <span>ช่วงเช่า</span>
+          <span class="font-semibold">{{ order.start_date }} - {{ order.end_date }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.days %}
+        <div class="flex justify-between">
+          <span>จำนวนวัน</span>
+          <span class="font-semibold">{{ order.days }} วัน</span>
+        </div>
+        {% endif %}
+
+        {% if order.status %}
+        <div class="flex justify-between">
+          <span>สถานะ</span>
+          <span class="font-semibold">{{ order.status }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.omise_charge_id %}
+        <div class="flex justify-between">
+          <span>Charge ID</span>
+          <span class="font-semibold">{{ order.omise_charge_id }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="mt-6 border-t pt-4 space-y-2 text-sm text-gray-700">
+        {% if order.rental_total is not None %}
+        <div class="flex justify-between">
+          <span>ค่าเช่า</span>
+          <span class="font-semibold">฿{{ order.rental_total|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.deposit_total is not None %}
+        <div class="flex justify-between">
+          <span>ค่ามัดจำ</span>
+          <span class="font-semibold">฿{{ order.deposit_total|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.shipping_fee is not None %}
+        <div class="flex justify-between">
+          <span>ค่าส่ง</span>
+          <span class="font-semibold">฿{{ order.shipping_fee|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+
+        <div class="flex justify-between text-base text-gray-800 pt-3 border-t">
+          <span class="font-bold">ยอดชำระ</span>
+          <span class="font-bold text-pink-600">฿{{ order.grand_total|floatformat:2 }}</span>
+        </div>
+      </div>
+
+      <div class="mt-6 grid grid-cols-1 gap-3">
+        <a href="{% url 'dress:payment_by_order' order.id %}"
+           class="w-full text-center bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition">
+          ไปหน้าชำระเงิน
+        </a>
+
+        <a href="{% url 'dress:cart_view' %}"
+           class="w-full text-center bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 transition">
+          กลับไปตะกร้า
+        </a>
+
+        <a href="{% url 'dress:home' %}"
+           class="w-full text-center bg-white border text-gray-800 py-3 rounded-lg hover:bg-gray-50 transition">
+          กลับหน้าหลัก
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+</body>
+</html>

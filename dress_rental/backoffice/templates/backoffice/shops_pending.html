@@ -1,0 +1,48 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}อนุมัติร้านค้า{% endblock %}
+{% block page_title %}ร้านค้า{% endblock %}
+{% block page_subtitle %}รายการร้านที่รอการอนุมัติ{% endblock %}
+
+{% block content %}
+  <div class="bg-white rounded-xl shadow">
+    <div class="p-6 border-b">
+      <div class="font-semibold text-neutral-800">ร้านที่รออนุมัติ</div>
+      <div class="text-sm text-neutral-500">ทั้งหมด {{ shops|length }} รายการ</div>
+    </div>
+
+    <div class="divide-y">
+      {% for shop in shops %}
+        <div class="p-6 flex items-center justify-between gap-6">
+          <div>
+            <div class="font-semibold text-neutral-800">{{ shop }}</div>
+            <div class="text-sm text-neutral-500">สถานะ: {{ shop.get_status_display }}</div>
+            {% if shop.reject_reason %}
+              <div class="text-sm text-red-600 mt-1">เหตุผลปฏิเสธ: {{ shop.reject_reason }}</div>
+            {% endif %}
+          </div>
+
+          <div class="flex items-center gap-3">
+            <form method="post" action="{% url 'backoffice:shop_reject' shop.id %}">
+              {% csrf_token %}
+              <input name="reason" placeholder="เหตุผลปฏิเสธ (ถ้ามี)"
+                     class="border rounded-lg px-3 py-2 text-sm mr-2 w-64" />
+              <button class="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600" type="submit">
+                ปฏิเสธ
+              </button>
+            </form>
+
+            <form method="post" action="{% url 'backoffice:shop_approve' shop.id %}">
+              {% csrf_token %}
+              <button class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">
+                อนุมัติ
+              </button>
+            </form>
+          </div>
+        </div>
+      {% empty %}
+        <div class="p-6 text-neutral-600">ยังไม่มีร้านที่รออนุมัติ</div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}
