@@ -20,9 +20,9 @@
 
 ระบบชำระเงิน
 
-PromptPay (ผ่าน Omise)
+AI ลองชุด
 
-Cash on Delivery (ตามการตั้งค่า)
+PromptPay (ผ่าน Omise)
 
 ** เทคโนโลยีที่ใช้พัฒนา
 
