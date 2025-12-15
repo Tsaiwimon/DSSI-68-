@@ -24,13 +24,13 @@ PromptPay (ผ่าน Omise)
 
 Cash on Delivery (ตามการตั้งค่า)
 
-## เทคโนโลยีที่ใช้พัฒนา
+** เทคโนโลยีที่ใช้พัฒนา
 
 Python 3.x
 
 Django
 
-Database
+** Database
 
 SQLite (Development)
 
@@ -40,7 +40,7 @@ HTML + TailwindCSS
 
 JavaScript
 
-System Architecture
+** System Architecture
 
 Backend: Django (Python)
 
@@ -72,11 +72,10 @@ git --version
 
 ## 2) Clone โปรเจกต์จาก GitHub
 
-git clone https://github.com/USERNAME/REPOSITORY.git
+git clone https://github.com/Tsaiwimon/DSSI-68-.git
 
 cd REPOSITORY
 
-กรุณาเปลี่ยน USERNAME/REPOSITORY ให้ตรงกับ repository จริง
 
 ## 3) สร้าง Virtual Environment
 
