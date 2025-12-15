@@ -104,6 +104,7 @@
 ### 5.1 สร้างไฟล์ `.env`
 macOS / Linux
 - cp .env.example .env
+  
 Windows
 - copy .env.example .env
 
