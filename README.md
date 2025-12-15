@@ -1,65 +1,85 @@
-# DSSI-68-
-ระบบเว็บเช่าชุดออนไลน์
+## DSSI-68 – ระบบเว็บเช่าชุดออนไลน์ (Dress Rental System)
 
-**โปรเจกต์นี้เป็นระบบเช่าชุดออนไลน์แบบครบวงจร ประกอบด้วยฟีเจอร์**
+โปรเจกต์นี้เป็นระบบเว็บเช่าชุดออนไลน์แบบครบวงจร
+รองรับทั้งฝั่งผู้ใช้งานทั่วไป (ลูกค้า) และฝั่งผู้ดูแลร้านค้า (Back-Office)
+พัฒนาขึ้นเพื่อใช้เป็นโปรเจกต์รายวิชา DSSI-68
 
-- ระบบจัดการร้านค้า (Back-Office)
+## ฟีเจอร์หลักของระบบ
 
-- ระบบเช่าชุด / คำนวณราคา / ตระกร้า
+ระบบจัดการร้านค้า (Back-Office)
 
-- ระบบรีวิว
+ระบบเช่าชุด / คำนวณราคา / ตะกร้าสินค้า
 
-- ระบบโปรไฟล์ร้าน
+ระบบรีวิวชุดและร้านค้า
 
-- ระบบจัดการสถานะคำสั่งเช่า
+ระบบโปรไฟล์ร้าน
 
-- ระบบคำนวณสถิติหลังร้าน
+ระบบจัดการสถานะคำสั่งเช่า
 
-- ระบบชำระเงิน (รองรับ PromptPay หรือ Cash on Delivery แล้วแต่ตั้งค่า)
+ระบบคำนวณสถิติหลังร้าน
 
-# พัฒนาโดยใช้
+ระบบชำระเงิน
 
-- Python 3.x
+PromptPay (ผ่าน Omise)
 
-- Django
+Cash on Delivery (ตามการตั้งค่า)
 
-- SQLite / PostgreSQL
+## เทคโนโลยีที่ใช้พัฒนา
 
-- HTML + TailwindCSS
+Python 3.x
 
-- JavaScript
+Django
 
+Database
 
+SQLite (Development)
 
+PostgreSQL (Production)
 
-# 1) การติดตั้งและรันโปรเจกต์ (Setup & Run)
+HTML + TailwindCSS
 
-คู่มือนี้ใช้สำหรับรันโปรเจกต์บนเครื่องเพื่อพัฒนา (Development Mode)
+JavaScript
 
-# 2) เตรียมเครื่องก่อนเริ่ม
+System Architecture
 
-โปรดติดตั้งเครื่องมือดังนี้
+Backend: Django (Python)
+
+Frontend: Django Template + TailwindCSS + JavaScript
+
+Database: SQLite / PostgreSQL
+
+Payment Gateway: Omise (PromptPay)
+
+## การติดตั้งและรันโปรเจกต์ (Setup & Run)
+
+คู่มือนี้ใช้สำหรับการรันโปรเจกต์ในโหมดพัฒนา (Development Mode)
+
+## 1) เตรียมเครื่องก่อนเริ่มต้น
+
+## โปรดติดตั้งเครื่องมือดังต่อไปนี้
 
 Python 3.x
 
 Git
 
-**ตรวจสอบว่าเครื่องติดตั้งแล้ว:**
+## ตรวจสอบเวอร์ชันที่ติดตั้งแล้ว
 
 python --version
 git --version
 
+หมายเหตุ:
+บน macOS / Linux อาจต้องใช้คำสั่ง python3
 
-หมายเหตุ: macOS / Linux บางเครื่องต้องใช้คำสั่ง python3
+## 2) Clone โปรเจกต์จาก GitHub
 
-# 3) Clone โปรเจกต์จาก GitHub
 git clone https://github.com/USERNAME/REPOSITORY.git
+
 cd REPOSITORY
 
+กรุณาเปลี่ยน USERNAME/REPOSITORY ให้ตรงกับ repository จริง
 
-เปลี่ยน USERNAME/REPOSITORY ให้ตรงกับโปรเจกต์จริง
+## 3) สร้าง Virtual Environment
 
-# 4) สร้าง Virtual Environment
 Windows
 python -m venv .venv
 .venv\Scripts\activate
@@ -68,54 +88,65 @@ macOS / Linux
 python3 -m venv .venv
 source .venv/bin/activate
 
-# 5) ติดตั้ง Dependencies
+## 4) ติดตั้ง Dependencies
+
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 6) ตั้งค่าไฟล์ Environment (.env)
+## 5) การตั้งค่า Environment Variables (.env)
 
-หากมีไฟล์ .env.example ให้คัดลอก:
+โปรเจกต์นี้ใช้ไฟล์ .env สำหรับเก็บค่า secret และ config ต่าง ๆ
+ไฟล์ .env จะไม่ถูกอัปขึ้น GitHub
+
+## 5.1 สร้างไฟล์ .env
+
+คัดลอกไฟล์ตัวอย่าง
 
 cp .env.example .env
 
+## 5.2 ตัวอย่างไฟล์ .env
 
-แล้วแก้ค่าต่าง ๆ เช่น
+OMISE_PUBLIC_KEY=pkey_test_xxxxxxxxxxxxxxxxx
+OMISE_SECRET_KEY=skey_test_xxxxxxxxxxxxxxxxx
+OMISE_CURRENCY=thb
 
-SECRET_KEY
+## 6) สร้างฐานข้อมูลและรัน Migrations
 
-ฐานข้อมูล (SQLite / PostgreSQL)
-
-คีย์ของ Payment Gateway เช่น Omise
-
-ค่า Config สำหรับระบบร้านค้าแต่ละส่วน
-
-หากไม่มี ให้สร้างไฟล์ .env เองตามตัวอย่างที่โปรเจกต์กำหนด
-
-# 7) สร้างฐานข้อมูลและรัน Migrations
 python manage.py migrate
 
+## 7) สร้าง Superuser (ผู้ดูแลระบบ)
 
-คำสั่งนี้จะสร้างตารางทั้งหมดในฐานข้อมูล
-
-# 8) สร้าง Superuser (แอดมินระบบ)
 python manage.py createsuperuser
 
+ข้อมูลที่ต้องกรอก
 
-**ข้อมูลที่ต้องกรอก:** 
+Username
 
-- Username
+Email (ไม่บังคับ)
 
-- Email (ไม่บังคับ)
+Password
 
-- Password
+ใช้สำหรับเข้าใช้งานหน้า Admin
 
-**ใช้สำหรับเข้า /admin/ เพื่อจัดการข้อมูล**
+## 8) รันเซิร์ฟเวอร์เพื่อพัฒนา
 
-# 9) โหลดข้อมูลตัวอย่าง (ถ้ามี)
-
-หากโปรเจกต์มีไฟล์ Fixture เช่น:
-
-python manage.py loaddata sample_data.json
-
-# 10) รันเซิร์ฟเวอร์เพื่อพัฒนา
 python manage.py runserver
+
+## 9) การเข้าใช้งานระบบหลังจากรัน
+
+หน้าเว็บหลัก
+http://127.0.0.1:8000/
+
+หน้า Admin
+http://127.0.0.1:8000/admin/
+
+Troubleshooting
+
+migrate ไม่ผ่าน
+
+ตรวจสอบว่า activate virtual environment แล้ว
+
+ตรวจสอบว่าไฟล์ .env ถูกสร้างแล้ว
+
+Port 8000 ถูกใช้งาน
+python manage.py runserver 8080
