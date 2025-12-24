@@ -2,6 +2,7 @@ from decimal import Decimal
 import json
 import time
 from datetime import datetime , timedelta, date
+from urllib import request
 from django.http import Http404
 
 from django.utils.dateparse import parse_date
@@ -25,6 +26,8 @@ from django.views.decorators.http import require_POST, require_GET
 from django.utils import timezone
 from django.db.models.functions import TruncDate
 from .utils import get_store_or_403
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 
@@ -103,15 +106,66 @@ def signup_view(request):
     return render(request, "dress/signup.html")
 
 
-def login_view(request):
-    if request.user.is_authenticated:
-        nxt = request.GET.get("next")
-        return redirect(nxt or reverse("dress:home"))
 
+
+
+def login_redirect(request):
+    if not request.user.is_authenticated:
+        return redirect("dress:login")
+
+    # แอดมินไปหลังบ้านเสมอ
+    if request.user.is_staff:
+        return redirect("backoffice:dashboard")
+
+    # เจ้าของร้านไปหลังร้านของตัวเอง
+    shop = Shop.objects.filter(owner=request.user).only("id").first()
+    if shop:
+        return redirect("dress:my_store", store_id=shop.id)
+
+    # สมาชิกทั่วไป
+    return redirect("dress:member_home")
+
+
+def login_view(request):
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+
+    def is_safe_next(url: str) -> bool:
+        if not url:
+            return False
+        parsed = urlparse(url)
+        return parsed.netloc == "" and url.startswith("/")
+
+    def is_backoffice_url(url: str) -> bool:
+        return url.startswith("/backoffice/")
+
+    def is_shop_url(url: str) -> bool:
+        # ปรับ prefix ให้ตรงกับระบบคุณ ถ้ามีหลายหน้า shop ก็เติมเพิ่มได้
+        return url.startswith("/my-store/") or url.startswith("/store/")
+
+    def is_shop_owner(user) -> bool:
+        return Shop.objects.filter(owner=user).exists()
+
+    # ถ้าล็อกอินอยู่แล้ว
+    if request.user.is_authenticated:
+        if is_safe_next(next_url):
+            if is_backoffice_url(next_url) and not request.user.is_staff:
+                messages.error(request, "บัญชีนี้ไม่มีสิทธิ์เข้าหน้าแอดมิน")
+                return redirect("dress:home")
+
+            if is_shop_url(next_url) and not is_shop_owner(request.user) and not request.user.is_staff:
+                messages.error(request, "บัญชีนี้ไม่มีสิทธิ์เข้าหน้าร้าน")
+                return redirect("dress:member_home")
+
+            return redirect(next_url)
+
+        if request.user.is_staff:
+            return redirect("backoffice:dashboard")
+        return redirect("dress:home")
+
+    # ยังไม่ล็อกอิน
     if request.method == "POST":
         username_or_email = request.POST.get("username", "").strip()
         password = request.POST.get("password", "").strip()
-        next_url = request.POST.get("next") or request.GET.get("next")
 
         try:
             user_obj = User.objects.get(Q(username=username_or_email) | Q(email=username_or_email))
@@ -123,12 +177,26 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect(next_url or reverse("dress:login_redirect"))
+
+            if is_safe_next(next_url):
+                if is_backoffice_url(next_url) and not user.is_staff:
+                    messages.error(request, "บัญชีนี้ไม่มีสิทธิ์เข้าหน้าแอดมิน")
+                    return redirect("dress:home")
+
+                if is_shop_url(next_url) and not is_shop_owner(user) and not user.is_staff:
+                    messages.error(request, "บัญชีนี้ไม่มีสิทธิ์เข้าหน้าร้าน")
+                    return redirect("dress:member_home")
+
+                return redirect(next_url)
+
+            if user.is_staff:
+                return redirect("backoffice:dashboard")
+            return redirect(reverse("dress:login_redirect"))
 
         messages.error(request, "รหัสผ่านไม่ถูกต้อง")
         return redirect("dress:login")
 
-    return render(request, "dress/login.html", {"next": request.GET.get("next", "")})
+    return render(request, "dress/login.html", {"next": next_url})
 
 
 def logout_view(request):
@@ -137,13 +205,7 @@ def logout_view(request):
     return redirect("dress:login")
 
 
-def login_redirect(request):
-    if not request.user.is_authenticated:
-        return redirect("dress:login")
-    shop = Shop.objects.filter(owner=request.user).first()
-    if shop:
-        return redirect("dress:my_store", store_id=shop.id)
-    return redirect("dress:member_home")
+
 
 
 # =========================
@@ -172,10 +234,6 @@ def member_home(request):
     })
 
 
-
-# =======================================================================================================
-# เปิดร้าน / จัดการสินค้า
-# =======================================================================================================
 @login_required(login_url="dress:login")
 def open_store(request):
     if request.method == "POST":
@@ -183,10 +241,19 @@ def open_store(request):
         province = request.POST.get("province", "").strip()
         phone = request.POST.get("phone", "").strip()
         fee = request.POST.get("fee", "").strip()
+
         shop_logo = request.FILES.get("shop_logo")
+        id_card_image = request.FILES.get("id_card")
+        bankbook_image = request.FILES.get("bank_book")
+
 
         if not shop_name or not province:
             messages.error(request, "กรุณากรอกข้อมูลร้านให้ครบถ้วน")
+            return redirect("dress:open_store")
+
+        # (ทางเลือก) บังคับแนบเอกสาร
+        if not id_card_image or not bankbook_image:
+            messages.error(request, "กรุณาแนบรูปบัตรประชาชน และรูปหน้าสมุดบัญชีให้ครบถ้วน")
             return redirect("dress:open_store")
 
         shop = Shop.objects.create(
@@ -196,11 +263,22 @@ def open_store(request):
             phone=phone,
             fee=fee,
             shop_logo=shop_logo,
+            id_card_image=id_card_image,
+            bankbook_image=bankbook_image,
+            status=Shop.STATUS_PENDING,
         )
-        messages.success(request, "เปิดร้านสำเร็จ")
-        return redirect("dress:my_store", store_id=shop.id)
+
+        messages.success(
+            request,
+            "ส่งคำขอเปิดร้านเรียบร้อยแล้ว กรุณารอแอดมินตรวจสอบและอนุมัติ"
+        )
+        return redirect("dress:shop_pending_notice")
 
     return render(request, "dress/open_store.html")
+
+
+
+
 
 # ดูหน้าร้านของตัวเอง
 @login_required(login_url="dress:login")

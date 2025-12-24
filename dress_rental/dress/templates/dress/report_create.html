@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>รายงานปัญหา</title>
+</head>
+<body>
+  <h2>รายงานปัญหาออเดอร์ #{{ order.id }} (ร้าน {{ store.name }})</h2>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div>
+      <label>ประเภทปัญหา</label>
+      {{ form.report_type }}
+    </div>
+    <div>
+      <label>รายละเอียด</label>
+      {{ form.description }}
+    </div>
+    <div>
+      <label>รูปหลักฐาน</label>
+      {{ form.evidence_image }}
+    </div>
+    <button type="submit">ส่งรายงาน</button>
+  </form>
+
+  <p><a href="{% url 'dress:store_reports' store.id %}">ดูรายงานทั้งหมดของร้าน</a></p>
+</body>
+</html>

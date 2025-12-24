@@ -1,6 +1,8 @@
 from django.urls import path, reverse_lazy
 from . import views
 from django.contrib.auth import views as auth_views
+from .report import views_report, views_admin_report
+
 
 
 
@@ -288,8 +290,17 @@ path(
     path("shop/pending/", views.shop_pending_notice, name="shop_pending_notice"),
 
 
-    
+    # ร้าน
+    path("my-store/<int:store_id>/reports/", views_report.store_reports, name="store_reports"),
+    path("my-store/<int:store_id>/orders/<int:order_id>/report/", views_report.create_damage_report, name="create_damage_report"),
+
+    # แอดมิน
+    path("admin-panel/reports/", views_admin_report.admin_reports, name="admin_reports"),
+    path("admin-panel/reports/<int:report_id>/", views_admin_report.admin_report_detail, name="admin_report_detail"),
 ]
+
+
+    
 
 
 handler403 = "dress.views.handler403"

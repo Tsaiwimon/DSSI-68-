@@ -5,44 +5,244 @@
 {% block page_subtitle %}รายการร้านที่รอการอนุมัติ{% endblock %}
 
 {% block content %}
-  <div class="bg-white rounded-xl shadow">
-    <div class="p-6 border-b">
-      <div class="font-semibold text-neutral-800">ร้านที่รออนุมัติ</div>
+<div class="bg-white rounded-xl shadow">
+  <div class="p-6 border-b flex items-start justify-between gap-6">
+    <div>
+      <div class="font-semibold text-neutral-800 text-lg">ร้านที่รออนุมัติ</div>
       <div class="text-sm text-neutral-500">ทั้งหมด {{ shops|length }} รายการ</div>
     </div>
+  </div>
 
-    <div class="divide-y">
-      {% for shop in shops %}
-        <div class="p-6 flex items-center justify-between gap-6">
-          <div>
-            <div class="font-semibold text-neutral-800">{{ shop }}</div>
-            <div class="text-sm text-neutral-500">สถานะ: {{ shop.get_status_display }}</div>
-            {% if shop.reject_reason %}
-              <div class="text-sm text-red-600 mt-1">เหตุผลปฏิเสธ: {{ shop.reject_reason }}</div>
-            {% endif %}
-          </div>
+  <div class="divide-y">
+    {% for shop in shops %}
+      <div class="p-6 flex items-center justify-between gap-6">
+        <!-- Left: avatar + basic info -->
+        <div class="flex items-center gap-4 min-w-0">
+          <!-- Avatar -->
+          {% if shop.shop_logo %}
+            <img src="{{ shop.shop_logo.url }}" alt="logo"
+                 class="w-11 h-11 rounded-full object-cover border" />
+          {% else %}
+            <div class="w-11 h-11 rounded-full bg-neutral-200 flex items-center justify-center font-semibold text-neutral-700">
+              {{ shop.name|default:"S"|slice:":1"|upper }}
+            </div>
+          {% endif %}
 
-          <div class="flex items-center gap-3">
-            <form method="post" action="{% url 'backoffice:shop_reject' shop.id %}">
-              {% csrf_token %}
-              <input name="reason" placeholder="เหตุผลปฏิเสธ (ถ้ามี)"
-                     class="border rounded-lg px-3 py-2 text-sm mr-2 w-64" />
-              <button class="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600" type="submit">
-                ปฏิเสธ
+          <div class="min-w-0">
+            <div class="font-semibold text-neutral-900 truncate">{{ shop.name }}</div>
+            <div class="text-sm text-neutral-500 truncate">
+              Owner: {{ shop.owner.username }}{% if shop.owner.email %} ({{ shop.owner.email }}){% endif %}
+            </div>
+
+            <div class="mt-1 flex items-center gap-2">
+              <span class="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                {{ shop.get_status_display }}
+              </span>
+
+              {% if shop.reject_reason %}
+                <span class="text-xs px-2 py-1 rounded-full bg-red-50 text-red-700 border border-red-200">
+                  มีเหตุผลปฏิเสธ
+                </span>
+              {% endif %}
+
+              <button type="button"
+                      class="text-xs px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-900 hover:bg-yellow-200"
+                      onclick="openModal({{ shop.id }})">
+                ดูรายละเอียด
               </button>
-            </form>
-
-            <form method="post" action="{% url 'backoffice:shop_approve' shop.id %}">
-              {% csrf_token %}
-              <button class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">
-                อนุมัติ
-              </button>
-            </form>
+            </div>
           </div>
         </div>
-      {% empty %}
-        <div class="p-6 text-neutral-600">ยังไม่มีร้านที่รออนุมัติ</div>
-      {% endfor %}
-    </div>
+
+        <!-- Right: actions -->
+        <div class="flex items-center gap-3 shrink-0">
+          <form method="post" action="{% url 'backoffice:shop_reject' shop.id %}" class="flex items-center gap-2">
+            {% csrf_token %}
+            <input name="reason" placeholder="เหตุผลปฏิเสธ (ถ้ามี)"
+                   class="border rounded-lg px-3 py-2 text-sm w-64" />
+            <button class="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600" type="submit">
+              ปฏิเสธ
+            </button>
+          </form>
+
+          <form method="post" action="{% url 'backoffice:shop_approve' shop.id %}">
+            {% csrf_token %}
+            <button class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">
+              อนุมัติ
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal -->
+      <div id="modal-{{ shop.id }}" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/40" onclick="closeModal({{ shop.id }})"></div>
+
+        <!-- Center -->
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+          <!-- Panel -->
+          <div class="bg-white w-full max-w-3xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b flex items-start justify-between">
+              <div>
+                <div class="text-lg font-semibold text-neutral-900">รายละเอียดร้าน</div>
+                <div class="text-sm text-neutral-500">{{ shop.name }} #{{ shop.id }}</div>
+              </div>
+              <button class="text-neutral-400 hover:text-neutral-700 text-2xl leading-none"
+                      onclick="closeModal({{ shop.id }})" type="button" aria-label="close">
+                ×
+              </button>
+            </div>
+
+            <!-- Body (scroll here) -->
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
+              <!-- Info -->
+              <div class="space-y-3">
+                <div class="flex justify-between gap-4">
+                  <div class="text-sm text-neutral-500">ชื่อร้าน</div>
+                  <div class="text-sm font-medium text-neutral-900 text-right">{{ shop.name }}</div>
+                </div>
+
+                <div class="flex justify-between gap-4">
+                  <div class="text-sm text-neutral-500">Owner</div>
+                  <div class="text-sm font-medium text-neutral-900 text-right">{{ shop.owner.username }}</div>
+                </div>
+
+                <div class="flex justify-between gap-4">
+                  <div class="text-sm text-neutral-500">อีเมล</div>
+                  <div class="text-sm font-medium text-neutral-900 text-right">
+                    {{ shop.owner.email|default:"-" }}
+                  </div>
+                </div>
+
+                <div class="flex justify-between gap-4">
+                  <div class="text-sm text-neutral-500">จังหวัด</div>
+                  <div class="text-sm font-medium text-neutral-900 text-right">
+                    {{ shop.province|default:"-" }}
+                  </div>
+                </div>
+
+                <div class="flex justify-between gap-4">
+                  <div class="text-sm text-neutral-500">เบอร์โทร</div>
+                  <div class="text-sm font-medium text-neutral-900 text-right">
+                    {{ shop.phone|default:"-" }}
+                  </div>
+                </div>
+
+                <div class="flex justify-between gap-4">
+                  <div class="text-sm text-neutral-500">สมัครเมื่อ</div>
+                  <div class="text-sm font-medium text-neutral-900 text-right">
+                    {{ shop.created_at|date:"d M Y, H:i" }}
+                  </div>
+                </div>
+
+                <div class="flex justify-between gap-4">
+                  <div class="text-sm text-neutral-500">สถานะ</div>
+                  <div class="text-sm font-semibold text-amber-700 text-right">
+                    {{ shop.get_status_display }}
+                  </div>
+                </div>
+
+                <div class="pt-2">
+                  <div class="text-sm text-neutral-500 mb-1">กติกา/โน้ต</div>
+                  <div class="border rounded-xl p-3 text-sm text-neutral-800 bg-neutral-50 whitespace-pre-line">
+                    {{ shop.fee|default:"-" }}
+                  </div>
+                </div>
+
+                {% if shop.reject_reason %}
+                  <div class="pt-2">
+                    <div class="text-sm text-red-600 mb-1">เหตุผลปฏิเสธล่าสุด</div>
+                    <div class="border border-red-200 rounded-xl p-3 text-sm text-red-700 bg-red-50 whitespace-pre-line">
+                      {{ shop.reject_reason }}
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+
+              <!-- Documents -->
+              <div class="space-y-4">
+                <div class="text-sm font-semibold text-neutral-800">เอกสารประกอบ</div>
+
+                <!-- Shop logo -->
+                <div class="border rounded-xl p-4">
+                  <div class="text-sm font-medium text-neutral-800 mb-2">รูปโปรไฟล์ร้าน</div>
+                  {% if shop.shop_logo %}
+                    <a href="{{ shop.shop_logo.url }}" target="_blank" class="text-xs text-blue-600 hover:underline">
+                      เปิดรูปในแท็บใหม่
+                    </a>
+                    <img src="{{ shop.shop_logo.url }}" class="mt-2 w-full max-h-56 object-contain rounded-lg bg-neutral-50" alt="shop logo">
+                  {% else %}
+                    <div class="text-sm text-neutral-500">ยังไม่ได้อัปโหลด</div>
+                  {% endif %}
+                </div>
+
+                <!-- ID card -->
+                <div class="border rounded-xl p-4">
+                  <div class="text-sm font-medium text-neutral-800 mb-2">รูปบัตรประชาชน</div>
+                  {% if shop.id_card_image %}
+                    <a href="{{ shop.id_card_image.url }}" target="_blank" class="text-xs text-blue-600 hover:underline">
+                      เปิดไฟล์ในแท็บใหม่
+                    </a>
+                    <img src="{{ shop.id_card_image.url }}" class="mt-2 w-full max-h-56 object-contain rounded-lg bg-neutral-50" alt="id card">
+                  {% else %}
+                    <div class="text-sm text-neutral-500">ยังไม่ได้อัปโหลด</div>
+                  {% endif %}
+                </div>
+
+                <!-- Bankbook -->
+                <div class="border rounded-xl p-4">
+                  <div class="text-sm font-medium text-neutral-800 mb-2">รูปหน้าสมุดบัญชี</div>
+                  {% if shop.bankbook_image %}
+                    <a href="{{ shop.bankbook_image.url }}" target="_blank" class="text-xs text-blue-600 hover:underline">
+                      เปิดไฟล์ในแท็บใหม่
+                    </a>
+                    <img src="{{ shop.bankbook_image.url }}" class="mt-2 w-full max-h-56 object-contain rounded-lg bg-neutral-50" alt="bankbook">
+                  {% else %}
+                    <div class="text-sm text-neutral-500">ยังไม่ได้อัปโหลด</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t flex justify-end">
+              <button type="button"
+                      class="px-4 py-2 rounded-lg bg-neutral-200 hover:bg-neutral-300 text-neutral-800"
+                      onclick="closeModal({{ shop.id }})">
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    {% empty %}
+      <div class="p-6 text-neutral-600">ยังไม่มีร้านที่รออนุมัติ</div>
+    {% endfor %}
   </div>
+</div>
+
+<script>
+  function openModal(id) {
+    const el = document.getElementById(`modal-${id}`);
+    if (el) el.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closeModal(id) {
+    const el = document.getElementById(`modal-${id}`);
+    if (el) el.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  // ปิดด้วยปุ่ม ESC (รองรับทุก modal ที่เปิดอยู่)
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    const opened = document.querySelectorAll('[id^="modal-"]:not(.hidden)');
+    opened.forEach(m => m.classList.add('hidden'));
+    document.body.classList.remove('overflow-hidden');
+  });
+</script>
 {% endblock %}

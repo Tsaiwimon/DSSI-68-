@@ -1,0 +1,303 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}จัดการผู้ใช้งาน{% endblock %}
+{% block page_title %}จัดการผู้ใช้งาน{% endblock %}
+{% block page_subtitle %}รายการผู้ใช้ทั้งหมดในระบบ{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-2xl shadow border border-black/5 overflow-hidden">
+
+  <!-- Header + Filters -->
+  <div class="p-6 border-b">
+    <div class="flex items-start justify-between gap-6">
+      <div>
+        <div class="text-lg font-semibold text-neutral-900">ผู้ใช้งานทั้งหมด</div>
+        <div class="text-sm text-neutral-500">ทั้งหมด {{ total_filtered }} คน</div>
+      </div>
+    </div>
+
+    <form method="get" class="mt-5 flex flex-wrap items-center gap-3">
+      <!-- Search -->
+      <div class="flex items-center gap-2 bg-white border rounded-xl px-3 py-2 w-full md:w-[380px]">
+        <span class="text-neutral-400">🔍</span>
+        <input type="text" name="q" value="{{ q }}" placeholder="Search users.." class="w-full outline-none text-sm" />
+      </div>
+
+      <!-- Role -->
+      <select name="role" class="border rounded-xl px-4 py-2 text-sm w-full md:w-[180px]">
+        <option value="" {% if role == "" %}selected{% endif %}>บทบาท</option>
+        <option value="admin" {% if role == "admin" %}selected{% endif %}>แอดมิน</option>
+        <option value="shop" {% if role == "shop" %}selected{% endif %}>ร้านค้า</option>
+        <option value="user" {% if role == "user" %}selected{% endif %}>ผู้ใช้งานทั่วไป</option>
+      </select>
+
+      <!-- Status -->
+      <select name="status" class="border rounded-xl px-4 py-2 text-sm w-full md:w-[180px]">
+        <option value="" {% if status == "" %}selected{% endif %}>สถานะ</option>
+        <option value="active" {% if status == "active" %}selected{% endif %}>ใช้งานอยู่</option>
+        <option value="inactive" {% if status == "inactive" %}selected{% endif %}>ถูกระงับ</option>
+      </select>
+
+      <button type="submit" class="px-5 py-2 rounded-xl bg-neutral-900 text-white text-sm font-semibold hover:bg-black">ค้นหา</button>
+      <a href="{% url 'backoffice:users' %}" class="px-5 py-2 rounded-xl bg-neutral-100 text-sm font-semibold hover:bg-neutral-200">ล้าง</a>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-neutral-50 text-neutral-600">
+        <tr>
+          <th class="text-left font-medium px-6 py-4">ชื่อ</th>
+          <th class="text-left font-medium px-6 py-4">อีเมล</th>
+          <th class="text-left font-medium px-6 py-4">บทบาท</th>
+          <th class="text-left font-medium px-6 py-4">สถานะ</th>
+          <th class="text-left font-medium px-6 py-4">วันที่เข้าร่วม</th>
+          <th class="text-right font-medium px-6 py-4"></th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y">
+        {% for u in page_obj %}
+        <tr class="hover:bg-neutral-50">
+          <!-- Name -->
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+              <div class="h-10 w-10 rounded-full bg-neutral-200 flex items-center justify-center font-semibold text-neutral-700">
+                {{ u.username|default:"U"|slice:":1"|upper }}
+              </div>
+              <div>
+                <div class="font-semibold text-neutral-900">{{ u.username|default:"-" }}</div>
+                <div class="text-xs text-neutral-500">ID: {{ u.id }}</div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Email -->
+          <td class="px-6 py-4 text-neutral-700">{{ u.email|default:"-" }}</td>
+
+          <!-- Role -->
+          <td class="px-6 py-4">
+            {% if u.is_superuser or u.is_staff %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-semibold border border-purple-100">แอดมิน</span>
+            {% elif u.is_shop_owner %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-100">ร้านค้า</span>
+            {% else %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full bg-neutral-100 text-neutral-700 text-xs font-semibold border border-neutral-200">ผู้ใช้ทั่วไป</span>
+            {% endif %}
+          </td>
+
+          <!-- Status -->
+          <td class="px-6 py-4">
+            {% if u.is_active %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">ใช้งานอยู่</span>
+            {% else %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full bg-red-50 text-red-700 text-xs font-semibold border border-red-100">ถูกระงับ</span>
+            {% endif %}
+          </td>
+
+          <!-- Joined -->
+          <td class="px-6 py-4 text-neutral-700">{{ u.date_joined|date:"d/m/Y" }}</td>
+
+          <!-- Actions -->
+          <td class="px-6 py-4 text-right relative">
+            <button type="button" class="px-2 py-1 rounded-lg hover:bg-neutral-200" onclick="toggleMenu('m{{ u.id }}')">⋮</button>
+
+            <div id="m{{ u.id }}" class="hidden absolute right-6 mt-2 w-48 bg-white border rounded-xl shadow-lg overflow-hidden z-20">
+              <button type="button" class="w-full text-left px-4 py-2 text-sm hover:bg-neutral-50 text-neutral-400 cursor-not-allowed" title="ยังไม่เปิดใช้งาน">ดูรายละเอียด</button>
+
+              {% if u.is_active %}
+                <form method="post" action="{% url 'backoffice:user_suspend' u.id %}" class="js-confirm-form"
+                      data-action="suspend" data-username="{{ u.username|default:'ผู้ใช้' }}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-neutral-50">ระงับผู้ใช้</button>
+                </form>
+              {% else %}
+                <form method="post" action="{% url 'backoffice:user_activate' u.id %}" class="js-confirm-form"
+                      data-action="activate" data-username="{{ u.username|default:'ผู้ใช้' }}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-neutral-50">ยกเลิกระงับ</button>
+                </form>
+              {% endif %}
+
+              <form method="post" action="{% url 'backoffice:user_delete' u.id %}" class="js-confirm-form"
+                    data-action="delete" data-username="{{ u.username|default:'ผู้ใช้' }}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="w-full text-left px-4 py-2 text-sm hover:bg-neutral-50 text-red-600">ลบผู้ใช้</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="px-6 py-10 text-center text-neutral-500">ยังไม่มีผู้ใช้งาน</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="p-6 flex items-center justify-between">
+    <div class="text-sm text-neutral-500">หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
+
+    <div class="flex items-center gap-2">
+      {% if page_obj.has_previous %}
+        <a class="px-3 py-2 rounded-lg border hover:bg-neutral-50"
+           href="?{% if preserved_qs %}{{ preserved_qs }}&{% endif %}page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>
+      {% else %}
+        <span class="px-3 py-2 rounded-lg border text-neutral-300">ก่อนหน้า</span>
+      {% endif %}
+
+      <span class="px-3 py-2 rounded-lg bg-neutral-900 text-white">{{ page_obj.number }}</span>
+
+      {% if page_obj.has_next %}
+        <a class="px-3 py-2 rounded-lg border hover:bg-neutral-50"
+           href="?{% if preserved_qs %}{{ preserved_qs }}&{% endif %}page={{ page_obj.next_page_number }}">ถัดไป</a>
+      {% else %}
+        <span class="px-3 py-2 rounded-lg border text-neutral-300">ถัดไป</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Professional Confirm Modal -->
+<div id="confirmModal" class="hidden fixed inset-0 z-[999]">
+  <div class="absolute inset-0 bg-black/40"></div>
+
+  <div class="relative min-h-full flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-black/10 overflow-hidden">
+      <div class="p-5 flex items-start gap-3">
+        <div id="cmIcon" class="h-10 w-10 rounded-xl flex items-center justify-center bg-neutral-100 text-neutral-700">!</div>
+        <div class="flex-1">
+          <div id="cmTitle" class="text-lg font-semibold text-neutral-900">ยืนยันการทำรายการ</div>
+          <div id="cmDesc" class="text-sm text-neutral-600 mt-1">รายละเอียดการยืนยัน</div>
+        </div>
+        <button type="button" class="p-2 rounded-lg hover:bg-neutral-100" onclick="closeConfirm()">
+          ✕
+        </button>
+      </div>
+
+      <div class="px-5 pb-5">
+        <div id="cmHint" class="text-xs text-neutral-500 bg-neutral-50 border border-black/5 rounded-xl p-3">
+          กด “ยืนยัน” เพื่อทำรายการ หรือ “ยกเลิก” เพื่อกลับไป
+        </div>
+
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <button type="button" class="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-sm font-semibold"
+                  onclick="closeConfirm()">
+            ยกเลิก
+          </button>
+          <button id="cmConfirmBtn" type="button"
+                  class="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-neutral-900 hover:bg-black">
+            ยืนยัน
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Dropdown menu
+  function toggleMenu(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    document.querySelectorAll('[id^="m"]').forEach(x => {
+      if (x.id !== id) x.classList.add('hidden');
+    });
+
+    el.classList.toggle('hidden');
+  }
+
+  document.addEventListener('click', function(e){
+    const isMenuBtn = e.target.closest('button[onclick^="toggleMenu"]');
+    const isMenuBox = e.target.closest('[id^="m"]');
+    if (!isMenuBtn && !isMenuBox) {
+      document.querySelectorAll('[id^="m"]').forEach(x => x.classList.add('hidden'));
+    }
+  });
+
+  // Confirm modal logic
+  const modal = document.getElementById('confirmModal');
+  const cmTitle = document.getElementById('cmTitle');
+  const cmDesc = document.getElementById('cmDesc');
+  const cmIcon = document.getElementById('cmIcon');
+  const cmConfirmBtn = document.getElementById('cmConfirmBtn');
+
+  let pendingForm = null;
+
+  function openConfirm({action, username, form}) {
+    pendingForm = form;
+
+    // theme by action
+    if (action === 'delete') {
+      cmTitle.textContent = 'ยืนยันการลบผู้ใช้';
+      cmDesc.textContent = `คุณต้องการลบผู้ใช้ "${username}" ใช่ไหม? การลบแล้วกู้คืนไม่ได้`;
+      cmIcon.className = 'h-10 w-10 rounded-xl flex items-center justify-center bg-red-50 text-red-700';
+      cmIcon.textContent = '🗑';
+      cmConfirmBtn.className = 'px-4 py-2 rounded-xl text-white text-sm font-semibold bg-red-600 hover:bg-red-700';
+      cmConfirmBtn.textContent = 'ลบผู้ใช้';
+    } else if (action === 'suspend') {
+      cmTitle.textContent = 'ยืนยันการระงับผู้ใช้';
+      cmDesc.textContent = `คุณต้องการระงับผู้ใช้ "${username}" ใช่ไหม? ผู้ใช้จะล็อกอินไม่ได้จนกว่าจะยกเลิกระงับ`;
+      cmIcon.className = 'h-10 w-10 rounded-xl flex items-center justify-center bg-amber-50 text-amber-700';
+      cmIcon.textContent = '⛔';
+      cmConfirmBtn.className = 'px-4 py-2 rounded-xl text-white text-sm font-semibold bg-neutral-900 hover:bg-black';
+      cmConfirmBtn.textContent = 'ระงับผู้ใช้';
+    } else if (action === 'activate') {
+      cmTitle.textContent = 'ยืนยันการยกเลิกระงับ';
+      cmDesc.textContent = `คุณต้องการยกเลิกระงับผู้ใช้ "${username}" ใช่ไหม? ผู้ใช้จะกลับมาใช้งานได้`;
+      cmIcon.className = 'h-10 w-10 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-700';
+      cmIcon.textContent = '✅';
+      cmConfirmBtn.className = 'px-4 py-2 rounded-xl text-white text-sm font-semibold bg-emerald-600 hover:bg-emerald-700';
+      cmConfirmBtn.textContent = 'ยืนยัน';
+    } else {
+      cmTitle.textContent = 'ยืนยันการทำรายการ';
+      cmDesc.textContent = `คุณต้องการทำรายการนี้กับ "${username}" ใช่ไหม?`;
+      cmIcon.className = 'h-10 w-10 rounded-xl flex items-center justify-center bg-neutral-100 text-neutral-700';
+      cmIcon.textContent = '!';
+      cmConfirmBtn.className = 'px-4 py-2 rounded-xl text-white text-sm font-semibold bg-neutral-900 hover:bg-black';
+      cmConfirmBtn.textContent = 'ยืนยัน';
+    }
+
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closeConfirm() {
+    modal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+    pendingForm = null;
+  }
+
+  // close when click overlay
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal || e.target.classList.contains('bg-black/40')) closeConfirm();
+  });
+
+  // bind forms
+  document.querySelectorAll('.js-confirm-form').forEach((form) => {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const action = form.dataset.action || '';
+      const username = form.dataset.username || 'ผู้ใช้';
+      openConfirm({action, username, form});
+    });
+  });
+
+  // confirm button actually submit
+  cmConfirmBtn.addEventListener('click', () => {
+    if (pendingForm) pendingForm.submit();
+  });
+
+  // ESC close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeConfirm();
+  });
+</script>
+{% endblock %}

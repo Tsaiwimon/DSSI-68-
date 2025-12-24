@@ -16,6 +16,8 @@
     <!-- ปิด autofill ระดับฟอร์ม -->
     <form method="POST" action="{% url 'dress:login' %}" autocomplete="off" novalidate>
       {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+
 
       {% if messages %}
         <div class="mb-4">

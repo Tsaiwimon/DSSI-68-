@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>รายงานทั้งหมด (แอดมิน)</title>
+</head>
+<body>
+  <h2>รายงานทั้งหมด</h2>
+
+  {% if reports %}
+    <ul>
+      {% for r in reports %}
+        <li>
+          <a href="{% url 'dress:admin_report_detail' r.id %}">
+            #{{ r.id }} | ร้าน: {{ r.shop.name }} | ออเดอร์: {{ r.order.id }} |
+            {{ r.get_report_type_display }} | {{ r.get_status_display }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>ยังไม่มีรายงาน</p>
+  {% endif %}
+</body>
+</html>

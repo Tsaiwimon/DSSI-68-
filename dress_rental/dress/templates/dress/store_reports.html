@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>รายงานของร้าน</title>
+</head>
+<body>
+  <h2>รายงานทั้งหมดของร้าน {{ store.name }}</h2>
+
+  {% if reports %}
+    <ul>
+      {% for r in reports %}
+        <li>
+          ออเดอร์ #{{ r.order.id }} |
+          ลูกค้า: {{ r.customer.username }} |
+          ประเภท: {{ r.get_report_type_display }} |
+          สถานะ: {{ r.get_status_display }} |
+          วันที่แจ้ง: {{ r.created_at }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>ยังไม่มีรายงาน</p>
+  {% endif %}
+</body>
+</html>

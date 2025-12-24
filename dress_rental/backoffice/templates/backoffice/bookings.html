@@ -1,0 +1,173 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}การจอง{% endblock %}
+{% block page_title %}การจอง{% endblock %}
+{% block page_subtitle %}รายการการจองทั้งหมด (กำลังเชื่อมข้อมูลจริง){% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white rounded-2xl shadow border border-black/5 p-5">
+      <div class="text-3xl font-extrabold text-neutral-900">{{ total_count }}</div>
+      <div class="text-sm text-neutral-500 mt-1">การจองทั้งหมด</div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow border border-black/5 p-5">
+      <div class="text-3xl font-extrabold text-neutral-900">{{ success_count }}</div>
+      <div class="text-sm text-neutral-500 mt-1">การจองสำเร็จ</div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow border border-black/5 p-5">
+      <div class="text-3xl font-extrabold text-neutral-900">{{ pending_count }}</div>
+      <div class="text-sm text-neutral-500 mt-1">กำลังดำเนินการ</div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow border border-black/5 p-5">
+      <div class="text-3xl font-extrabold text-neutral-900">{{ cancel_count }}</div>
+      <div class="text-sm text-neutral-500 mt-1">ยกเลิกแล้ว</div>
+    </div>
+  </div>
+
+  <!-- Filters + Table -->
+  <div class="bg-white rounded-2xl shadow border border-black/5 overflow-hidden">
+
+    <div class="p-6 border-b">
+      <form method="get" class="flex flex-col lg:flex-row lg:items-center gap-3">
+        <!-- Status dropdown -->
+        <select name="status" class="border rounded-xl px-4 py-2 text-sm w-full lg:w-[240px]">
+          <option value="all" {% if status_filter == "all" %}selected{% endif %}>สถานะทั้งหมด</option>
+          <option value="success" {% if status_filter == "success" %}selected{% endif %}>เสร็จสิ้น</option>
+          <option value="pending" {% if status_filter == "pending" %}selected{% endif %}>กำลังดำเนินการ</option>
+          <option value="cancel" {% if status_filter == "cancel" %}selected{% endif %}>ยกเลิก</option>
+        </select>
+
+        <!-- Search -->
+        <div class="flex items-center gap-2 bg-white border rounded-xl px-3 py-2 w-full">
+          <span class="text-neutral-400">Search</span>
+          <input
+            type="text"
+            name="q"
+            value="{{ q }}"
+            placeholder="Search bookings..."
+            class="w-full outline-none text-sm"
+          />
+        </div>
+
+        <div class="flex items-center gap-2 lg:justify-end">
+          <button type="submit" class="px-6 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+            ค้นหา
+          </button>
+          <a href="{% url 'backoffice:bookings' %}" class="px-6 py-2 rounded-xl bg-neutral-100 text-sm font-semibold hover:bg-neutral-200">
+            ล้าง
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-neutral-50 text-neutral-600">
+          <tr>
+            <th class="text-left font-medium px-6 py-4">รหัสการจอง</th>
+            <th class="text-left font-medium px-6 py-4">ผู้ใช้งาน</th>
+            <th class="text-left font-medium px-6 py-4">ร้านค้า</th>
+            <th class="text-left font-medium px-6 py-4">วันที่จอง</th>
+            <th class="text-left font-medium px-6 py-4">สถานะ</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y">
+          {% for b in page_obj %}
+          <tr class="hover:bg-neutral-50">
+            <td class="px-6 py-4 text-neutral-900 font-semibold">{{ b.code }}</td>
+
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="h-9 w-9 rounded-full bg-neutral-200 flex items-center justify-center font-semibold text-neutral-700">
+                  {{ b.user_initial }}
+                </div>
+                <div class="font-medium text-neutral-900">{{ b.user_name }}</div>
+              </div>
+            </td>
+
+            <td class="px-6 py-4 text-neutral-700">{{ b.shop_name }}</td>
+
+            <td class="px-6 py-4 text-neutral-700">
+              {% if b.date %}
+                {{ b.date|date:"d/m/Y" }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td class="px-6 py-4">
+              {% if b.status_key == "success" %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">
+                  {{ b.status_label }}
+                </span>
+              {% elif b.status_key == "cancel" %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-red-50 text-red-700 text-xs font-semibold border border-red-100">
+                  {{ b.status_label }}
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-sky-50 text-sky-700 text-xs font-semibold border border-sky-100">
+                  {{ b.status_label }}
+                </span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-6 py-12 text-center text-neutral-500">
+              {% if model_found %}
+                ยังไม่มีรายการจองในระบบ (0 รายการ)
+              {% else %}
+                ยังไม่พบ Model สำหรับ “การจอง” ในโปรเจกต์ (เลยแสดง 0 ชั่วคราว)
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="p-6 flex items-center justify-between">
+      <div class="text-sm text-neutral-500">
+        {% if page_obj %}
+          หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        {% else %}
+          หน้า 0 / 0
+        {% endif %}
+      </div>
+
+      <div class="flex items-center gap-2">
+        {% if page_obj and page_obj.has_previous %}
+          <a class="px-3 py-2 rounded-lg border hover:bg-neutral-50"
+             href="?status={{ status_filter }}&q={{ q }}&page={{ page_obj.previous_page_number }}">
+            ก่อนหน้า
+          </a>
+        {% else %}
+          <span class="px-3 py-2 rounded-lg border text-neutral-300">ก่อนหน้า</span>
+        {% endif %}
+
+        <span class="px-3 py-2 rounded-lg bg-neutral-900 text-white">
+          {% if page_obj %}{{ page_obj.number }}{% else %}0{% endif %}
+        </span>
+
+        {% if page_obj and page_obj.has_next %}
+          <a class="px-3 py-2 rounded-lg border hover:bg-neutral-50"
+             href="?status={{ status_filter }}&q={{ q }}&page={{ page_obj.next_page_number }}">
+            ถัดไป
+          </a>
+        {% else %}
+          <span class="px-3 py-2 rounded-lg border text-neutral-300">ถัดไป</span>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

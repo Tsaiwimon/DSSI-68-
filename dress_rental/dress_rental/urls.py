@@ -5,11 +5,12 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # ใช้อันเดียวพอ และมี namespace ชัดเจน
+
+    # front site
     path("", include(("dress.urls", "dress"), namespace="dress")),
 
-
-    path("backoffice/", include("backoffice.urls")),
+    # backoffice (custom admin)
+    path("backoffice/", include(("backoffice.urls", "backoffice"), namespace="backoffice")),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,123 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}ดูรายงาน{% endblock %}
+{% block page_title %}ดูรายงาน{% endblock %}
+{% block page_subtitle %}แสดงรายงานสำหรับ{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+
+  <!-- Filters -->
+  <div class="flex flex-wrap items-center gap-3">
+    <form method="get" class="flex flex-wrap items-center gap-3 w-full">
+      <!-- Category -->
+      <select name="category"
+              class="h-11 w-full md:w-56 rounded-xl border border-black/10 bg-white px-4 text-sm focus:outline-none">
+        <option value="all" {% if category == "all" %}selected{% endif %}>ทั้งหมด</option>
+        <!-- ถ้ามีหมวดจริงค่อยเพิ่ม option ทีหลังได้ -->
+      </select>
+
+      <!-- Search -->
+      <div class="flex items-center w-full md:flex-1 h-11 rounded-xl border border-black/10 bg-white px-4">
+        <div class="text-neutral-400 mr-2">🔍</div>
+        <input type="text"
+               name="q"
+               value="{{ q }}"
+               placeholder="Search reports.."
+               class="w-full text-sm outline-none bg-transparent" />
+      </div>
+
+      <button type="submit"
+              class="h-11 px-6 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+        ค้นหา
+      </button>
+    </form>
+  </div>
+
+  <!-- Table Card -->
+  <div class="bg-white rounded-2xl shadow border border-black/5 overflow-hidden">
+    <div class="px-6 py-4 text-sm text-neutral-600 border-b">
+      ทั้งหมด {{ total }} รายการ
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-neutral-50 text-neutral-600">
+          <tr>
+            <th class="text-left font-medium px-6 py-4">ผู้ถูกรายงาน</th>
+            <th class="text-left font-medium px-6 py-4">ผู้รายงาน</th>
+            <th class="text-left font-medium px-6 py-4">รายละเอียด</th>
+            <th class="text-left font-medium px-6 py-4">วันที่</th>
+            <th class="text-left font-medium px-6 py-4">สถานะ</th>
+            <th class="text-left font-medium px-6 py-4">ดูรายงาน</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y">
+          {% for r in rows %}
+          <tr class="hover:bg-neutral-50">
+            <!-- Reported -->
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="h-9 w-9 rounded-full bg-neutral-200 flex items-center justify-center font-semibold text-neutral-700">
+                  {{ r.reported_initial }}
+                </div>
+                <div class="font-medium text-neutral-900">{{ r.reported_name }}</div>
+              </div>
+            </td>
+
+            <!-- Reporter -->
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="h-9 w-9 rounded-full bg-neutral-200 flex items-center justify-center font-semibold text-neutral-700">
+                  {{ r.reporter_initial }}
+                </div>
+                <div class="font-medium text-neutral-900">{{ r.reporter_name }}</div>
+              </div>
+            </td>
+
+            <!-- Detail -->
+            <td class="px-6 py-4 text-neutral-700">
+              <div class="max-w-[520px] truncate">
+                {{ r.detail|default:"-" }}
+              </div>
+            </td>
+
+            <!-- Date -->
+            <td class="px-6 py-4 text-neutral-700">{{ r.date }}</td>
+
+            <!-- Status -->
+            <td class="px-6 py-4">
+              {% if r.status_key == "done" %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">
+                  {{ r.status_label }}
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-red-50 text-red-700 text-xs font-semibold border border-red-100">
+                  {{ r.status_label }}
+                </span>
+              {% endif %}
+            </td>
+
+            <!-- View -->
+            <td class="px-6 py-4">
+              <a href="#"
+                 class="text-sm font-semibold text-neutral-800 hover:underline">
+                ดูรายงาน
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="px-6 py-12 text-center text-neutral-500">
+              ยังไม่มีรายงานในระบบ (0 รายการ)
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

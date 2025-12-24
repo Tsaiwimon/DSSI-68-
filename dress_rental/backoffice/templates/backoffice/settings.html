@@ -1,0 +1,204 @@
+{% extends "backoffice/base.html" %}
+
+{% block title %}ตั้งค่าระบบ{% endblock %}
+{% block page_title %}ตั้งค่าระบบ{% endblock %}
+{% block page_subtitle %}ตั้งค่าหลักของระบบเช่า (ใช้งานจริงจากฐานข้อมูล){% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  {% if messages %}
+    <div class="space-y-2">
+      {% for m in messages %}
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-emerald-800 text-sm">
+          {{ m }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Banner -->
+  <div class="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-4">
+    <div class="font-semibold text-amber-900">โหมดตั้งค่าระบบกลาง</div>
+    <div class="text-sm text-amber-800 mt-1">
+      หน้านี้เป็น “กติกากลาง” ของ Glam & Borrow: ค่าคอมฯ / ค่าปรับคืนช้า / เงื่อนไขคืนเงิน (ค่ามัดจำดึงจากชุด)
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white rounded-2xl shadow border border-black/5 p-5">
+      <div class="text-xs text-neutral-500">ค่าคอมมิชชั่นระบบ</div>
+      <div class="text-3xl font-extrabold text-neutral-900">{{ commission_percent }}%</div>
+      <div class="text-sm text-neutral-500 mt-1">
+        ขั้นต่ำ {{ settings_obj.commission_min_fee }} บาท • VAT {{ commission_vat_percent }}%
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow border border-black/5 p-5">
+      <div class="text-xs text-neutral-500">ค่ามัดจำ</div>
+      <div class="text-2xl font-extrabold text-neutral-900">ตามร้าน/ตามชุด</div>
+      <div class="text-sm text-neutral-500 mt-1">{{ deposit_source }}</div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow border border-black/5 p-5">
+      <div class="text-xs text-neutral-500">คืนเงิน/คืนมัดจำ</div>
+      <div class="text-3xl font-extrabold text-neutral-900">{{ settings_obj.refund_days }} วันทำการ</div>
+      <div class="text-sm text-neutral-500 mt-1">ตรวจสภาพ {{ settings_obj.inspection_days }} วัน</div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow border border-black/5 p-5">
+      <div class="text-xs text-neutral-500">ค่าปรับคืนช้า (ระบบกลาง)</div>
+      <div class="text-3xl font-extrabold text-neutral-900">{{ settings_obj.late_fee_per_day }} บาท/วัน</div>
+      <div class="text-sm text-neutral-500 mt-1">เพดาน {{ settings_obj.late_fee_cap }} บาท</div>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="bg-white rounded-2xl shadow border border-black/5 overflow-hidden">
+    <div class="p-6 border-b flex items-start justify-between gap-4">
+      <div>
+        <div class="text-lg font-semibold text-neutral-900">ตั้งค่าระบบเช่า</div>
+        <div class="text-sm text-neutral-500 mt-1">แก้ไข “กติกากลาง” ที่ระบบใช้คำนวณ/แสดงในหน้าเช่า</div>
+      </div>
+      <div class="text-xs text-neutral-400">
+        อัปเดตล่าสุด: {{ settings_obj.updated_at|date:"d/m/Y H:i" }}
+      </div>
+    </div>
+
+    <form method="post" class="p-6 space-y-6">
+      {% csrf_token %}
+
+      <!-- 1) Commission -->
+      <div class="rounded-2xl border border-black/10 p-5">
+        <div class="font-semibold text-neutral-900">1) ค่าคอมมิชชั่นระบบกลาง</div>
+        <div class="text-sm text-neutral-500 mt-1">
+          หักจาก “ค่าเช่า (ไม่รวมมัดจำ)” ค่าเริ่มต้นระบบกลาง (ร้านสามารถ override ได้ด้วย ShopCommission)
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div>
+            <label class="text-sm font-medium text-neutral-700">อัตราคอมฯ (ทศนิยม)</label>
+            <input name="commission_rate" value="{{ settings_obj.commission_rate }}" class="mt-1 w-full border rounded-xl px-4 py-2 text-sm" />
+            <div class="text-xs text-neutral-400 mt-1">0.10 = 10%</div>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-neutral-700">ค่าคอมขั้นต่ำ/ออเดอร์</label>
+            <input name="commission_min_fee" value="{{ settings_obj.commission_min_fee }}" class="mt-1 w-full border rounded-xl px-4 py-2 text-sm" />
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-neutral-700">VAT บนค่าคอมฯ (ทศนิยม)</label>
+            <input name="commission_vat_rate" value="{{ settings_obj.commission_vat_rate }}" class="mt-1 w-full border rounded-xl px-4 py-2 text-sm" />
+            <div class="text-xs text-neutral-400 mt-1">0.07 = 7%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2) Deposit -->
+      <div class="rounded-2xl border border-black/10 p-5">
+        <div class="font-semibold text-neutral-900">2) ค่ามัดจำ</div>
+        <div class="text-sm text-neutral-500 mt-1">
+          ค่ามัดจำเป็นของ “แต่ละชุด” ร้านตั้งเองผ่าน Dress.deposit (หน้านี้ไม่แก้ deposit)
+        </div>
+        <div class="mt-3 rounded-xl bg-neutral-50 border px-4 py-3 text-sm text-neutral-700">
+          แหล่งที่มา: {{ deposit_source }}
+        </div>
+      </div>
+
+      <!-- 3) Late Fee -->
+      <div class="rounded-2xl border border-black/10 p-5">
+        <div class="font-semibold text-neutral-900">3) ค่าปรับคืนช้า (ระบบกลาง)</div>
+        <div class="text-sm text-neutral-500 mt-1">
+          ใช้เป็นค่าเริ่มต้นทั้งระบบ: 50 บาท/วัน เพดาน 500 (ตามที่คุณสรุป)
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div>
+            <label class="text-sm font-medium text-neutral-700">รูปแบบการคิด</label>
+            <select name="late_fee_mode" class="mt-1 w-full border rounded-xl px-4 py-2 text-sm">
+              {% for key,label in late_fee_modes %}
+                <option value="{{ key }}" {% if settings_obj.late_fee_mode == key %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-neutral-700">ค่าปรับต่อวัน (บาท)</label>
+            <input name="late_fee_per_day" value="{{ settings_obj.late_fee_per_day }}" class="mt-1 w-full border rounded-xl px-4 py-2 text-sm" />
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-neutral-700">เพดานค่าปรับรวม (บาท)</label>
+            <input name="late_fee_cap" value="{{ settings_obj.late_fee_cap }}" class="mt-1 w-full border rounded-xl px-4 py-2 text-sm" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div>
+            <label class="text-sm font-medium text-neutral-700">ผ่อนผัน (ชั่วโมง)</label>
+            <input name="late_fee_grace_hours" value="{{ settings_obj.late_fee_grace_hours }}" class="mt-1 w-full border rounded-xl px-4 py-2 text-sm" />
+            <div class="text-xs text-neutral-400 mt-1">ใส่ 0 = ไม่ผ่อนผัน</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4) Refund -->
+      <div class="rounded-2xl border border-black/10 p-5">
+        <div class="font-semibold text-neutral-900">4) การคืนเงิน / คืนมัดจำ</div>
+        <div class="text-sm text-neutral-500 mt-1">
+          แนวทางระบบกลาง: คืนมัดจำหลังตรวจสภาพ ถ้าไม่มีเสียหาย/สูญหาย
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div>
+            <label class="text-sm font-medium text-neutral-700">ร้านตรวจสภาพภายใน (วัน)</label>
+            <input name="inspection_days" value="{{ settings_obj.inspection_days }}" class="mt-1 w-full border rounded-xl px-4 py-2 text-sm" />
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-neutral-700">คืนเงินภายใน (วันทำการ)</label>
+            <input name="refund_days" value="{{ settings_obj.refund_days }}" class="mt-1 w-full border rounded-xl px-4 py-2 text-sm" />
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-neutral-700">ช่องทางคืนเงิน (ค่าเริ่มต้น)</label>
+            <select name="refund_method" class="mt-1 w-full border rounded-xl px-4 py-2 text-sm">
+              {% for key,label in refund_methods %}
+                <option value="{{ key }}" {% if settings_obj.refund_method == key %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-xl bg-neutral-50 border p-4 text-sm text-neutral-700">
+          <div class="font-semibold">ตัวอย่าง flow (เพื่อเช็ค UI/Flow)</div>
+          <ul class="list-disc ml-5 mt-2 space-y-1">
+            <li>ลูกค้าคืนชุด → ร้านกด “รับคืน”</li>
+            <li>ร้านตรวจสภาพภายใน {{ settings_obj.inspection_days }} วัน</li>
+            <li>ถ้าไม่มีปัญหา → ระบบคืนเงินภายใน {{ settings_obj.refund_days }} วันทำการ</li>
+            <li>ถ้ามีความเสียหาย → หักมัดจำบางส่วน/ทั้งหมด (ขั้นนี้ค่อยทำในเวอร์ชันถัดไป)</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center justify-end gap-2">
+        <button type="submit" class="px-6 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+          บันทึก
+        </button>
+        <a href="{% url 'backoffice:settings' %}" class="px-6 py-2 rounded-xl bg-neutral-100 text-sm font-semibold hover:bg-neutral-200">
+          รีเฟรช
+        </a>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+{% endblock %}

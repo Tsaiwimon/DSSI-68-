@@ -4,22 +4,30 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
+from .report.models_report import DamageReport
+
+
+
+
+
+
 
 
 # ============================================================
 # Model: PlatformSettings
 # ตั้งค่าระดับแพลตฟอร์ม เช่น อัตราค่าคอมมิชชั่นหลัก
 # ============================================================
+
+
 class PlatformSettings(models.Model):
     name = models.CharField(max_length=100, default="Default")
+
+    # ---------- Commission ----------
     commission_rate = models.DecimalField(
         max_digits=5,
         decimal_places=4,
         default=Decimal("0.10"),
-        validators=[
-            MinValueValidator(Decimal("0.00")),
-            MaxValueValidator(Decimal("1.00")),
-        ],
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("1.00"))],
         help_text="อัตราค่าคอมมิชชั่นเริ่มต้นของแพลตฟอร์ม เช่น 0.10 = 10%",
     )
     commission_min_fee = models.DecimalField(
@@ -33,12 +41,59 @@ class PlatformSettings(models.Model):
         max_digits=4,
         decimal_places=2,
         default=Decimal("0.00"),
-        validators=[
-            MinValueValidator(Decimal("0.00")),
-            MaxValueValidator(Decimal("1.00")),
-        ],
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("1.00"))],
         help_text="VAT บนค่าคอมฯ (ทศนิยม) เช่น 0.07 = 7%",
     )
+
+    # ---------- Late Fee (Central Policy) ----------
+    LATE_FEE_MODE_CHOICES = [
+        ("per_day", "คิดต่อวัน"),
+        ("per_hour", "คิดต่อชั่วโมง"),
+        ("percent_of_daily", "คิดเป็น % ของราคาต่อวัน"),
+    ]
+    late_fee_mode = models.CharField(
+        max_length=20,
+        choices=LATE_FEE_MODE_CHOICES,
+        default="per_day",
+    )
+    late_fee_per_day = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("50.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text="ค่าปรับคืนช้าต่อวัน (บาท)",
+    )
+    late_fee_cap = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("500.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text="เพดานค่าปรับรวม (บาท)",
+    )
+    late_fee_grace_hours = models.PositiveIntegerField(
+        default=0,
+        help_text="ผ่อนผัน (ชั่วโมง) ก่อนเริ่มคิดค่าปรับ",
+    )
+
+    # ---------- Refund / Deposit Return ----------
+    inspection_days = models.PositiveIntegerField(
+        default=2,
+        help_text="ร้านตรวจสภาพภายใน (วัน)",
+    )
+    refund_days = models.PositiveIntegerField(
+        default=5,
+        help_text="คืนเงินภายใน (วันทำการ) หลังตรวจสภาพ",
+    )
+    REFUND_METHOD_CHOICES = [
+        ("original_payment", "คืนเข้าช่องทางเดิม"),
+        ("manual_transfer", "โอนคืนด้วยตนเอง"),
+    ]
+    refund_method = models.CharField(
+        max_length=30,
+        choices=REFUND_METHOD_CHOICES,
+        default="original_payment",
+    )
+
     is_active = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -50,9 +105,7 @@ class PlatformSettings(models.Model):
 
     @classmethod
     def current(cls):
-        """ดึง config แพลตฟอร์มที่ active ล่าสุด"""
-        obj = cls.objects.filter(is_active=True).order_by("-updated_at", "-id").first()
-        return obj
+        return cls.objects.filter(is_active=True).order_by("-updated_at", "-id").first()
 
 
 # ============================================================
@@ -125,6 +178,8 @@ class Shop(models.Model):
     phone = models.CharField(max_length=20, blank=True)
     province = models.CharField(max_length=200, blank=True, null=True)
     shop_logo = models.ImageField(upload_to="img_shop_logos/", blank=True, null=True)
+    id_card_image = models.ImageField(upload_to="img_shop_docs/id_cards/", blank=True, null=True)
+    bankbook_image = models.ImageField(upload_to="img_shop_docs/bankbooks/", blank=True, null=True)
     fee = models.TextField(blank=True, null=True)  # ข้อความกติกา/โน้ต (ไม่ใช้คำนวณ)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -273,6 +328,10 @@ class RentalOrder(models.Model):
 
     def __str__(self):
         return f"ORD-{self.id} ({self.user})"
+    
+    returned_at = models.DateTimeField(null=True, blank=True)
+    late_days = models.PositiveIntegerField(default=0)
+    late_fee_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
 
 
 
@@ -597,6 +656,8 @@ class Review(models.Model):
 
     shop_reply = models.TextField(blank=True, null=True)
     replied_at = models.DateTimeField(blank=True, null=True)
+
+    is_hidden = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         ordering = ("-created_at",)

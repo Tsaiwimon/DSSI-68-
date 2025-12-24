@@ -279,16 +279,22 @@
               <!-- ปุ่มล่าง -->
               <div class="mt-4 flex items-center justify-end gap-2">
 
-                <!-- ปุ่มดูรายละเอียด (ลิงก์เดิมของคุณถ้ามี url อื่นก็แก้ให้ตรง) -->
                 <a href="#"
                    class="border border-gray-300 px-4 py-2 rounded-lg text-xs font-medium
                           text-gray-800 hover:bg-gray-50 transition">
                   ดูรายละเอียดชุด
                 </a>
 
+              {# ✅ แสดงปุ่มแจ้งปัญหาเฉพาะแท็บ damaged เท่านั้น #}
+              {% if active_tab == 'damaged' %}
+                <a href="{% url 'dress:create_damage_report' store.id order.id %}"
+                   class="px-4 py-2 rounded-lg text-xs font-semibold bg-pink-600 text-white hover:bg-pink-700 transition">
+                  แจ้งปัญหาให้แอดมิน
+                </a>
+              {% endif %}
+
                 {# ปุ่มอัปเดตสถานะ ตามหมวดที่กำลังดูอยู่ #}
                 {% if active_tab == 'paid' %}
-                  <!-- จาก ชำระเงินสำเร็จ -> กำลังเตรียมจัดส่ง -->
                   <form method="post"
                         action="{% url 'dress:back_office_update_order_status' store.id order.id %}">
                     {% csrf_token %}
@@ -301,8 +307,6 @@
                   </form>
 
                 {% elif active_tab == 'preparing' %}
-                  <!-- จาก กำลังเตรียมจัดส่ง -> จัดส่งเรียบร้อย
-                       (จะส่ง Notification ให้ลูกค้าด้วย) -->
                   <form method="post"
                         action="{% url 'dress:back_office_update_order_status' store.id order.id %}">
                     {% csrf_token %}
@@ -315,7 +319,6 @@
                   </form>
 
                 {% elif active_tab == 'shipping' %}
-                  <!-- จาก จัดส่งเรียบร้อย -> อยู่ระหว่างการเช่า -->
                   <form method="post"
                         action="{% url 'dress:back_office_update_order_status' store.id order.id %}">
                     {% csrf_token %}
@@ -328,7 +331,6 @@
                   </form>
 
                 {% elif active_tab == 'renting' %}
-                  <!-- จาก อยู่ระหว่างการเช่า -> รอคืนชุด -->
                   <form method="post"
                         action="{% url 'dress:back_office_update_order_status' store.id order.id %}">
                     {% csrf_token %}
@@ -341,7 +343,6 @@
                   </form>
 
                 {% elif active_tab == 'awaiting_return' %}
-                  <!-- จาก รอคืนชุด -> คืนชุดแล้ว -->
                   <form method="post"
                         action="{% url 'dress:back_office_update_order_status' store.id order.id %}">
                     {% csrf_token %}
@@ -366,9 +367,17 @@
         <img src="{% static 'img/no-orders.svg' %}" alt="no orders"
              class="w-32 h-32 mb-4 opacity-80">
         <p class="font-medium">ยังไม่มีคำสั่งเช่าในหมวดนี้</p>
-        <p class="text-xs text-gray-400 mt-1">
+        <p class="text-xs text-gray-400 mt-1 text-center">
           เมื่อมีคำสั่งเช่า ระบบจะแสดงรายการให้คุณจัดการที่นี่
         </p>
+
+        <!-- ✅ แก้เฉพาะส่วนแจ้งปัญหา: ไม่เรียก create_damage_report เพราะไม่มี order.id -->
+        <div class="mt-6 flex flex-col sm:flex-row gap-3">
+          <a href="{% url 'dress:back_office' store.id %}"
+             class="px-5 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition text-center">
+            กลับไปหลังร้าน
+          </a>
+        </div>
       </section>
     {% endif %}
   </main>
