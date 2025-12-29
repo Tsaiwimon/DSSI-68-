@@ -3,83 +3,82 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>การตั้งค่าร้าน - SasiShop</title>
+  <title>การตั้งค่าร้าน - {{ store.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
+
 <body class="bg-gray-50">
 
-  <!-- Header เดียวกับหลังร้าน -->
+  <!-- Header -->
   <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-100 shadow-sm">
     <div class="max-w-6xl mx-auto px-9 py-9 flex items-center justify-between">
-      
-      <!-- ซ้าย: ปุ่มย้อนกลับ + หัวข้อหน้า -->
+
       <div class="flex items-center space-x-3">
         <a href="{% url 'dress:back_office' store_id %}"
-           class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300
-                  bg-white/60 text-sm text-gray-700 hover:bg-white">
-          ← กลับไปหน้าหลังร้าน
+           class="w-10 h-10 rounded-full bg-white shadow grid place-items-center text-gray-900 hover:bg-gray-50">
+          <span class="text-lg leading-none">←</span>
         </a>
         <h1 class="text-xl font-semibold text-gray-800">การตั้งค่าร้าน</h1>
       </div>
 
-      <!-- ขวา: ชื่อร้าน + โลโก้ -->
       <div class="flex items-center space-x-4">
-        <span class="text-sm text-gray-700">
-          {{ store.name }}
-        </span>
+        <span class="text-sm text-gray-700">{{ store.name }}</span>
 
         {% if store.shop_logo %}
-          <img src="{{ store.shop_logo.url }}"
-               class="w-9 h-9 rounded-full object-cover"
-               alt="{{ store.name }}">
+          <img src="{{ store.shop_logo.url }}" class="w-9 h-9 rounded-full object-cover" alt="{{ store.name }}">
         {% else %}
-          <img src="{% static 'images/store-placeholder.png' %}"
-               class="w-9 h-9 rounded-full object-cover"
-               alt="store placeholder">
+          <img src="{% static 'images/store-placeholder.png' %}" class="w-9 h-9 rounded-full object-cover" alt="store placeholder">
         {% endif %}
       </div>
     </div>
   </header>
 
-  <!-- เนื้อหา -->
+  <!-- Content -->
   <main class="max-w-6xl mx-auto px-6 py-8">
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
 
-      <!-- Sidebar เมนูการตั้งค่า -->
+      <!-- Sidebar -->
       <aside class="md:col-span-1">
         <div class="bg-white rounded-xl shadow-sm border border-gray-100">
           <nav class="flex md:flex-col">
-            <button
+            <button type="button"
               class="settings-tab-btn flex-1 md:flex-none px-4 py-3 text-sm text-left border-b md:border-b-0 md:border-l-4 md:border-l-pink-500 bg-pink-50 font-semibold"
               data-tab-target="#tab-store-info">
               ข้อมูลร้าน
             </button>
-            <button
+
+            <button type="button"
               class="settings-tab-btn flex-1 md:flex-none px-4 py-3 text-sm text-left border-b md:border-b-0 md:border-l-4 md:border-l-transparent hover:bg-gray-50"
               data-tab-target="#tab-rental">
               การตั้งค่าการเช่า
             </button>
-            <button
+
+            <button type="button"
               class="settings-tab-btn flex-1 md:flex-none px-4 py-3 text-sm text-left border-b md:border-b-0 md:border-l-4 md:border-l-transparent hover:bg-gray-50"
               data-tab-target="#tab-shipping">
               การจัดส่ง / รับคืน
             </button>
-            <button
+
+            <button type="button"
               class="settings-tab-btn flex-1 md:flex-none px-4 py-3 text-sm text-left border-b md:border-b-0 md:border-l-4 md:border-l-transparent hover:bg-gray-50"
               data-tab-target="#tab-payment">
               การชำระเงิน
             </button>
-            <button
+
+            <button type="button"
               class="settings-tab-btn flex-1 md:flex-none px-4 py-3 text-sm text-left border-b md:border-b-0 md:border-l-4 md:border-l-transparent hover:bg-gray-50"
               data-tab-target="#tab-notification">
               การแจ้งเตือน
             </button>
-            <button
+
+            <button type="button"
               class="settings-tab-btn flex-1 md:flex-none px-4 py-3 text-sm text-left border-b md:border-b-0 md:border-l-4 md:border-l-transparent hover:bg-gray-50"
               data-tab-target="#tab-storefront">
               การตั้งค่าหน้าร้าน
             </button>
-            <button
+
+            <button type="button"
               class="settings-tab-btn flex-1 md:flex-none px-4 py-3 text-sm text-left md:border-l-4 md:border-l-transparent hover:bg-gray-50"
               data-tab-target="#tab-account">
               บัญชีร้าน / ความปลอดภัย
@@ -88,388 +87,504 @@
         </div>
       </aside>
 
-      <!-- ส่วนเนื้อหาแต่ละแท็บ -->
+      <!-- Main -->
       <section class="md:col-span-3 space-y-6">
 
-        <!-- แท็บ 1: ข้อมูลร้าน -->
+        <!-- Messages -->
+        {% if messages %}
+          <div class="space-y-2">
+            {% for message in messages %}
+              <div class="p-3 rounded-lg text-sm
+                {% if message.tags == 'success' %} bg-green-50 border border-green-100 text-green-700
+                {% elif message.tags == 'error' %} bg-red-50 border border-red-100 text-red-700
+                {% else %} bg-gray-50 border border-gray-100 text-gray-700 {% endif %}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- TAB 1: Store Info -->
         <form id="tab-store-info"
               class="settings-tab bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4"
               method="post" enctype="multipart/form-data">
-          <h2 class="text-lg font-semibold text-gray-800 mb-2">ข้อมูลร้าน</h2>
+
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-semibold text-gray-800">ข้อมูลร้าน</h2>
+              <p class="text-xs text-gray-500 mt-1">ข้อมูลชุดนี้จะเชื่อมกับหน้าโปรไฟล์ร้านโดยตรง</p>
+            </div>
+            <a href="{% url 'dress:store_profile' store_id %}" class="text-xs text-pink-600 hover:underline">
+              ไปหน้าโปรไฟล์ร้าน
+            </a>
+          </div>
 
           {% csrf_token %}
 
+          {% if form.errors %}
+            <div class="p-3 rounded-lg bg-red-50 border border-red-100 text-sm text-red-700">
+              บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลที่กรอก
+            </div>
+          {% endif %}
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อร้าน</label>
-              <input type="text" name="store_name"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
-                     placeholder="เช่น SasiShop">
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.name.label }}</label>
+              {{ form.name }}
+              {% if form.name.errors %}<p class="text-xs text-red-600 mt-1">{{ form.name.errors|striptags }}</p>{% endif %}
             </div>
+
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อสำหรับลิงก์ (Slug)</label>
-              <input type="text" name="store_slug"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
-                     placeholder="เช่น sasishop">
-              <p class="mt-1 text-xs text-gray-500">ใช้สำหรับลิงก์ เช่น /store/sasishop</p>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.phone.label }}</label>
+              {{ form.phone }}
+              {% if form.phone.errors %}<p class="text-xs text-red-600 mt-1">{{ form.phone.errors|striptags }}</p>{% endif %}
             </div>
+
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทร</label>
-              <input type="text" name="phone"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.province.label }}</label>
+              {{ form.province }}
+              {% if form.province.errors %}<p class="text-xs text-red-600 mt-1">{{ form.province.errors|striptags }}</p>{% endif %}
             </div>
+
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Line ID</label>
-              <input type="text" name="line_id"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.shop_logo.label }}</label>
+
+              {% if store.shop_logo %}
+                <div class="flex items-center gap-3 mb-2">
+                  <img src="{{ store.shop_logo.url }}" class="w-12 h-12 rounded-full object-cover border" alt="logo">
+                  <span class="text-xs text-gray-500">โลโก้ปัจจุบัน</span>
+                </div>
+              {% endif %}
+
+              {{ form.shop_logo }}
+              {% if form.shop_logo.errors %}<p class="text-xs text-red-600 mt-1">{{ form.shop_logo.errors|striptags }}</p>{% endif %}
+              <p class="mt-1 text-xs text-gray-500">รองรับไฟล์รูปภาพ</p>
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">คำอธิบายร้าน</label>
-            <textarea name="description" rows="3"
-                      class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
-                      placeholder="แนะนำจุดเด่นของร้านและบริการ"></textarea>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">ที่อยู่ร้าน</label>
-              <textarea name="address" rows="3"
-                        class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"></textarea>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">ลิงก์แผนที่ (Google Maps)</label>
-              <input type="text" name="map_url"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
-                     placeholder="วางลิงก์แผนที่ร้าน">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">โลโก้ร้าน</label>
-              <input type="file" name="logo" class="w-full text-sm">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">ภาพปกหน้าร้าน</label>
-              <input type="file" name="cover_image" class="w-full text-sm">
-            </div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.fee.label }}</label>
+            {{ form.fee }}
+            {% if form.fee.errors %}<p class="text-xs text-red-600 mt-1">{{ form.fee.errors|striptags }}</p>{% endif %}
           </div>
 
           <div class="flex justify-end">
-            <button type="submit"
+            <button type="submit" name="action" value="store_info"
                     class="px-5 py-2.5 rounded-lg bg-pink-500 text-white text-sm font-medium hover:bg-pink-600">
               บันทึกข้อมูลร้าน
             </button>
           </div>
         </form>
 
-        <!-- แท็บ 2: การตั้งค่าการเช่า -->
+        <!-- TAB 2: Rental -->
         <form id="tab-rental"
-              class="settings-tab hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4"
+              class="settings-tab hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6"
               method="post">
-          <h2 class="text-lg font-semibold text-gray-800 mb-2">การตั้งค่าการเช่า</h2>
-
           {% csrf_token %}
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">จำนวนวันเช่ามาตรฐาน</label>
-              <input type="number" name="default_rental_days" min="1"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
-                     value="3">
-              <p class="mt-1 text-xs text-gray-500">เช่น 3 วัน</p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">ค่าปรับคืนช้าต่อวัน (บาท)</label>
-              <input type="number" name="late_fee_per_day" min="0"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">มัดจำ (% ของราคาชุด)</label>
-              <input type="number" name="deposit_percent" min="0" max="100"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">การตั้งค่าการเช่า</h2>
+            <p class="text-xs text-gray-500 mt-1">
+              ร้านกำหนดได้เฉพาะ “วันเช่า/นโยบาย” ส่วนค่าปรับคืนช้าและการคืนมัดจำเป็นนโยบายกลางของระบบ
+            </p>
+          </div>
+
+          <div class="rounded-xl border border-yellow-100 bg-yellow-50 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">ค่าปรับคืนล่าช้า (นโยบายกลางระบบ)</p>
+                <p class="text-xs text-gray-600 mt-1">
+                  ระบบคำนวณอัตโนมัติเมื่อ “คืนหลังวันกำหนด” ร้านไม่ต้องตั้งค่า
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs px-2 py-1 rounded-full bg-white border border-yellow-200 text-gray-700">50 บาท/วัน</span>
+                <span class="text-xs px-2 py-1 rounded-full bg-white border border-yellow-200 text-gray-700">สูงสุด 500 บาท</span>
+              </div>
             </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">เวลาเปิดให้รับ–คืนชุด</label>
-              <div class="flex items-center space-x-2">
-                <input type="time" name="time_open"
-                       class="border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
-                <span class="text-sm text-gray-500">ถึง</span>
-                <input type="time" name="time_close"
-                       class="border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
-              </div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">จำนวนวันเช่ามาตรฐาน</label>
+              <input type="number" name="default_rental_days" min="1"
+                     value="{{ rental.default_rental_days|default:3 }}"
+                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
+              <p class="mt-1 text-xs text-gray-500">ค่าเริ่มต้นของร้าน (ลูกค้าเห็นเป็นค่าแนะนำ)</p>
             </div>
+
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">วันหยุดประจำสัปดาห์</label>
-              <div class="grid grid-cols-3 gap-2 text-sm">
-                {% for day in days %}
-                  <label class="inline-flex items-center space-x-2">
-                    <input type="checkbox" name="closed_days" value="{{ day }}"
-                           class="rounded border-gray-300">
-                    <span>{{ day }}</span>
-                  </label>
-                {% endfor %}
+              <label class="block text-sm font-medium text-gray-700 mb-1">จำกัดวันเช่าสูงสุด</label>
+              <input type="number" name="max_rental_days" min="1"
+                     value="{{ rental.max_rental_days|default:8 }}"
+                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
+              <p class="mt-1 text-xs text-gray-500">กันการเลือกวันเยอะเกินที่ร้านจัดการไม่ไหว</p>
+            </div>
+          </div>
+
+          <!-- Deposit (ปรับตามที่ขอ) -->
+          <div class="rounded-xl border border-gray-100 bg-white">
+            <div class="p-4 border-b border-gray-100">
+              <p class="text-sm font-semibold text-gray-800">มัดจำ</p>
+              <p class="text-xs text-gray-500 mt-1">ร้านเป็นคนกำหนดเอง “ตอนเพิ่มชุด” (ไม่ต้องตั้งค่าที่หน้านี้)</p>
+            </div>
+
+            <div class="p-4">
+              <div class="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                <p class="text-sm font-medium text-gray-800">การคืนเงินมัดจำ</p>
+                <p class="text-xs text-gray-600 mt-1">
+                  ระบบกลางจะคืนเงินมัดจำให้ลูกค้า “หลังตรวจสภาพชุด” ภายใน 2 วัน (ร้านไม่ต้องตั้งค่า)
+                </p>
               </div>
             </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">นโยบายความเสียหาย / สูญหาย</label>
-            <textarea name="damage_policy" rows="3"
-                      class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
-                      placeholder="ระบุเกณฑ์การคิดค่าปรับ กรณีชุดชำรุดหรือสูญหาย"></textarea>
-          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">นโยบายความเสียหาย / สูญหาย</label>
+              <textarea name="damage_policy" rows="5"
+                        class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
+                        placeholder="เช่น ซิปแตก/คราบล้างไม่ออก/ชุดหาย คิดค่าเสียหายตามสภาพจริง">{{ rental.damage_policy|default:'' }}</textarea>
+            </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">นโยบายการยกเลิก / คืนเงิน</label>
-            <textarea name="cancel_policy" rows="3"
-                      class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
-                      placeholder="เช่น ยกเลิกก่อนวันรับ 7 วัน คืนเงินเต็มจำนวน"></textarea>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">นโยบายการยกเลิก / คืนเงิน</label>
+              <textarea name="cancel_policy" rows="5"
+                        class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
+                        placeholder="เช่น ยกเลิกก่อนวันรับ 7 วัน คืนเงินเต็มจำนวน / น้อยกว่านั้นไม่คืน">{{ rental.cancel_policy|default:'' }}</textarea>
+            </div>
           </div>
 
           <div class="flex justify-end">
-            <button type="submit"
+            <button type="submit" name="action" value="rental_settings"
                     class="px-5 py-2.5 rounded-lg bg-pink-500 text-white text-sm font-medium hover:bg-pink-600">
               บันทึกการตั้งค่าการเช่า
             </button>
           </div>
         </form>
 
-        <!-- แท็บ 3: การจัดส่ง / รับคืน -->
+        <!-- TAB 3: Shipping -->
         <form id="tab-shipping"
-              class="settings-tab hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4"
+              class="settings-tab hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5"
               method="post">
-          <h2 class="text-lg font-semibold text-gray-800 mb-2">การจัดส่ง / รับคืน</h2>
-
           {% csrf_token %}
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">วิธีรับ–ส่งชุดที่เปิดให้ใช้</label>
+            <h2 class="text-lg font-semibold text-gray-800">การจัดส่ง / รับคืน</h2>
+            <p class="text-xs text-gray-500 mt-1">ตั้งค่าวิธีรับ–ส่ง และค่าส่ง “ขาไป” (ค่าส่งคืนลูกค้าจ่ายเอง)</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">วิธีรับ–ส่งชุดที่เปิดให้ใช้</label>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <label class="inline-flex items-center space-x-2">
-                <input type="checkbox" name="shipping_methods" value="pickup"
-                       class="rounded border-gray-300">
+                <input type="checkbox" name="shipping_pickup" value="1" class="rounded border-gray-300"
+                       {% if shipping.pickup %}checked{% endif %}>
                 <span>รับ–คืนที่หน้าร้าน</span>
               </label>
               <label class="inline-flex items-center space-x-2">
-                <input type="checkbox" name="shipping_methods" value="courier"
-                       class="rounded border-gray-300">
+                <input type="checkbox" name="shipping_courier" value="1" class="rounded border-gray-300"
+                       {% if shipping.courier %}checked{% endif %}>
                 <span>ส่งโดยขนส่งเอกชน</span>
-              </label>
-              <label class="inline-flex items-center space-x-2">
-                <input type="checkbox" name="shipping_methods" value="ride_hailing"
-                       class="rounded border-gray-300">
-                <span>จัดส่งด่วน (Grab / Lalamove)</span>
               </label>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">ค่าจัดส่งไปยังลูกค้า (บาท)</label>
-              <input type="number" name="shipping_fee_to"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
+          <!-- รูปแบบค่าส่งขาไป (ทำให้ไม่งง) -->
+          <div class="rounded-xl border border-gray-100 bg-white p-4">
+            <p class="text-sm font-semibold text-gray-800 mb-2">ค่าส่ง “ขาไป” ที่คิดกับลูกค้า</p>
+            <p class="text-xs text-gray-500 mb-3">เลือกว่าจะให้ระบบคิดจาก “แพ็คค่าส่งของร้าน” หรือ “กำหนดเอง”</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <label class="flex items-start gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer">
+                <input type="radio" name="shipping_fee_mode" value="pack"
+                       {% if shipping.fee_mode == 'pack' or not shipping.fee_mode %}checked{% endif %}>
+                <div>
+                  <p class="font-medium text-gray-800">ใช้แพ็คค่าส่งของร้าน</p>
+                  <p class="text-xs text-gray-500">ระบบจะคิดตามจำนวนชิ้น (ดูตารางด้านล่าง)</p>
+                </div>
+              </label>
+
+              <label class="flex items-start gap-2 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer">
+                <input type="radio" name="shipping_fee_mode" value="manual"
+                       {% if shipping.fee_mode == 'manual' %}checked{% endif %}>
+                <div>
+                  <p class="font-medium text-gray-800">กำหนดค่าส่งเอง</p>
+                  <p class="text-xs text-gray-500">ใส่เป็นตัวเลขเดียว (บาท)</p>
+                </div>
+              </label>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">ค่าจัดส่งคืนจากลูกค้า (บาท)</label>
-              <input type="number" name="shipping_fee_back"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
+
+            <div class="mt-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">ค่าส่งไปยังลูกค้า (บาท) — กรณี “กำหนดเอง”</label>
+              <input type="number" name="shipping_fee_to" min="0"
+                     value="{{ shipping.fee_to|default:'' }}"
+                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
+                     placeholder="เช่น 60">
+              <p class="mt-1 text-xs text-gray-500">ถ้าเลือก “ใช้แพ็คค่าส่งของร้าน” ช่องนี้ปล่อยว่างได้</p>
             </div>
+          </div>
+
+          <!-- ตารางแพ็ค: ให้ดูอย่างเดียว (ตามที่ขอ) -->
+          <div class="border border-gray-100 rounded-xl p-4 bg-gray-50/50">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-sm font-semibold text-gray-800">ตารางแพ็คค่าส่งของร้าน (ดูอย่างเดียว)</p>
+              <p class="text-xs text-gray-500">ใช้เป็นข้อมูลอ้างอิง</p>
+            </div>
+
+            {% if shipping_brackets and shipping_brackets|length > 0 %}
+              <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="text-left text-gray-600 border-b">
+                      <th class="px-3 py-2">ช่วงจำนวนชิ้น</th>
+                      <th class="px-3 py-2">ค่าส่ง (บาท)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for b in shipping_brackets %}
+                      <tr class="border-b last:border-b-0">
+                        <td class="px-3 py-2">{{ b.min_qty }}–{{ b.max_qty }}</td>
+                        <td class="px-3 py-2">{{ b.fee }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="p-3 rounded-lg bg-yellow-50 border border-yellow-100 text-sm text-yellow-800">
+                ยังไม่มี “แพ็คค่าส่ง” ของร้าน
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="rounded-xl border border-gray-100 bg-white p-4">
+            <p class="text-sm font-semibold text-gray-800">ค่าจัดส่งคืนชุด</p>
+            <p class="text-xs text-gray-600 mt-1">ลูกค้าเป็นผู้ชำระค่าส่งคืนเอง</p>
           </div>
 
           <div class="flex justify-end">
-            <button type="submit"
+            <button type="submit" name="action" value="shipping"
                     class="px-5 py-2.5 rounded-lg bg-pink-500 text-white text-sm font-medium hover:bg-pink-600">
               บันทึกการตั้งค่าการจัดส่ง
             </button>
           </div>
         </form>
 
-        <!-- แท็บ 4: การชำระเงิน -->
+        <!-- TAB 4: Payment -->
         <form id="tab-payment"
-              class="settings-tab hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4"
+              class="settings-tab hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5"
               method="post">
-          <h2 class="text-lg font-semibold text-gray-800 mb-2">การชำระเงิน</h2>
-
           {% csrf_token %}
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">วิธีชำระเงินที่รองรับ</label>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <h2 class="text-lg font-semibold text-gray-800 mb-1">การชำระเงิน</h2>
+            <p class="text-xs text-gray-500">
+              เช่าผ่านระบบออนไลน์ใช้ QR ระบบกลางเท่านั้น / เช่าหน้าร้านรับได้ทั้งเงินสดและ QR ของร้าน
+            </p>
+          </div>
+
+          <div class="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
+            <p class="text-sm font-semibold text-gray-800">เช่าผ่านระบบออนไลน์</p>
+            <p class="text-xs text-gray-600 mt-1">ระบบรองรับช่องทางเดียว: QR Code ของระบบ</p>
+            <div class="mt-3 flex items-center gap-3 text-sm">
+              <input type="checkbox" checked disabled class="rounded border-gray-300">
+              <span class="text-gray-800">QR Code (ระบบกลาง)</span>
+            </div>
+            <input type="hidden" name="online_payment_method" value="system_qr">
+          </div>
+
+          <div class="rounded-xl border border-gray-100 bg-white p-4">
+            <p class="text-sm font-semibold text-gray-800">เช่าหน้าร้าน (Walk-in)</p>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <label class="inline-flex items-center space-x-2">
-                <input type="checkbox" name="payment_methods" value="bank_transfer"
-                       class="rounded border-gray-300">
-                <span>โอนเงินผ่านบัญชีธนาคาร</span>
+                <input type="checkbox" name="walkin_cash" value="1" class="rounded border-gray-300"
+                       {% if payment.walkin_cash %}checked{% endif %}>
+                <span>เงินสด</span>
               </label>
               <label class="inline-flex items-center space-x-2">
-                <input type="checkbox" name="payment_methods" value="promptpay"
-                       class="rounded border-gray-300">
-                <span>PromptPay / QR</span>
+                <input type="checkbox" name="walkin_shop_qr" value="1" class="rounded border-gray-300"
+                       {% if payment.walkin_shop_qr %}checked{% endif %}>
+                <span>QR ของร้าน</span>
               </label>
-              <label class="inline-flex items-center space-x-2">
-                <input type="checkbox" name="payment_methods" value="card"
-                       class="rounded border-gray-300">
-                <span>บัตรเครดิต/เดบิต (ผ่าน Omise)</span>
-              </label>
+            </div>
+
+            <div class="mt-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">รายละเอียด QR ของร้าน</label>
+              <textarea name="shop_qr_note" rows="3"
+                        class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
+                        placeholder="พร้อมเพย์ / ชื่อบัญชี ...">{{ payment.shop_qr_note|default:'' }}</textarea>
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">ข้อความแจ้งเตือนหลังลูกค้าชำระเงิน</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">ข้อความแจ้งเตือนหลังลูกค้าชำระเงิน (กรณีหน้าร้าน)</label>
             <textarea name="payment_note" rows="3"
                       class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
-                      placeholder="ตัวอย่าง: กรุณาแนบสลิป และรอการยืนยันไม่เกิน 24 ชั่วโมง"></textarea>
+                      placeholder="เช่น กรุณาแสดงสลิปให้พนักงานตรวจสอบก่อนรับชุด">{{ payment.payment_note|default:'' }}</textarea>
           </div>
 
           <div class="flex justify-end">
-            <button type="submit"
+            <button type="submit" name="action" value="payment"
                     class="px-5 py-2.5 rounded-lg bg-pink-500 text-white text-sm font-medium hover:bg-pink-600">
               บันทึกการตั้งค่าการชำระเงิน
             </button>
           </div>
         </form>
 
-        <!-- แท็บ 5: การแจ้งเตือน -->
+        <!-- TAB 5: Notification -->
         <form id="tab-notification"
-              class="settings-tab hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4"
+              class="settings-tab hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5"
               method="post">
-          <h2 class="text-lg font-semibold text-gray-800 mb-2">การแจ้งเตือน</h2>
-
           {% csrf_token %}
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">อีเมลสำหรับรับการแจ้งเตือน</label>
-              <input type="email" name="notify_email"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Line Notify Token</label>
-              <input type="text" name="line_notify_token"
-                     class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
-            </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800 mb-1">การแจ้งเตือน</h2>
+            <p class="text-xs text-gray-500">เลือกเฉพาะเหตุการณ์ที่ต้องการให้ระบบแจ้งเตือน</p>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">เหตุการณ์ที่ต้องการให้ระบบแจ้งเตือน</label>
-            <div class="space-y-2 text-sm">
-              <label class="flex items-center justify-between">
-                <span>มีออเดอร์ใหม่</span>
-                <input type="checkbox" name="notify_new_order"
-                       class="rounded border-gray-300">
-              </label>
-              <label class="flex items-center justify-between">
-                <span>ลูกค้าอัพโหลดสลิปชำระเงิน</span>
-                <input type="checkbox" name="notify_payment"
-                       class="rounded border-gray-300">
-              </label>
-              <label class="flex items-center justify-between">
-                <span>ใกล้ถึงวันรับชุด</span>
-                <input type="checkbox" name="notify_pickup"
-                       class="rounded border-gray-300">
-              </label>
-              <label class="flex items-center justify-between">
-                <span>ใกล้ถึงวันคืนชุด</span>
-                <input type="checkbox" name="notify_return"
-                       class="rounded border-gray-300">
-              </label>
-            </div>
+          <div class="space-y-3 text-sm">
+            <label class="flex items-center justify-between rounded-lg border border-gray-100 p-3 hover:bg-gray-50">
+              <div>
+                <p class="font-medium text-gray-800">มีออเดอร์ใหม่</p>
+                <p class="text-xs text-gray-500">แจ้งทันทีเมื่อมีการสั่งเช่าเข้ามา</p>
+              </div>
+              <input type="checkbox" name="notify_new_order" value="1" class="rounded border-gray-300"
+                     {% if notify.notify_new_order %}checked{% endif %}>
+            </label>
+
+            <label class="flex items-center justify-between rounded-lg border border-gray-100 p-3 hover:bg-gray-50">
+              <div>
+                <p class="font-medium text-gray-800">ลูกค้าอัปโหลดสลิปชำระเงิน</p>
+                <p class="text-xs text-gray-500">แจ้งเมื่อมีสลิปใหม่ เพื่อให้ตรวจสอบได้เร็ว</p>
+              </div>
+              <input type="checkbox" name="notify_payment_slip" value="1" class="rounded border-gray-300"
+                     {% if notify.notify_payment_slip %}checked{% endif %}>
+            </label>
           </div>
 
           <div class="flex justify-end">
-            <button type="submit"
+            <button type="submit" name="action" value="notification"
                     class="px-5 py-2.5 rounded-lg bg-pink-500 text-white text-sm font-medium hover:bg-pink-600">
               บันทึกการแจ้งเตือน
             </button>
           </div>
         </form>
 
-        <!-- แท็บ 6: การตั้งค่าหน้าร้าน -->
+        <!-- TAB 6: Storefront -->
         <form id="tab-storefront"
               class="settings-tab hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4"
               method="post">
-          <h2 class="text-lg font-semibold text-gray-800 mb-2">การตั้งค่าหน้าร้าน</h2>
-
           {% csrf_token %}
 
+          <h2 class="text-lg font-semibold text-gray-800 mb-2">การตั้งค่าหน้าร้าน</h2>
+
+          <!-- สวิตช์ (แก้ให้คลิกได้ชัวร์) -->
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-gray-700">สถานะหน้าร้าน</p>
-              <p class="text-xs text-gray-500">ปิดชั่วคราวเมื่อต้องการหยุดรับออเดอร์</p>
+              <p class="text-xs text-gray-500">ถ้าปิดร้าน ระบบจะทำให้ “ชุดทั้งร้านไม่พร้อมเช่า”</p>
             </div>
-            <label class="inline-flex.items-center cursor-pointer">
-              <input type="checkbox" name="store_is_open" class="sr-only peer">
-              <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 relative transition">
-                <div class="absolute w-5 h-5 bg-white rounded-full shadow transform translate-x-0.5 top-0.5 peer-checked:translate-x-5 transition"></div>
-              </div>
-              <span class="ml-2 text-sm text-gray-700">เปิดหน้าร้าน</span>
-            </label>
+
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-gray-700">ปิด</span>
+
+              <input
+                id="store_is_open"
+                type="checkbox"
+                name="store_is_open"
+                value="1"
+                class="hidden"
+                {% if storefront.store_is_open %}checked{% endif %}
+              />
+
+              <label for="store_is_open" class="relative inline-flex items-center cursor-pointer select-none">
+                <span class="w-11 h-6 bg-gray-200 rounded-full transition" id="switch_track"></span>
+                <span class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition" id="switch_thumb"></span>
+              </label>
+
+              <span class="text-sm text-gray-700">เปิด</span>
+            </div>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">ข้อความเมื่อปิดหน้าร้าน</label>
             <textarea name="store_closed_message" rows="3"
                       class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400"
-                      placeholder="ตัวอย่าง: ร้านปิดปรับปรุงชั่วคราว ถึงวันที่ ..."></textarea>
+                      placeholder="เช่น ร้านปิดปรับปรุงชั่วคราว ถึงวันที่ ...">{{ storefront.store_closed_message|default:'' }}</textarea>
           </div>
 
+          <!-- ลบจำนวนสินค้าต่อหน้าออกตามที่ขอ -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">จำนวนสินค้า / หน้า</label>
-              <input type="number" name="products_per_page"
-                     class="w-full border-gray-300 rounded-lg.shadow-sm focus:ring-pink-400 focus:border-pink-400"
-                     value="12">
-            </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">การเรียงลำดับเริ่มต้น</label>
               <select name="default_sort"
                       class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-pink-400 focus:border-pink-400">
-                <option value="newest">สินค้าใหม่ล่าสุด</option>
-                <option value="popular">ยอดนิยม</option>
-                <option value="price_low">ราคาต่ำไปสูง</option>
-                <option value="price_high">ราคาสูงไปต่ำ</option>
+                <option value="newest" {% if storefront.default_sort == "newest" %}selected{% endif %}>สินค้าใหม่ล่าสุด</option>
+                <option value="popular" {% if storefront.default_sort == "popular" %}selected{% endif %}>ยอดนิยม</option>
+                <option value="price_low" {% if storefront.default_sort == "price_low" %}selected{% endif %}>ราคาต่ำไปสูง</option>
+                <option value="price_high" {% if storefront.default_sort == "price_high" %}selected{% endif %}>ราคาสูงไปต่ำ</option>
               </select>
+            </div>
+
+            <div class="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3">
+              <span class="text-sm text-gray-700">อนุญาตให้ลูกค้าเขียนรีวิวหน้าร้าน</span>
+              <input type="checkbox" name="allow_reviews" value="1" class="rounded border-gray-300"
+                     {% if storefront.allow_reviews %}checked{% endif %}>
             </div>
           </div>
 
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-700">อนุญาตให้ลูกค้าเขียนรีวิวหน้าร้าน</span>
-            <input type="checkbox" name="allow_reviews" class="rounded border-gray-300">
-          </div>
-
           <div class="flex justify-end">
-            <button type="submit"
-                    class="px-5 py-2.5 rounded-lg bg-pink-500 text-white text-sm font-medium.hover:bg-pink-600">
+            <button type="submit" name="action" value="storefront"
+                    class="px-5 py-2.5 rounded-lg bg-pink-500 text-white text-sm font-medium hover:bg-pink-600">
               บันทึกการตั้งค่าหน้าร้าน
             </button>
           </div>
+
+          <script>
+            (function(){
+              const cb = document.getElementById("store_is_open");
+              const track = document.getElementById("switch_track");
+              const thumb = document.getElementById("switch_thumb");
+
+              function paint(){
+                if(cb.checked){
+                  track.classList.add("bg-green-500");
+                  track.classList.remove("bg-gray-200");
+                  thumb.style.transform = "translateX(20px)";
+                }else{
+                  track.classList.add("bg-gray-200");
+                  track.classList.remove("bg-green-500");
+                  thumb.style.transform = "translateX(0px)";
+                }
+              }
+              cb.addEventListener("change", paint);
+              paint();
+            })();
+          </script>
         </form>
 
-        <!-- แท็บ 7: บัญชีร้าน / ความปลอดภัย -->
+        <!-- TAB 7: Account -->
         <div id="tab-account"
              class="settings-tab hidden bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
           <h2 class="text-lg font-semibold text-gray-800 mb-2">บัญชีร้าน / ความปลอดภัย</h2>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+            <div class="rounded-xl border border-gray-100 p-4">
               <h3 class="text-sm font-semibold text-gray-800 mb-1">รหัสผ่าน</h3>
               <p class="text-xs text-gray-500 mb-3">แนะนำให้เปลี่ยนรหัสผ่านเป็นระยะเพื่อความปลอดภัย</p>
-              <a href="#"
-                 class="inline-flex items-center px-4 py-2 text-sm rounded-lg border.border-gray-300 hover:bg-gray-50">
+              <a href="{% url 'dress:password_change' %}"
+                 class="inline-flex items-center px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
                 เปลี่ยนรหัสผ่าน
               </a>
             </div>
-            <div>
-              <h3 class="text-sm font-semibold text-gray-800 mb-1">ผู้ดูแลร้าน</h3>
-              <p class="text-xs text-gray-500 mb-3">จัดการบัญชีพนักงานที่สามารถเข้าใช้งานหลังร้านได้</p>
-              <a href="#"
+
+            <div class="rounded-xl border border-gray-100 p-4">
+              <h3 class="text-sm font-semibold text-gray-800 mb-1">ออกจากระบบ</h3>
+              <p class="text-xs text-gray-500 mb-3">ออกจากระบบหลังร้านในอุปกรณ์นี้</p>
+              <a href="{% url 'dress:logout' %}"
                  class="inline-flex items-center px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
-                จัดการผู้ดูแลร้าน
+                ออกจากระบบ
               </a>
             </div>
           </div>
@@ -479,35 +594,38 @@
     </div>
   </main>
 
-  <!-- Script สลับแท็บ -->
+  <!-- Tab Script -->
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       const buttons = document.querySelectorAll('.settings-tab-btn');
       const tabs = document.querySelectorAll('.settings-tab');
 
-      buttons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const target = btn.getAttribute('data-tab-target');
+      function activateTab(selector) {
+        tabs.forEach(tab => tab.classList.add('hidden'));
+        buttons.forEach(b => {
+          b.classList.remove('bg-pink-50', 'font-semibold', 'md:border-l-pink-500');
+          b.classList.add('md:border-l-transparent');
+        });
 
-          // ปิดทุกแท็บ
-          tabs.forEach(tab => tab.classList.add('hidden'));
+        const targetEl = document.querySelector(selector);
+        if (targetEl) targetEl.classList.remove('hidden');
 
-          // เอา active style ออกจากปุ่มทั้งหมด
-          buttons.forEach(b => {
-            b.classList.remove('bg-pink-50', 'font-semibold');
-            b.classList.remove('md:border-l-pink-500');
-            b.classList.add('md:border-l-transparent');
-          });
-
-          // แสดงแท็บเป้าหมาย
-          const targetEl = document.querySelector(target);
-          if (targetEl) targetEl.classList.remove('hidden');
-
-          // ทำปุ่มที่เลือกให้ดู active
+        const btn = Array.from(buttons).find(x => x.getAttribute('data-tab-target') === selector);
+        if (btn) {
           btn.classList.add('bg-pink-50', 'font-semibold', 'md:border-l-pink-500');
           btn.classList.remove('md:border-l-transparent');
+        }
+      }
+
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          activateTab(btn.getAttribute('data-tab-target'));
         });
       });
+
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab) activateTab('#' + tab);
     });
   </script>
 

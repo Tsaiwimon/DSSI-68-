@@ -56,7 +56,11 @@
 
         <!-- Right: actions -->
         <div class="flex items-center gap-3 shrink-0">
-          <form method="post" action="{% url 'backoffice:shop_reject' shop.id %}" class="flex items-center gap-2">
+          <form method="post"
+                action="{% url 'backoffice:shop_reject' shop.id %}"
+                class="flex items-center gap-2 js-confirm-shop"
+                data-action="reject"
+                data-shopname="{{ shop.name|default:'ร้านค้า' }}">
             {% csrf_token %}
             <input name="reason" placeholder="เหตุผลปฏิเสธ (ถ้ามี)"
                    class="border rounded-lg px-3 py-2 text-sm w-64" />
@@ -65,7 +69,11 @@
             </button>
           </form>
 
-          <form method="post" action="{% url 'backoffice:shop_approve' shop.id %}">
+          <form method="post"
+                action="{% url 'backoffice:shop_approve' shop.id %}"
+                class="js-confirm-shop"
+                data-action="approve"
+                data-shopname="{{ shop.name|default:'ร้านค้า' }}">
             {% csrf_token %}
             <button class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" type="submit">
               อนุมัติ
@@ -74,7 +82,7 @@
         </div>
       </div>
 
-      <!-- Modal -->
+      <!-- Modal: Shop Details -->
       <div id="modal-{{ shop.id }}" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
         <!-- Backdrop -->
         <div class="absolute inset-0 bg-black/40" onclick="closeModal({{ shop.id }})"></div>
@@ -95,7 +103,7 @@
               </button>
             </div>
 
-            <!-- Body (scroll here) -->
+            <!-- Body -->
             <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
               <!-- Info -->
               <div class="space-y-3">
@@ -224,7 +232,46 @@
   </div>
 </div>
 
+<!-- Confirm Modal: Approve/Reject -->
+<div id="confirmModal" class="hidden fixed inset-0 z-[999]" role="dialog" aria-modal="true">
+  <div class="absolute inset-0 bg-black/40"></div>
+
+  <div class="relative min-h-full flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-black/10 overflow-hidden">
+      <div class="p-5 flex items-start gap-3">
+        <div id="cmIcon" class="h-10 w-10 rounded-xl flex items-center justify-center bg-neutral-100 text-neutral-700">!</div>
+        <div class="flex-1">
+          <div id="cmTitle" class="text-lg font-semibold text-neutral-900">ยืนยันการทำรายการ</div>
+          <div id="cmDesc" class="text-sm text-neutral-600 mt-1">รายละเอียดการยืนยัน</div>
+        </div>
+        <button type="button" class="p-2 rounded-lg hover:bg-neutral-100" onclick="closeConfirm()">
+          ✕
+        </button>
+      </div>
+
+      <div class="px-5 pb-5">
+        <div class="text-xs text-neutral-500 bg-neutral-50 border border-black/5 rounded-xl p-3">
+          กด “ยืนยัน” เพื่อทำรายการ หรือ “ยกเลิก” เพื่อกลับไป
+        </div>
+
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <button type="button"
+                  class="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-sm font-semibold"
+                  onclick="closeConfirm()">
+            ยกเลิก
+          </button>
+          <button id="cmConfirmBtn" type="button"
+                  class="px-4 py-2 rounded-xl text-white text-sm font-semibold bg-neutral-900 hover:bg-black">
+            ยืนยัน
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+  // Shop details modal
   function openModal(id) {
     const el = document.getElementById(`modal-${id}`);
     if (el) el.classList.remove('hidden');
@@ -237,9 +284,88 @@
     document.body.classList.remove('overflow-hidden');
   }
 
-  // ปิดด้วยปุ่ม ESC (รองรับทุก modal ที่เปิดอยู่)
+  // Confirm modal logic
+  const confirmModal = document.getElementById('confirmModal');
+  const cmTitle = document.getElementById('cmTitle');
+  const cmDesc = document.getElementById('cmDesc');
+  const cmIcon = document.getElementById('cmIcon');
+  const cmConfirmBtn = document.getElementById('cmConfirmBtn');
+
+  let pendingForm = null;
+
+  function openConfirm({ action, shopname, form }) {
+    pendingForm = form;
+
+    if (action === 'approve') {
+      cmTitle.textContent = 'ยืนยันการอนุมัติร้าน';
+      cmDesc.textContent = `คุณต้องการอนุมัติร้าน "${shopname}" ใช่ไหม?`;
+      cmIcon.className = 'h-10 w-10 rounded-xl flex items-center justify-center bg-blue-50 text-blue-700';
+      cmIcon.textContent = 'i';
+      cmConfirmBtn.className = 'px-4 py-2 rounded-xl text-white text-sm font-semibold bg-blue-600 hover:bg-blue-700';
+      cmConfirmBtn.textContent = 'อนุมัติ';
+    } else if (action === 'reject') {
+      const reasonInput = form.querySelector('input[name="reason"]');
+      const reason = (reasonInput?.value || '').trim();
+
+      cmTitle.textContent = 'ยืนยันการปฏิเสธร้าน';
+      cmDesc.textContent = reason
+        ? `คุณต้องการปฏิเสธร้าน "${shopname}" ใช่ไหม? เหตุผล: "${reason}"`
+        : `คุณต้องการปฏิเสธร้าน "${shopname}" ใช่ไหม? (ยังไม่ใส่เหตุผล)`;
+
+      cmIcon.className = 'h-10 w-10 rounded-xl flex items-center justify-center bg-red-50 text-red-700';
+      cmIcon.textContent = '!';
+      cmConfirmBtn.className = 'px-4 py-2 rounded-xl text-white text-sm font-semibold bg-red-600 hover:bg-red-700';
+      cmConfirmBtn.textContent = 'ปฏิเสธ';
+    } else {
+      cmTitle.textContent = 'ยืนยันการทำรายการ';
+      cmDesc.textContent = `คุณต้องการทำรายการนี้กับร้าน "${shopname}" ใช่ไหม?`;
+      cmIcon.className = 'h-10 w-10 rounded-xl flex items-center justify-center bg-neutral-100 text-neutral-700';
+      cmIcon.textContent = '!';
+      cmConfirmBtn.className = 'px-4 py-2 rounded-xl text-white text-sm font-semibold bg-neutral-900 hover:bg-black';
+      cmConfirmBtn.textContent = 'ยืนยัน';
+    }
+
+    confirmModal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closeConfirm() {
+    confirmModal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+    pendingForm = null;
+  }
+
+  // close confirm when click overlay
+  confirmModal.addEventListener('click', (e) => {
+    if (e.target === confirmModal || e.target.classList.contains('bg-black/40')) closeConfirm();
+  });
+
+  // bind approve/reject forms
+  document.querySelectorAll('.js-confirm-shop').forEach((form) => {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const action = form.dataset.action || '';
+      const shopname = form.dataset.shopname || 'ร้านค้า';
+      openConfirm({ action, shopname, form });
+    });
+  });
+
+  // confirm button -> submit
+  cmConfirmBtn.addEventListener('click', () => {
+    if (pendingForm) pendingForm.submit();
+  });
+
+  // ESC close all modals (shop detail + confirm)
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
+
+    // close confirm
+    if (confirmModal && !confirmModal.classList.contains('hidden')) {
+      closeConfirm();
+      return;
+    }
+
+    // close all shop detail modals
     const opened = document.querySelectorAll('[id^="modal-"]:not(.hidden)');
     opened.forEach(m => m.classList.add('hidden'));
     document.body.classList.remove('overflow-hidden');

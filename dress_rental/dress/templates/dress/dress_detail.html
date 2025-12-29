@@ -73,9 +73,10 @@
         เช่าไปแล้ว {{ total_rented }} ครั้ง
       </p>
 
-      <button class="mt-4 bg-yellow-400 text-gray-900 px-4 py-2 rounded shadow hover:bg-yellow-500 font-medium flex items-center space-x-2">
+      <a href="#"
+         class="mt-4 bg-yellow-400 text-gray-900 px-4 py-2 rounded shadow hover:bg-yellow-500 font-medium flex items-center space-x-2 w-fit">
         <i class="fa-solid fa-camera"></i><span>ลองชุดด้วย AI</span>
-      </button>
+      </a>
 
       <!-- การ์ดข้อมูลร้าน -->
       <div class="mt-6 bg-white border rounded-xl shadow p-4 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -100,10 +101,18 @@
             <p class="font-semibold text-gray-900 truncate">
               {{ dress.shop.name }}
             </p>
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px]
-                         bg-emerald-50 text-emerald-700 border border-emerald-100">
-              ร้านเช่าในระบบ
-            </span>
+
+            {% if dress.shop.is_open %}
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px]
+                           bg-emerald-50 text-emerald-700 border border-emerald-100">
+                เปิดให้บริการ
+              </span>
+            {% else %}
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px]
+                           bg-yellow-50 text-yellow-800 border border-yellow-200">
+                ปิดชั่วคราว
+              </span>
+            {% endif %}
           </div>
 
           <div class="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
@@ -136,7 +145,7 @@
         </div>
       </div>
 
-      <!-- เงื่อนไขการเช่าระบบกลาง (ปรับสูงให้พอดี) -->
+      <!-- เงื่อนไขการเช่าระบบกลาง -->
       <div class="mt-4 bg-white border rounded-xl shadow p-4 overflow-y-auto h-60">
         <h3 class="text-sm font-semibold text-gray-900 mb-2">
           เงื่อนไขการเช่าชุดบนระบบ Glam & Borrow (เงื่อนไขระบบกลาง)
@@ -176,7 +185,6 @@
           ถือว่ายอมรับเงื่อนไขระบบกลางฉบับนี้แล้ว รวมถึงเงื่อนไขเพิ่มเติมของแต่ละร้าน (หากมี)
         </p>
       </div>
-
     </div>
 
     <!-- ขวา: รายละเอียดชุด -->
@@ -202,16 +210,27 @@
         <p class="text-red-600 text-2xl font-bold">฿ {{ dress.daily_price }}/วัน</p>
         <h1 class="text-lg font-semibold mt-1">{{ dress.name }}</h1>
 
+        <!-- แจ้งเตือนร้านปิด -->
+        {% if not dress.shop.is_open %}
+          <div class="mt-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 text-sm">
+            ร้านปิดชั่วคราว — ตอนนี้ยังไม่สามารถเช่าชุดจากร้านนี้ได้
+          </div>
+        {% endif %}
+
         <!-- ปฏิทินเช่า -->
         <div class="mt-4">
           <label for="rental_range" class="block text-sm font-medium text-gray-700 mb-1">เลือกช่วงวันเช่า</label>
           <input type="text" id="rental_range" name="rental_range"
                  class="w-full border border-gray-300 rounded-lg px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
-                 placeholder="เลือกวันเริ่ม - วันสิ้นสุด">
+                 placeholder="เลือกวันเริ่ม - วันสิ้นสุด"
+                 {% if not dress.shop.is_open %}disabled{% endif %}>
           <div id="rentSummary" class="text-sm text-gray-700 mt-2 hidden">
             เลือก <span id="selDays" class="font-semibold">–</span> วัน — 
             ราคาเช่ารวม <span id="selPrice" class="font-semibold">–</span> บาท
           </div>
+          {% if not dress.shop.is_open %}
+            <p class="text-xs text-gray-500 mt-1">* ร้านปิดชั่วคราว จึงยังเลือกวันเช่าไม่ได้</p>
+          {% endif %}
         </div>
 
         <!-- รายละเอียดชุด -->
@@ -219,7 +238,6 @@
           <p><span class="font-semibold">รายละเอียด:</span> {{ dress.description|default:"-" }}</p>
           <p><span class="font-semibold">ขนาด:</span> {{ dress.size|default:"-" }}</p>
           <p><span class="font-semibold">มัดจำ:</span> ฿ {{ dress.deposit|default:"0" }}</p>
-          <!-- ใช้ remaining_stock + total_rented -->
           <p><span class="font-semibold">จำนวนคงเหลือ:</span> {{ remaining_stock }} ชุด</p>
           <p class="text-xs text-gray-500">
             เคยถูกเช่าไปแล้วทั้งหมด {{ total_rented }} ครั้ง
@@ -316,7 +334,24 @@
 
         <!-- ปุ่มเช่า -->
         <div class="mt-6">
-          {% if remaining_stock > 0 %}
+          {% if not dress.shop.is_open %}
+            <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-center py-3 rounded font-semibold">
+              ร้านปิดชั่วคราว — ไม่สามารถเช่าชุดได้ตอนนี้
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-3">
+              <button disabled
+                      class="flex-1 bg-gray-300 text-gray-700 py-2 rounded shadow cursor-not-allowed">
+                เพิ่มลงตะกร้า
+              </button>
+
+              <button disabled
+                      class="flex-1 bg-gray-300 text-gray-700 py-2 rounded shadow cursor-not-allowed">
+                เช่าทันที
+              </button>
+            </div>
+
+          {% elif remaining_stock > 0 %}
             <div class="flex flex-wrap gap-3">
               <form id="add-to-cart-form" action="{% url 'dress:add_to_cart' dress.id %}" method="post" class="flex-1">
                 {% csrf_token %}
@@ -608,6 +643,7 @@ document.head.appendChild(style);
 
 <script>
 (function(){
+  // ถ้าร้านปิด ก็ไม่ต้องติด listener เช่าทันที (เพราะลิงก์จะไม่ถูก render อยู่แล้ว)
   const checkoutURL = "{% url 'dress:rent_checkout' dress.id %}";
   const rentLink = document.querySelector('a[href="' + checkoutURL + '"]');
   if (!rentLink) return;

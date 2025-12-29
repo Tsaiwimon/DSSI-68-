@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
+
 # ---- Base & .env ------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")  # โหลดตัวแปรจาก .env ตั้งแต่ต้นไฟล์
@@ -115,6 +116,11 @@ OMISE_PUBLIC_KEY = os.getenv("OMISE_PUBLIC_KEY", "")
 OMISE_SECRET_KEY = os.getenv("OMISE_SECRET_KEY", "")
 OMISE_CURRENCY   = os.getenv("OMISE_CURRENCY", "thb")
 # หมายเหตุ: ใน view ให้ตั้งค่า omise.api_public / omise.api_secret จากตัวแปรข้างบน
+
+
+
+
+
 
 # ========== Email (Gmail SMTP) ==========
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

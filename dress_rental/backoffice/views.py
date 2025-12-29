@@ -1,5 +1,7 @@
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
+import math
+from datetime import datetime, time, timedelta
 
 from django.apps import apps
 from django.contrib import messages
@@ -15,21 +17,205 @@ from django.views.decorators.http import require_POST
 
 from .decorators import admin_required
 from dress.models import Shop, Dress, RentalOrder, Review, PlatformSettings
-
- 
-
+from dress.models import Report, ReportAttachment
 
 
+# =============================
+# Utils
+# =============================
+def _has_field(model_cls, field_name: str) -> bool:
+    try:
+        model_cls._meta.get_field(field_name)
+        return True
+    except Exception:
+        return False
 
 
+def _safe_str(obj) -> str:
+    try:
+        return str(obj)
+    except Exception:
+        return "-"
 
 
+def _pick_first_attr(obj, candidates):
+    for f in candidates:
+        if hasattr(obj, f):
+            val = getattr(obj, f)
+            if val is not None and val != "":
+                return val
+    return None
 
 
+# =============================
+# Report / DamageReport support
+# =============================
+STATUS_LABEL_TH = {
+    "SUBMITTED": "ส่งรายงานแล้ว",
+    "PROCESSING": "กำลังตรวจสอบ",
+    "RESOLVED": "จัดการแล้ว",
+    "REJECTED": "ปฏิเสธ",
+}
+
+STATUS_KEY = {
+    "SUBMITTED": "submitted",
+    "PROCESSING": "processing",
+    "RESOLVED": "done",
+    "REJECTED": "rejected",
+}
+
+STATUS_TH_TO_CODE = {v: k for k, v in STATUS_LABEL_TH.items()}
+
+STATUS_OPTIONS = [
+    ("", "ทั้งหมด"),
+    ("SUBMITTED", "ส่งรายงานแล้ว"),
+    ("PROCESSING", "กำลังตรวจสอบ"),
+    ("RESOLVED", "จัดการแล้ว"),
+    ("REJECTED", "ปฏิเสธ"),
+]
 
 
+def _normalize_status_param(raw: str) -> str:
+    s = (raw or "").strip()
+    if s == "" or s.lower() in {"all", "ทั้งหมด"}:
+        return ""
+    # ถ้าส่งมาเป็นภาษาไทย ให้แปลงกลับเป็น code
+    if s in STATUS_TH_TO_CODE:
+        return STATUS_TH_TO_CODE[s]
+    return s  # น่าจะเป็น code อยู่แล้ว เช่น SUBMITTED
 
 
+def _get_report_models():
+    """
+    รองรับ:
+    - dress.models.Report
+    - dress.report.models_report.DamageReport (อยู่ใน app 'dress')
+    """
+    models = [("Report", Report)]
+
+    try:
+        DamageReport = apps.get_model("dress", "DamageReport")
+        models.append(("DamageReport", DamageReport))
+    except LookupError:
+        pass
+
+    return models
+
+
+def _report_detail_text(obj) -> str:
+    for f in ["description", "detail", "reason", "message", "title", "note"]:
+        if hasattr(obj, f):
+            v = getattr(obj, f)
+            if v:
+                return str(v)
+    return "-"
+
+
+def _report_date(obj):
+    for f in ["created_at", "created", "reported_at", "date"]:
+        if hasattr(obj, f):
+            v = getattr(obj, f)
+            if v:
+                return v
+    return None
+
+
+def _build_report_rows(q: str = "", status: str = "", limit_each_model: int = 200):
+    """
+    รวม rows จากหลายโมเดล (Report + DamageReport) เพื่อให้ list ไม่หาย
+    """
+    q = (q or "").strip()
+    status = _normalize_status_param(status)
+
+    models = _get_report_models()
+    all_items = []
+
+    for model_label, Model in models:
+        qs = Model.objects.all()
+
+        # filter status ถ้ามี field status
+        if status and _has_field(Model, "status"):
+            qs = qs.filter(status=status)
+
+        # search
+        if q:
+            query = Q()
+
+            for f in ["title", "detail", "description", "reason", "message", "note"]:
+                if _has_field(Model, f):
+                    query |= Q(**{f"{f}__icontains": q})
+
+            if _has_field(Model, "shop"):
+                query |= Q(shop__name__icontains=q)
+            if _has_field(Model, "customer"):
+                query |= Q(customer__username__icontains=q)
+            if _has_field(Model, "order"):
+                query |= Q(order__id__icontains=q)
+
+            if query.children:
+                qs = qs.filter(query)
+
+        # order by newest
+        if _has_field(Model, "created_at"):
+            qs = qs.order_by("-created_at", "-id")
+        elif _has_field(Model, "created"):
+            qs = qs.order_by("-created", "-id")
+        elif _has_field(Model, "reported_at"):
+            qs = qs.order_by("-reported_at", "-id")
+        else:
+            qs = qs.order_by("-id")
+
+        for obj in qs[:limit_each_model]:
+            dt = _report_date(obj)
+
+            shop_val = _pick_first_attr(obj, ["shop", "target_shop"])
+            customer_val = _pick_first_attr(obj, ["customer", "reported_user", "target_user", "user"])
+
+            reporter_name = _safe_str(shop_val) if shop_val is not None else "-"
+            reported_name = _safe_str(customer_val) if customer_val is not None else "-"
+
+            order_val = _pick_first_attr(obj, ["order"])
+            if reported_name == "-" and order_val is not None:
+                reported_name = f"Order #{getattr(order_val, 'id', '-')}"
+
+            status_code = getattr(obj, "status", "") if hasattr(obj, "status") else ""
+
+            # กัน datetime None/naive
+            sort_dt = dt
+            if sort_dt is None:
+                sort_dt = timezone.make_aware(datetime(1970, 1, 1))
+            else:
+                try:
+                    if timezone.is_naive(sort_dt):
+                        sort_dt = timezone.make_aware(sort_dt)
+                except Exception:
+                    sort_dt = timezone.make_aware(datetime(1970, 1, 1))
+
+            all_items.append({
+                "id": getattr(obj, "id", None),
+                "model": model_label,  # ใช้ช่วย debug/กันชน
+                "reported_name": reported_name,
+                "reported_initial": (reported_name[:1] or "U").upper(),
+                "reporter_name": reporter_name,
+                "reporter_initial": (reporter_name[:1] or "S").upper(),
+                "detail": _report_detail_text(obj),
+                "date": dt,
+                "status_code": status_code,
+                "status_key": STATUS_KEY.get(status_code, "submitted"),
+                "status_label": STATUS_LABEL_TH.get(status_code, str(status_code)),
+                "_sort_dt": sort_dt,
+            })
+
+    all_items.sort(key=lambda x: x["_sort_dt"], reverse=True)
+    for x in all_items:
+        x.pop("_sort_dt", None)
+
+    return all_items
+
+
+# =============================
+# Dashboard
+# =============================
 @admin_required
 def dashboard(request):
     User = get_user_model()
@@ -39,19 +225,30 @@ def dashboard(request):
     total_dresses = Dress.objects.count()
     pending_shops = Shop.objects.filter(status=Shop.STATUS_PENDING).count()
 
-    # เพิ่ม: ร้านที่เปิดแล้ว
-    approved_shops = Shop.objects.filter(status=Shop.STATUS_APPROVED).count()
-
-    # เพิ่ม: ข้อมูลกราฟ (demo ก่อน)
     chart_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     chart_values = [12, 22, 18, 30, 24, 28, 20]
 
-    # เพิ่ม: ตารางรายการล่าสุด (demo ก่อน)
-    latest_issues = [
-        {"date": "5 เม.ย. 2025", "user": "Bee", "topic": "การจัดส่งสินค้า", "shop": "ร้านChinRent", "status": "ดูรายละเอียด"},
-        {"date": "20 เม.ย. 2025", "user": "GHB", "topic": "ไม่ได้ของ", "shop": "ผู้ใช้CVFdjg", "status": "ดูรายละเอียด"},
-        {"date": "1 พ.ค. 2025", "user": "mala", "topic": "ยกเลิกการจอง", "shop": "malaShop", "status": "ดูรายละเอียด"},
-    ]
+    report_rows = _build_report_rows(limit_each_model=30)
+    issues_count = len(report_rows)
+
+    latest_issues = []
+    for r in report_rows[:3]:
+        dt = r.get("date")
+        if dt:
+            try:
+                date_str = timezone.localtime(dt).strftime("%d/%m/%Y %H:%M")
+            except Exception:
+                date_str = str(dt)
+        else:
+            date_str = "-"
+
+        latest_issues.append({
+            "date": date_str,
+            "user": r.get("reporter_name", "-"),
+            "topic": r.get("detail", "-"),
+            "shop": r.get("reported_name", "-"),
+            "status": "ดูรายละเอียด",
+        })
 
     context = {
         "total_users": total_users,
@@ -59,15 +256,18 @@ def dashboard(request):
         "total_dresses": total_dresses,
         "pending_shops": pending_shops,
 
-        # ใหม่
-        "approved_shops": approved_shops,
         "chart_labels": chart_labels,
         "chart_values": chart_values,
+
+        "issues_count": issues_count,
         "latest_issues": latest_issues,
     }
     return render(request, "backoffice/dashboard.html", context)
 
 
+# =============================
+# Shop approval
+# =============================
 @admin_required
 def shop_pending_list(request):
     shops = Shop.objects.filter(status=Shop.STATUS_PENDING).order_by("-created_at")
@@ -108,41 +308,28 @@ def shop_reject(request, shop_id):
     return redirect("backoffice:shop_pending_list")
 
 
-
-
-
-
-
-
-
+# =============================
+# Users
+# =============================
 @admin_required
 def users_page(request):
     User = get_user_model()
 
     q = (request.GET.get("q") or "").strip()
-    role = (request.GET.get("role") or "").strip()      # admin | shop | user | ""
-    status = (request.GET.get("status") or "").strip()  # active | inactive | ""
+    role = (request.GET.get("role") or "").strip()
+    status = (request.GET.get("status") or "").strip()
 
     users_qs = User.objects.all().order_by("-date_joined")
 
-    # ค้นหา
     if q:
-        users_qs = users_qs.filter(
-            Q(username__icontains=q) |
-            Q(email__icontains=q)
-        )
+        users_qs = users_qs.filter(Q(username__icontains=q) | Q(email__icontains=q))
 
-    # สถานะ
     if status == "active":
         users_qs = users_qs.filter(is_active=True)
     elif status == "inactive":
         users_qs = users_qs.filter(is_active=False)
 
-    # role: ใช้ตรรกะง่าย ๆ ไม่พึ่ง OuterRef/Exists (กัน NameError)
-    # shop owner: คนที่เป็น owner ในตาราง Shop
-    shop_owner_ids = list(
-        Shop.objects.values_list("owner_id", flat=True).distinct()
-    )
+    shop_owner_ids = list(Shop.objects.values_list("owner_id", flat=True).distinct())
 
     if role == "admin":
         users_qs = users_qs.filter(Q(is_superuser=True) | Q(is_staff=True))
@@ -151,18 +338,14 @@ def users_page(request):
     elif role == "user":
         users_qs = users_qs.exclude(Q(is_superuser=True) | Q(is_staff=True)).exclude(id__in=shop_owner_ids)
 
-    # paginate
     paginator = Paginator(users_qs, 10)
     page_number = request.GET.get("page") or 1
     page_obj = paginator.get_page(page_number)
 
-    # ใส่ flag ให้ template ใช้ได้ง่าย
-    # (ช่วยให้ {% if u.is_shop_owner %} ทำงาน แม้ model user จะไม่มี field นี้)
     shop_owner_set = set(shop_owner_ids)
     for u in page_obj.object_list:
         setattr(u, "is_shop_owner", u.id in shop_owner_set)
 
-    # preserved querystring สำหรับ pagination
     preserved = {}
     if q:
         preserved["q"] = q
@@ -179,7 +362,7 @@ def users_page(request):
         "role": role,
         "status": status,
         "preserved_qs": preserved_qs,
-        "next_url": request.get_full_path(),  # กลับหน้าเดิมหลังทำ action
+        "next_url": request.get_full_path(),
     }
     return render(request, "backoffice/users.html", context)
 
@@ -194,9 +377,6 @@ def _safe_next(request, fallback_name="backoffice:users"):
 @require_POST
 @admin_required
 def user_suspend(request, user_id):
-    if request.method != "POST":
-        return redirect("backoffice:users")
-
     User = get_user_model()
     target = get_object_or_404(User, id=user_id)
 
@@ -213,12 +393,10 @@ def user_suspend(request, user_id):
     messages.success(request, f"ระงับผู้ใช้ {target.username} แล้ว")
     return redirect(_safe_next(request))
 
+
 @require_POST
 @admin_required
 def user_activate(request, user_id):
-    if request.method != "POST":
-        return redirect("backoffice:users")
-
     User = get_user_model()
     target = get_object_or_404(User, id=user_id)
 
@@ -231,12 +409,10 @@ def user_activate(request, user_id):
     messages.success(request, f"ยกเลิกระงับผู้ใช้ {target.username} แล้ว")
     return redirect(_safe_next(request))
 
+
 @require_POST
 @admin_required
 def user_delete(request, user_id):
-    if request.method != "POST":
-        return redirect("backoffice:users")
-
     User = get_user_model()
     target = get_object_or_404(User, id=user_id)
 
@@ -254,140 +430,137 @@ def user_delete(request, user_id):
     return redirect(_safe_next(request))
 
 
+# =============================
+# Reports (LIST / DETAIL / UPDATE)
+# =============================
+@admin_required
+def reports_page(request):
+    q = (request.GET.get("q") or "").strip()
+    status_raw = (request.GET.get("status") or "").strip()
+    status = _normalize_status_param(status_raw)
 
+    rows_all = _build_report_rows(q=q, status=status, limit_each_model=200)
 
+    paginator = Paginator(rows_all, 10)
+    page_number = request.GET.get("page") or 1
+    page_obj = paginator.get_page(page_number)
 
+    return render(request, "backoffice/reports.html", {
+        "rows": page_obj.object_list,
+        "page_obj": page_obj,
+        "total": paginator.count,
+        "q": q,
+        "status": status,  # ส่งเป็น code กลับไป
+        "status_options": STATUS_OPTIONS,
+    })
 
 
 @admin_required
-def reports_page(request):
+def report_detail(request, report_id):
     """
-    หน้ารายงาน:
-    - ถ้ายังไม่มี model รายงาน => โชว์ 0 รายการ (ไม่ error)
-    - ถ้ามี model รายงานภายหลัง => จะดึงข้อมูลขึ้นตารางให้อัตโนมัติ (ตามฟิลด์พื้นฐานที่พอเดาได้)
+    พยายามหาใน Report ก่อน ถ้าไม่เจอค่อยไป DamageReport
     """
+    report_obj = None
+    model_label = "Report"
 
-    q = (request.GET.get("q") or "").strip()
-    status = (request.GET.get("status") or "").strip()  # "" | "pending" | "done" (ตาม UI)
-
-    # พยายามหาโมเดลรายงานแบบปลอดภัย (ถ้าไม่มีจะคืน None)
-    report_model = None
-    candidate_models = [
-        ("dress", "Report"),
-        ("dress", "UserReport"),
-        ("reports", "Report"),
-        ("reports", "UserReport"),
-        ("backoffice", "Report"),
-    ]
-    for app_label, model_name in candidate_models:
+    try:
+        report_obj = Report.objects.select_related("shop", "order", "customer").get(id=report_id)
+        model_label = "Report"
+    except Report.DoesNotExist:
         try:
-            report_model = apps.get_model(app_label, model_name)
-            if report_model:
-                break
-        except LookupError:
-            continue
+            DamageReport = apps.get_model("dress", "DamageReport")
+            report_obj = DamageReport.objects.select_related("shop", "order", "customer").get(id=report_id)
+            model_label = "DamageReport"
+        except Exception:
+            report_obj = None
 
-    reports = []
-    total_count = 0
+    if report_obj is None:
+        messages.error(request, "ไม่พบรายงาน")
+        return redirect("backoffice:reports")
 
-    if report_model:
-        qs = report_model.objects.all()
+    # attachments: มีเฉพาะ ReportAttachment (ของ Report) ถ้าเป็น DamageReport จะให้ว่างไว้แบบไม่พัง
+    attachments = []
+    if model_label == "Report":
+        attachments = list(ReportAttachment.objects.filter(report_id=report_obj.id).all())
 
-        # ค้นหาแบบกว้าง ๆ (ถ้ามีฟิลด์เหล่านี้)
-        search_fields = ["reason", "detail", "description", "message", "title"]
-        if q:
-            query = Q()
-            for f in search_fields:
-                try:
-                    report_model._meta.get_field(f)
-                    query |= Q(**{f"{f}__icontains": q})
-                except Exception:
-                    pass
-            if query.children:
-                qs = qs.filter(query)
-
-        # filter สถานะ (ถ้ามีฟิลด์ status)
-        if status:
-            try:
-                report_model._meta.get_field("status")
-                qs = qs.filter(status=status)
-            except Exception:
-                pass
-
-        # order_by วันที่ (พยายามจับชื่อฟิลด์ยอดฮิต)
-        for dt_field in ["created_at", "created", "date", "reported_at"]:
-            try:
-                report_model._meta.get_field(dt_field)
-                qs = qs.order_by(f"-{dt_field}")
-                break
-            except Exception:
-                continue
-
-        total_count = qs.count()
-
-        # แปลงเป็น dict สำหรับ template (ยืดหยุ่น ไม่ผูกกับชื่อฟิลด์ 100%)
-        for obj in qs[:50]:
-            # ผู้ถูกรายงาน / ผู้รายงาน (ลองดึงจากฟิลด์ยอดฮิต)
-            reported_name = "-"
-            reporter_name = "-"
-
-            for f in ["reported_user", "target_user", "reported", "shop", "target_shop"]:
-                if hasattr(obj, f) and getattr(obj, f) is not None:
-                    reported_name = str(getattr(obj, f))
-                    break
-
-            for f in ["reporter", "user", "reported_by", "created_by"]:
-                if hasattr(obj, f) and getattr(obj, f) is not None:
-                    reporter_name = str(getattr(obj, f))
-                    break
-
-            # รายละเอียด
-            detail = "-"
-            for f in ["detail", "description", "reason", "message", "title"]:
-                if hasattr(obj, f) and getattr(obj, f):
-                    detail = str(getattr(obj, f))
-                    break
-
-            # วันที่
-            date_value = None
-            for f in ["created_at", "created", "date", "reported_at"]:
-                if hasattr(obj, f) and getattr(obj, f):
-                    date_value = getattr(obj, f)
-                    break
-
-            # สถานะ
-            status_value = getattr(obj, "status", "") if hasattr(obj, "status") else ""
-
-            reports.append({
-                "id": getattr(obj, "id", None),
-                "reported_name": reported_name,
-                "reporter_name": reporter_name,
-                "detail": detail,
-                "date": date_value,
-                "status": status_value,
-            })
+    status_code = getattr(report_obj, "status", "") if hasattr(report_obj, "status") else ""
 
     context = {
-        "q": q,
-        "status": status,
-        "total_count": total_count,
-        "reports": reports,
+        "report": report_obj,
+        "model_label": model_label,
+        "detail_text": _report_detail_text(report_obj),
+        "date_value": _report_date(report_obj),
+        "status_code": status_code,
+        "status_label": STATUS_LABEL_TH.get(status_code, str(status_code)),
+        "status_options": STATUS_OPTIONS[1:],  # ตัด "ทั้งหมด"
+        "attachments": attachments,
+        "admin_note_value": getattr(report_obj, "admin_note", ""),
     }
-    return render(request, "backoffice/reports.html", context)
+    return render(request, "backoffice/report_detail.html", context)
 
 
+@require_POST
+@admin_required
+def report_update(request, report_id):
+    """
+    อัปเดตสถานะ (และ admin_note ถ้ามี)
+    รองรับทั้ง Report และ DamageReport
+    """
+    new_status_raw = (request.POST.get("status") or "").strip()
+    new_status = _normalize_status_param(new_status_raw)  # รับได้ทั้งไทย/โค้ด
+    admin_note = (request.POST.get("admin_note") or "").strip()
+
+    if new_status not in STATUS_LABEL_TH:
+        messages.error(request, "สถานะไม่ถูกต้อง")
+        return redirect("backoffice:report_detail", report_id=report_id)
+
+    # หา obj
+    obj = None
+    model_label = "Report"
+
+    try:
+        obj = Report.objects.get(id=report_id)
+        model_label = "Report"
+    except Report.DoesNotExist:
+        try:
+            DamageReport = apps.get_model("dress", "DamageReport")
+            obj = DamageReport.objects.get(id=report_id)
+            model_label = "DamageReport"
+        except Exception:
+            obj = None
+
+    if obj is None:
+        messages.error(request, "ไม่พบรายงาน")
+        return redirect("backoffice:reports")
+
+    # update
+    if hasattr(obj, "status"):
+        obj.status = new_status
+
+    if hasattr(obj, "admin_note"):
+        obj.admin_note = admin_note
+
+    if new_status in {"RESOLVED", "REJECTED"}:
+        if hasattr(obj, "handled_by"):
+            obj.handled_by = request.user
+        if hasattr(obj, "handled_at"):
+            obj.handled_at = timezone.now()
+
+    obj.save()
+    messages.success(request, "อัปเดตสถานะรายงานเรียบร้อยแล้ว")
+    return redirect("backoffice:report_detail", report_id=report_id)
 
 
-
+# =============================
+# Bookings
+# =============================
 @admin_required
 def bookings_page(request):
     q = (request.GET.get("q") or "").strip()
     status_filter = (request.GET.get("status") or "all").strip()
 
-    # 1) ฐานข้อมูลหลัก
     qs = RentalOrder.objects.select_related("user", "rental_shop").all()
 
-    # 2) search
     if q:
         qs = qs.filter(
             Q(id__icontains=q) |
@@ -396,9 +569,8 @@ def bookings_page(request):
             Q(rental_shop__name__icontains=q)
         )
 
-    # 3) map กลุ่มสถานะตามระบบจริงของ RentalOrder
-    SUCCESS_STATUSES = {"paid", "returned", "completed"}   # ปรับได้ตามนิยามของคุณ
-    CANCEL_STATUSES  = {"cancelled"}
+    SUCCESS_STATUSES = {"paid", "returned", "completed"}
+    CANCEL_STATUSES = {"cancelled"}
 
     def status_key(raw: str) -> str:
         s = (raw or "").strip().lower()
@@ -408,9 +580,7 @@ def bookings_page(request):
             return "cancel"
         return "pending"
 
-    # 4) filter ตาม dropdown
     if status_filter != "all":
-        # กรองด้วย python แบบชัวร์ (ไม่ต้องเดาชุด status__in ที่อาจเปลี่ยน)
         tmp = []
         for obj in qs.order_by("-id"):
             if status_key(obj.status) == status_filter:
@@ -419,12 +589,9 @@ def bookings_page(request):
     else:
         qs_list = list(qs.order_by("-id"))
 
-    # 5) sort ให้ "เสร็จสิ้นขึ้นมาก่อน" (priority)
-    # อยากให้เสร็จสิ้นอยู่บนสุด: success -> pending -> cancel
     priority = {"success": 0, "pending": 1, "cancel": 2}
     qs_list.sort(key=lambda o: (priority[status_key(o.status)], -o.id))
 
-    # 6) build rows ให้ template ใช้ง่าย
     rows = []
     for obj in qs_list:
         sk = status_key(obj.status)
@@ -444,22 +611,17 @@ def bookings_page(request):
             "user_name": user_name,
             "user_initial": user_initial,
             "shop_name": obj.rental_shop.name if obj.rental_shop else "-",
-            "date": obj.created_at,   # ใช้ created_at ของ RentalOrder
+            "date": obj.created_at,
             "status_key": sk,
             "status_label": label,
         })
 
-    # 7) สรุปยอด (อิง “ทั้งหมดจริง” ไม่ว่า filter อะไร)
-    # ถ้าคุณอยากให้การ์ดเปลี่ยนตาม filter บอก เดี๋ยวปรับให้
-    all_rows = []
-    for obj in RentalOrder.objects.all():
-        all_rows.append(status_key(obj.status))
+    all_rows = [status_key(obj.status) for obj in RentalOrder.objects.all()]
     total_count = len(all_rows)
     success_count = sum(1 for s in all_rows if s == "success")
     pending_count = sum(1 for s in all_rows if s == "pending")
-    cancel_count  = sum(1 for s in all_rows if s == "cancel")
+    cancel_count = sum(1 for s in all_rows if s == "cancel")
 
-    # 8) paginate จาก rows ที่กรองแล้ว/จัดลำดับแล้ว
     paginator = Paginator(rows, 10)
     page_number = request.GET.get("page") or 1
     page_obj = paginator.get_page(page_number)
@@ -476,17 +638,8 @@ def bookings_page(request):
     })
 
 
-
 def _compute_late_fee(settings_obj: PlatformSettings, due_date, returned_at):
-    """
-    โหมดที่คุณใช้ตอนนี้: per_day
-    คิดคืนช้าหลัง "วันกำหนดคืน" โดยให้ grace_hours ได้
-    - ค่าปรับ = late_days * late_fee_per_day
-    - cap ไม่เกิน late_fee_cap
-    """
     grace_hours = int(settings_obj.late_fee_grace_hours or 0)
-
-    # กำหนดเส้นตายเป็น "จบวันกำหนดคืน" แล้วค่อยบวก grace
     due_dt = timezone.make_aware(datetime.combine(due_date, time(23, 59, 59)))
     start_penalty_dt = due_dt + timedelta(hours=grace_hours)
 
@@ -506,8 +659,6 @@ def _compute_late_fee(settings_obj: PlatformSettings, due_date, returned_at):
 
 @require_POST
 def booking_mark_returned(request, order_id):
-    # ถ้าคุณใช้ @admin_required อยู่แล้ว ให้ใส่กลับ
-    # ผมใส่แยกไว้เผื่อคุณจัดตำแหน่ง decorator เอง
     from .decorators import admin_required
     return _booking_mark_returned_impl(admin_required, request, order_id)
 
@@ -528,10 +679,7 @@ def _booking_mark_returned_impl(admin_required, request, order_id):
             order.returned_at = now
             order.late_days = late_days
             order.late_fee_amount = late_fee
-
-            # ปรับสถานะตาม flow ของคุณ (ถ้าคุณอยากให้ไป waiting_return ก่อนแล้วค่อย returned ก็ได้)
             order.status = RentalOrder.STATUS_RETURNED
-
             order.save(update_fields=["returned_at", "late_days", "late_fee_amount", "status"])
 
         if late_fee > 0:
@@ -544,19 +692,11 @@ def _booking_mark_returned_impl(admin_required, request, order_id):
     return inner(request, order_id)
 
 
-
-
-
+# =============================
+# Reviews
+# =============================
 @admin_required
 def reviews_page(request):
-    """
-    หน้า 'รีวิว' (Backoffice)
-    - ดึงข้อมูลจริงจาก Review
-    - มีค้นหา + ตัวกรอง (ดาว/ร้าน/ตอบกลับแล้ว/มีรูป) + pagination
-    - รองรับ POST: ตอบกลับรีวิว / ลบรีวิว / ซ่อนรีวิว
-    """
-
-    # ---------- POST actions (รองรับยิงกลับหน้าเดียวด้วย) ----------
     if request.method == "POST":
         action = (request.POST.get("action") or "").strip()
         review_id = request.POST.get("review_id")
@@ -573,7 +713,6 @@ def reviews_page(request):
                 return redirect(request.get_full_path())
 
             if action == "toggle_hidden":
-                # ต้องมี field is_hidden ใน Review ถ้าไม่มีให้ตัดส่วนนี้ออก
                 review.is_hidden = not getattr(review, "is_hidden", False)
                 review.save(update_fields=["is_hidden"])
                 messages.success(request, "อัปเดตสถานะการซ่อนเรียบร้อยแล้ว")
@@ -584,21 +723,15 @@ def reviews_page(request):
                 messages.success(request, "ลบรีวิวเรียบร้อยแล้ว")
                 return redirect(request.get_full_path())
 
-    # ---------- Filters ----------
     q = (request.GET.get("q") or "").strip()
-    rating = (request.GET.get("rating") or "all").strip()         # all, 1..5
-    shop_id = (request.GET.get("shop") or "all").strip()          # all, shop.id
-    replied = (request.GET.get("replied") or "all").strip()       # all, yes, no
-    has_image = (request.GET.get("has_image") or "all").strip()   # all, yes, no
-    sort = (request.GET.get("sort") or "new").strip()             # new, old, rating_high, rating_low
+    rating = (request.GET.get("rating") or "all").strip()
+    shop_id = (request.GET.get("shop") or "all").strip()
+    replied = (request.GET.get("replied") or "all").strip()
+    has_image = (request.GET.get("has_image") or "all").strip()
+    sort = (request.GET.get("sort") or "new").strip()
 
-    qs = (
-        Review.objects
-        .select_related("user", "dress", "dress__shop")
-        .all()
-    )
+    qs = Review.objects.select_related("user", "dress", "dress__shop").all()
 
-    # search
     if q:
         qs = qs.filter(
             Q(user__username__icontains=q) |
@@ -609,27 +742,22 @@ def reviews_page(request):
             Q(shop_reply__icontains=q)
         )
 
-    # rating filter
     if rating.isdigit():
         qs = qs.filter(rating=int(rating))
 
-    # shop filter
     if shop_id.isdigit():
         qs = qs.filter(dress__shop_id=int(shop_id))
 
-    # replied filter
     if replied == "yes":
         qs = qs.exclude(shop_reply__isnull=True).exclude(shop_reply__exact="")
     elif replied == "no":
         qs = qs.filter(Q(shop_reply__isnull=True) | Q(shop_reply__exact=""))
 
-    # has image filter (เช็คจาก Review.image)
     if has_image == "yes":
         qs = qs.exclude(image__isnull=True).exclude(image__exact="")
     elif has_image == "no":
         qs = qs.filter(Q(image__isnull=True) | Q(image__exact=""))
 
-    # sorting
     if sort == "old":
         qs = qs.order_by("created_at", "id")
     elif sort == "rating_high":
@@ -637,43 +765,36 @@ def reviews_page(request):
     elif sort == "rating_low":
         qs = qs.order_by("rating", "-created_at", "-id")
     else:
-        qs = qs.order_by("-created_at", "-id")  # new
+        qs = qs.order_by("-created_at", "-id")
 
-    # summary counts (ตาม filter)
     total_count = qs.count()
     rating5_count = qs.filter(rating=5).count()
     rating4_count = qs.filter(rating=4).count()
     pending_reply_count = qs.filter(Q(shop_reply__isnull=True) | Q(shop_reply__exact="")).count()
 
-    # pagination
     paginator = Paginator(qs, 6)
     page_number = request.GET.get("page") or 1
     page_obj = paginator.get_page(page_number)
 
     shops = Shop.objects.all().order_by("name")
 
-    return render(
-        request,
-        "backoffice/reviews.html",
-        {
-            "page_obj": page_obj,
-            "total_count": total_count,
-            "rating5_count": rating5_count,
-            "rating4_count": rating4_count,
-            "pending_reply_count": pending_reply_count,
-            "q": q,
-            "rating": rating,
-            "shop_id": shop_id,
-            "replied": replied,
-            "has_image": has_image,
-            "sort": sort,
-            "shops": shops,
-            "star_range": range(1, 6),
-        },
-    )
+    return render(request, "backoffice/reviews.html", {
+        "page_obj": page_obj,
+        "total_count": total_count,
+        "rating5_count": rating5_count,
+        "rating4_count": rating4_count,
+        "pending_reply_count": pending_reply_count,
+        "q": q,
+        "rating": rating,
+        "shop_id": shop_id,
+        "replied": replied,
+        "has_image": has_image,
+        "sort": sort,
+        "shops": shops,
+        "star_range": range(1, 6),
+    })
 
 
-# ---------- แยก endpoint ให้ตรง urls.py (ถ้าคุณยังใช้ใน template) ----------
 @admin_required
 def review_reply(request, review_id):
     if request.method != "POST":
@@ -717,17 +838,10 @@ def review_delete(request, review_id):
     return redirect(next_url)
 
 
-
-
-
-
-
+# =============================
+# Settings
+# =============================
 def _to_decimal(val, fallback: Decimal) -> Decimal:
-    """
-    แปลง string -> Decimal แบบปลอดภัย
-    - รับ "1,234.50" ได้
-    - ถ้าว่าง/แปลงไม่ได้ ใช้ fallback
-    """
     if val is None:
         return fallback
     s = str(val).strip().replace(",", "")
@@ -738,13 +852,8 @@ def _to_decimal(val, fallback: Decimal) -> Decimal:
     except (InvalidOperation, ValueError):
         return fallback
 
+
 def _to_rate(val, fallback: Decimal) -> Decimal:
-    """
-    แปลง commission_rate / vat_rate
-    - ถ้ากรอก 10 => 0.10
-    - ถ้ากรอก 0.10 => 0.10
-    - ถ้ากรอก 10% => 0.10
-    """
     if val is None:
         return fallback
     s = str(val).strip().replace("%", "").replace(",", "")
@@ -752,10 +861,8 @@ def _to_rate(val, fallback: Decimal) -> Decimal:
         return fallback
     try:
         d = Decimal(s)
-        # ถ้าคนกรอก 10 แปลว่า 10%
         if d > 1:
             d = d / Decimal("100")
-        # clamp 0..1
         if d < 0:
             d = Decimal("0")
         if d > 1:
@@ -763,6 +870,7 @@ def _to_rate(val, fallback: Decimal) -> Decimal:
         return d
     except (InvalidOperation, ValueError):
         return fallback
+
 
 @admin_required
 def settings_page(request):
@@ -772,33 +880,18 @@ def settings_page(request):
 
     if request.method == "POST":
         with transaction.atomic():
-            # --- Commission ---
-            settings_obj.commission_rate = _to_rate(
-                request.POST.get("commission_rate"), settings_obj.commission_rate
-            )
-            settings_obj.commission_min_fee = _to_decimal(
-                request.POST.get("commission_min_fee"), settings_obj.commission_min_fee
-            )
-            settings_obj.commission_vat_rate = _to_rate(
-                request.POST.get("commission_vat_rate"), settings_obj.commission_vat_rate
-            )
+            settings_obj.commission_rate = _to_rate(request.POST.get("commission_rate"), settings_obj.commission_rate)
+            settings_obj.commission_min_fee = _to_decimal(request.POST.get("commission_min_fee"), settings_obj.commission_min_fee)
+            settings_obj.commission_vat_rate = _to_rate(request.POST.get("commission_vat_rate"), settings_obj.commission_vat_rate)
 
-            # --- Late fee (ระบบกลาง) ---
             settings_obj.late_fee_mode = (request.POST.get("late_fee_mode") or settings_obj.late_fee_mode).strip()
-            settings_obj.late_fee_per_day = _to_decimal(
-                request.POST.get("late_fee_per_day"), settings_obj.late_fee_per_day
-            )
-            settings_obj.late_fee_cap = _to_decimal(
-                request.POST.get("late_fee_cap"), settings_obj.late_fee_cap
-            )
+            settings_obj.late_fee_per_day = _to_decimal(request.POST.get("late_fee_per_day"), settings_obj.late_fee_per_day)
+            settings_obj.late_fee_cap = _to_decimal(request.POST.get("late_fee_cap"), settings_obj.late_fee_cap)
             try:
-                settings_obj.late_fee_grace_hours = int(
-                    request.POST.get("late_fee_grace_hours") or settings_obj.late_fee_grace_hours
-                )
+                settings_obj.late_fee_grace_hours = int(request.POST.get("late_fee_grace_hours") or settings_obj.late_fee_grace_hours)
             except ValueError:
                 pass
 
-            # --- Refund/Inspection ---
             try:
                 settings_obj.inspection_days = int(request.POST.get("inspection_days") or settings_obj.inspection_days)
             except ValueError:
@@ -809,10 +902,8 @@ def settings_page(request):
                 pass
             settings_obj.refund_method = (request.POST.get("refund_method") or settings_obj.refund_method).strip()
 
-            # กัน active ซ้อน: ให้มี active ตัวเดียว
             PlatformSettings.objects.exclude(id=settings_obj.id).update(is_active=False)
             settings_obj.is_active = True
-
             settings_obj.save()
 
         messages.success(request, "บันทึกการตั้งค่าเรียบร้อยแล้ว")
@@ -830,5 +921,3 @@ def settings_page(request):
         "refund_methods": PlatformSettings.REFUND_METHOD_CHOICES,
     }
     return render(request, "backoffice/settings.html", context)
-
-

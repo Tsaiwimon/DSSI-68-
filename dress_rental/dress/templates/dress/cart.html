@@ -27,8 +27,23 @@
 <!-- Main -->
 <main class="max-w-6xl mx-auto py-8 px-6">
   {% for shop, data in grouped_cart.items %}
-    <div class="mb-6 bg-white-50 rounded-lg shadow p-4 shop-group" data-shop="{{ shop.name }}" data-shop-id="{{ shop.id }}">
-      <h2 class="font-bold text-lg mb-4">{{ shop.name }} <span class="text-gray-500">></span></h2>
+    <div class="mb-6 bg-white-50 rounded-lg shadow p-4 shop-group"
+         data-shop="{{ shop.name }}"
+         data-shop-id="{{ shop.id }}"
+         data-shop-closed="{% if data.shop_closed %}1{% else %}0{% endif %}">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-bold text-lg">{{ shop.name }} <span class="text-gray-500">></span></h2>
+
+        {% if data.shop_closed %}
+          <span class="text-xs font-semibold px-3 py-1 rounded-full bg-yellow-50 border border-yellow-200 text-yellow-800">
+            ร้านปิดชั่วคราว
+          </span>
+        {% else %}
+          <span class="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700">
+            เปิดให้บริการ
+          </span>
+        {% endif %}
+      </div>
 
       {% for item in data.items %}
         <div class="flex items-center justify-between border-b py-3 item-row" data-item-id="{{ item.id }}">
@@ -65,6 +80,12 @@
                  class="inline-block mt-1 bg-pink-100 text-pink-600 px-3 py-1 rounded hover:bg-pink-200 transition text-xs font-medium">
                 ดูรายละเอียด
               </a>
+
+              {% if data.shop_closed %}
+                <div class="mt-2 text-xs text-yellow-800 bg-yellow-50 border border-yellow-200 px-3 py-2 rounded">
+                  ร้านปิดชั่วคราว — ยังไม่สามารถชำระเงินสินค้าร้านนี้ได้
+                </div>
+              {% endif %}
             </div>
           </div>
 
@@ -116,6 +137,9 @@
               class="mt-2 bg-blue-600 text-white px-8 py-2 rounded hover:bg-blue-700">
         ชำระเงิน
       </button>
+      <p id="checkout-hint" class="text-xs text-gray-500 mt-2 hidden">
+        * ร้านปิดชั่วคราว — ไม่สามารถชำระเงินได้
+      </p>
     </div>
   </div>
 </main>
@@ -149,6 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const moveBtn = document.getElementById("move-favorite");
   const totalText = document.getElementById("selected-total");
   const checkoutBtn = document.getElementById("checkout-btn");
+  const checkoutHint = document.getElementById("checkout-hint");
 
   let editMode = false;
 
@@ -199,16 +224,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       shop.querySelectorAll(".item-row").forEach(item => {
         const price = parseFloat(item.querySelector(".item-total").dataset.price || "0");
-        const qty = 1; // เช่า 1 ชุดต่อรายการ
+        const qty = 1;
         shopTotal += (price * qty);
       });
 
-      shop.querySelector(".shop-total").textContent =
-        "รวมร้าน " + shop.dataset.shop + ": ฿" + shopTotal.toFixed(2);
+      const shopTotalNode = shop.querySelector(".shop-total");
+      if (shopTotalNode) {
+        shopTotalNode.textContent = "รวมร้าน " + shop.dataset.shop + ": ฿" + shopTotal.toFixed(2);
+      }
     });
   }
 
-  // ===== ยอดรวมตามที่เลือก (ราคา/วัน) =====
+  // ===== ยอดรวมตามที่เลือก (ราคา/วัน) + ปิดปุ่มชำระเงินถ้าร้านปิด =====
   function updateSelectedTotal() {
     let selectedTotal = 0;
     const checked = Array.from(checkboxes).filter(cb => cb.checked);
@@ -218,11 +245,32 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!row) return;
 
       const price = parseFloat(row.querySelector(".item-total").dataset.price || "0");
-      const qty = 1; // เช่า 1 ชุดต่อรายการ
+      const qty = 1;
       selectedTotal += price * qty;
     });
 
     totalText.textContent = "฿" + selectedTotal.toFixed(2);
+
+    // === disable checkout ถ้าเลือกร้านปิด ===
+    let disableCheckout = false;
+
+    if (checked.length) {
+      const storeId = checked[0].dataset.storeId;
+      const shopGroup = document.querySelector(`.shop-group[data-shop-id="${storeId}"]`);
+      disableCheckout = shopGroup?.dataset.shopClosed === "1";
+    }
+
+    checkoutBtn.disabled = disableCheckout;
+
+    if (disableCheckout) {
+      checkoutBtn.classList.remove("bg-blue-600", "hover:bg-blue-700", "text-white");
+      checkoutBtn.classList.add("bg-gray-300", "text-gray-700", "cursor-not-allowed");
+      checkoutHint.classList.remove("hidden");
+    } else {
+      checkoutBtn.classList.remove("bg-gray-300", "text-gray-700", "cursor-not-allowed");
+      checkoutBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "text-white");
+      checkoutHint.classList.add("hidden");
+    }
   }
 
   checkboxes.forEach(cb => cb.addEventListener("change", updateSelectedTotal));
@@ -240,7 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return stores;
   }
 
-  // ===== กดชำระเงิน: เช็คร้านเดียวกันเฉพาะตอนกด =====
+  // ===== กดชำระเงิน: เช็คร้านเดียวกัน + เช็คร้านปิด =====
   checkoutBtn.addEventListener("click", () => {
     const selectedIds = getSelectedIds();
 
@@ -255,7 +303,16 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const checkoutUrl = checkoutBtn.dataset.checkoutUrl; // {% url 'dress:cart_checkout' %}
+    // เช็คร้านปิด
+    const selectedStoreId = Array.from(stores)[0];
+    const shopGroup = document.querySelector(`.shop-group[data-shop-id="${selectedStoreId}"]`);
+    const shopClosed = shopGroup?.dataset.shopClosed === "1";
+    if (shopClosed) {
+      alert("ร้านปิดชั่วคราว — ไม่สามารถชำระเงินได้ตอนนี้");
+      return;
+    }
+
+    const checkoutUrl = checkoutBtn.dataset.checkoutUrl;
     const qs = selectedIds.map(id => `ids=${encodeURIComponent(id)}`).join("&");
     window.location.href = `${checkoutUrl}?${qs}`;
   });

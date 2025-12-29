@@ -285,12 +285,28 @@
                   ดูรายละเอียดชุด
                 </a>
 
+                {% if active_tab == 'returned' %}
+                  <a
+                    href="{% url 'dress:store_create_report' store_id=store.id order_id=order.id %}"
+                    class="border border-red-300 px-4 py-2 rounded-lg text-xs font-medium
+                           text-red-600 hover:bg-red-50 transition"
+                  >
+                    รายงานปัญหา
+                  </a>
+                {% endif %}
+
               {# ✅ แสดงปุ่มแจ้งปัญหาเฉพาะแท็บ damaged เท่านั้น #}
               {% if active_tab == 'damaged' %}
-                <a href="{% url 'dress:create_damage_report' store.id order.id %}"
-                   class="px-4 py-2 rounded-lg text-xs font-semibold bg-pink-600 text-white hover:bg-pink-700 transition">
-                  แจ้งปัญหาให้แอดมิน
-                </a>
+                {% if order.reports.exists %}
+                  <span class="px-4 py-2 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600">
+                    แจ้งปัญหาแล้ว
+                  </span>
+                {% else %}
+                  <a href="{% url 'dress:create_damage_report' store.id order.id %}"
+                     class="px-4 py-2 rounded-lg text-xs font-semibold bg-pink-600 text-white hover:bg-pink-700 transition">
+                    แจ้งปัญหาให้แอดมิน
+                  </a>
+                {% endif %}
               {% endif %}
 
                 {# ปุ่มอัปเดตสถานะ ตามหมวดที่กำลังดูอยู่ #}

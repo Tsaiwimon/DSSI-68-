@@ -1,17 +1,16 @@
 from decimal import Decimal
 import json
+from PIL import Image
+import uuid
 import time
 from datetime import datetime , timedelta, date
 from urllib import request
 from django.http import Http404
-
 from django.utils.dateparse import parse_date
-
 from .decorators import shop_approved_required
 import omise
 from django.conf import settings
-
-from django.urls import reverse ,NoReverseMatch
+from django.urls import reverse, reverse_lazy, NoReverseMatch
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -24,11 +23,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 from django.utils import timezone
+from urllib.parse import urlparse
 from django.db.models.functions import TruncDate
 from .utils import get_store_or_403
 from django.contrib.auth import get_user_model
 User = get_user_model()
-
+from django.apps import apps
+from .forms import ShopForm
+from django.contrib.auth.views import PasswordChangeView, PasswordChangeDoneView
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 
 
@@ -41,6 +44,72 @@ from .models import (
 
 # รูป QR fallback (กรณีไม่มีคีย์/เกิดข้อผิดพลาด)
 FALLBACK_QR_URL = "/static/img/mock-qr.svg"
+
+def _shop_closed_message(shop) -> str:
+    # ใช้ข้อความร้านถ้าตั้งไว้ ไม่งั้นใช้ default
+    msg = (getattr(shop, "closed_message", "") or "").strip()
+    return msg or "ร้านปิดชั่วคราว ไม่สามารถเช่าชุดได้ในขณะนี้"
+
+from django.urls import reverse
+
+def _reject_if_shop_closed(request, shop, *, redirect_to=None, render_error=False):
+    """
+    ถ้าร้านปิด:
+      - render_error=True -> render dress/error.html
+      - ไม่งั้น -> messages.error + redirect ไป redirect_to (หรือกลับหน้าเดิม)
+
+    redirect_to รองรับ:
+      - None
+      - "dress:home" (url name)
+      - "/some/path/" (absolute path)
+      - ("dress:dress_detail", dress_id)  <- แบบที่คุณใช้อยู่
+      - ("dress:dress_detail", [dress_id])
+      - ("dress:dress_detail", {"dress_id": dress_id})
+    """
+    if shop and hasattr(shop, "is_open") and (not bool(shop.is_open)):
+        msg = _shop_closed_message(shop)
+
+        if render_error:
+            return render(request, "dress/error.html", {"message": msg})
+
+        messages.error(request, msg)
+
+        if redirect_to:
+            try:
+                # case: ("url_name", arg1, arg2, ...)
+                if isinstance(redirect_to, (tuple, list)):
+                    url_name = redirect_to[0]
+                    rest = list(redirect_to[1:])
+
+                    # ("name", {"k":v})
+                    if len(rest) == 1 and isinstance(rest[0], dict):
+                        return redirect(reverse(url_name, kwargs=rest[0]))
+
+                    # ("name", [a,b]) or ("name", (a,b))
+                    if len(rest) == 1 and isinstance(rest[0], (list, tuple)):
+                        return redirect(reverse(url_name, args=list(rest[0])))
+
+                    # ("name", a, b)
+                    return redirect(reverse(url_name, args=rest))
+
+                # case: "/path/" or "url_name"
+                if isinstance(redirect_to, str):
+                    if redirect_to.startswith("/"):
+                        return redirect(redirect_to)
+                    return redirect(redirect_to)
+
+            except Exception:
+                # ถ้า reverse fail ให้ fallback ไป referer
+                pass
+
+        referer = request.META.get("HTTP_REFERER")
+        if referer:
+            return redirect(referer)
+
+        return redirect("dress:home")
+
+    return None
+
 
 
 
@@ -142,25 +211,46 @@ def login_view(request):
         # ปรับ prefix ให้ตรงกับระบบคุณ ถ้ามีหลายหน้า shop ก็เติมเพิ่มได้
         return url.startswith("/my-store/") or url.startswith("/store/")
 
+    def is_member_url(url: str) -> bool:
+        # ใส่หน้า member ทั้งหมดที่ต้องการกัน admin
+        return url.startswith("/member/") or url.startswith("/profile/")
+
     def is_shop_owner(user) -> bool:
         return Shop.objects.filter(owner=user).exists()
 
-    # ถ้าล็อกอินอยู่แล้ว
-    if request.user.is_authenticated:
+    def redirect_by_role(user):
+        # จัดเส้นทางหลังล็อกอินให้ชัดเจน
+        if user.is_staff:
+            return redirect("backoffice:dashboard")
+        return redirect(reverse("dress:login_redirect"))
+
+    def handle_next_or_role(user, next_url: str):
+        """
+        ถ้ามี next ที่ปลอดภัย -> ตรวจสิทธิ์ก่อน redirect
+        ถ้า next ไม่ผ่านเงื่อนไข -> redirect ตาม role
+        """
         if is_safe_next(next_url):
-            if is_backoffice_url(next_url) and not request.user.is_staff:
+            # กัน member เข้า backoffice
+            if is_backoffice_url(next_url) and not user.is_staff:
                 messages.error(request, "บัญชีนี้ไม่มีสิทธิ์เข้าหน้าแอดมิน")
                 return redirect("dress:home")
 
-            if is_shop_url(next_url) and not is_shop_owner(request.user) and not request.user.is_staff:
+            # กัน admin เข้า member (ตาม requirement ใหม่)
+            if is_member_url(next_url) and user.is_staff:
+                return redirect("backoffice:dashboard")
+
+            # กัน member ที่ไม่ใช่เจ้าของร้าน เข้าโซนร้าน (ยกเว้น staff)
+            if is_shop_url(next_url) and (not is_shop_owner(user)) and (not user.is_staff):
                 messages.error(request, "บัญชีนี้ไม่มีสิทธิ์เข้าหน้าร้าน")
                 return redirect("dress:member_home")
 
             return redirect(next_url)
 
-        if request.user.is_staff:
-            return redirect("backoffice:dashboard")
-        return redirect("dress:home")
+        return redirect_by_role(user)
+
+    # ถ้าล็อกอินอยู่แล้ว
+    if request.user.is_authenticated:
+        return handle_next_or_role(request.user, next_url)
 
     # ยังไม่ล็อกอิน
     if request.method == "POST":
@@ -176,22 +266,12 @@ def login_view(request):
 
         user = authenticate(request, username=username, password=password)
         if user is not None:
+            # สำคัญ: ล้าง session เก่า กันค้างตอนสลับบัญชี
+            request.session.flush()
+
             login(request, user)
 
-            if is_safe_next(next_url):
-                if is_backoffice_url(next_url) and not user.is_staff:
-                    messages.error(request, "บัญชีนี้ไม่มีสิทธิ์เข้าหน้าแอดมิน")
-                    return redirect("dress:home")
-
-                if is_shop_url(next_url) and not is_shop_owner(user) and not user.is_staff:
-                    messages.error(request, "บัญชีนี้ไม่มีสิทธิ์เข้าหน้าร้าน")
-                    return redirect("dress:member_home")
-
-                return redirect(next_url)
-
-            if user.is_staff:
-                return redirect("backoffice:dashboard")
-            return redirect(reverse("dress:login_redirect"))
+            return handle_next_or_role(user, next_url)
 
         messages.error(request, "รหัสผ่านไม่ถูกต้อง")
         return redirect("dress:login")
@@ -211,12 +291,16 @@ def logout_view(request):
 # =========================
 # Member
 # =========================
+
 @login_required(login_url="dress:login")
 def member_home(request):
+    # กัน admin ไม่ให้เข้าหน้า member
+    if request.user.is_staff:
+        return redirect("backoffice:dashboard")  # ปรับชื่อ url ให้ตรงโปรเจกต์คุณ
+
     q = request.GET.get("q")
     category = request.GET.get("category")
 
-    # แสดงเฉพาะชุดที่ยังไม่ถูกเก็บเข้าคลัง และเปิดให้เช่าอยู่
     dresses = Dress.objects.filter(is_archived=False, is_available=True)
 
     if q:
@@ -224,7 +308,6 @@ def member_home(request):
     if category:
         dresses = dresses.filter(categories__name=category)
 
-    # ดึงหมวดหมู่จากชุดที่ยัง active อยู่เท่านั้น (จะได้ไม่โชว์หมวดของชุดที่ถูกเก็บคลัง)
     categories = Category.objects.filter(dress__is_archived=False).distinct()
 
     return render(request, "dress/member_home.html", {
@@ -366,8 +449,8 @@ def store_dress_archive(request, store_id):
 
 
 #เพิ่มชุดใหม่
-@shop_approved_required
 @login_required(login_url="dress:login")
+@shop_approved_required
 def add_dress(request, store_id):
     shop = get_object_or_404(Shop, id=store_id, owner=request.user)
 
@@ -446,8 +529,8 @@ def _assert_store_owner(store: Shop, user):
     return (store.owner_id == getattr(user, "id", None)) or getattr(user, "is_superuser", False)
 
 # แก้ไขชุด
-@shop_approved_required
 @login_required(login_url="dress:login")
+@shop_approved_required
 def edit_dress(request, store_id, dress_id):
     shop = get_object_or_404(Shop, id=store_id, owner=request.user)
     dress = get_object_or_404(Dress, id=dress_id, shop=shop)
@@ -608,8 +691,8 @@ def api_update_price_template(request, store_id: int, tpl_id: int):
 # ======================================================================
 # ลบชุด
 # ======================================================================
-@shop_approved_required
 @login_required(login_url="dress:login")
+@shop_approved_required
 def delete_dress(request, store_id, dress_id):
     shop = get_object_or_404(Shop, id=store_id, owner=request.user)
     dress = get_object_or_404(Dress, id=dress_id, shop=shop)
@@ -690,6 +773,10 @@ def review_list(request, dress_id):
 # ดูรายละเอียดชุด
 def dress_detail(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
+
+    store_closed = hasattr(dress.shop, "is_open") and (not bool(dress.shop.is_open))
+    store_closed_message = (getattr(dress.shop, "closed_message", "") or "").strip() or "ร้านปิดชั่วคราว ไม่สามารถเช่าชุดได้ในขณะนี้"
+
 
     # ถ้าชุดถูกเก็บลงคลัง และคนที่เปิดไม่ใช่เจ้าของร้าน / แอดมิน → ไม่ให้ดู
     if dress.is_archived and request.user != dress.shop.owner and not request.user.is_superuser:
@@ -781,6 +868,9 @@ def dress_detail(request, dress_id):
         # ตัวแปรใหม่ส่งไป template
         "total_rented": total_rented,          # เคยถูกเช่าทั้งหมดกี่ครั้ง
         "remaining_stock": remaining_stock,    # เหลือให้เช่าอีกกี่ชุด
+
+        "store_closed": store_closed,
+        "store_closed_message": store_closed_message,
     })
 
 
@@ -910,6 +1000,22 @@ def cart_view(request):
 @login_required(login_url="dress:login")
 def add_to_cart(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
+
+    # เช็คร้านปิด
+    blocked = _reject_if_shop_closed(
+        request,
+        dress.shop,
+        redirect_to=("dress:dress_detail", dress.id),
+        render_error=False
+    )
+    if blocked:
+        return blocked
+
+    # เช็คชุดปิดเช่า
+    if not getattr(dress, "is_available", True):
+        messages.error(request, "ชุดนี้ถูกปิดการเช่าชั่วคราว ไม่สามารถทำรายการเช่าได้ในขณะนี้")
+        return redirect("dress:dress_detail", dress_id=dress.id)
+
     cart_item, created = CartItem.objects.get_or_create(user=request.user, dress=dress)
     if not created:
         cart_item.quantity += 1
@@ -917,7 +1023,9 @@ def add_to_cart(request, dress_id):
         messages.info(request, "เพิ่มจำนวนสินค้าในตะกร้าแล้ว")
     else:
         messages.success(request, "เพิ่มสินค้าในตะกร้าสำเร็จ")
-    return redirect('dress:dress_detail', dress_id=dress.id)
+
+    return redirect("dress:dress_detail", dress_id=dress.id)
+
 
 
 def cart_item_count(request):
@@ -1183,6 +1291,7 @@ def how_to_rent(request):
 # หน้าควบคุมหลังร้าน
 #==============================================================================================
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
 
@@ -1260,6 +1369,7 @@ def back_office(request, store_id):
 
 
 @login_required(login_url="dress:login")
+@shop_approved_required
 @require_POST
 def back_office_update_order_status(request, store_id, order_id):
     """
@@ -1391,6 +1501,7 @@ def back_office_update_order_status(request, store_id, order_id):
 
 # ฟังก์ชันนี้คือ “หน้าคำเช่าใหม่” ในหลังร้านของเจ้าของร้านเช่าชุด
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_new(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)# ดึงร้านของเจ้าของร้านที่ล็อกอินอยู่
     today = timezone.localdate()#เอาวันปัจจุบัน (ใช้เทียบกับวันรับชุด)
@@ -1422,6 +1533,7 @@ def back_office_orders_new(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้ารอชำระเงิน” หลังร้าน (สำหรับร้านที่ให้ลูกค้าเลือกแบบจ่ายที่หน้าร้าน หรือยังไม่ชำระ)
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_pending_payment(request, store_id):
     """รอชำระเงิน (ลูกค้าเลือกชำระที่หน้าร้าน / ยังไม่จ่าย)"""
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
@@ -1447,6 +1559,7 @@ def back_office_orders_pending_payment(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่ชำระเงินแล้ว
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_paid(request, store_id):
     """ชำระเงินสำเร็จ แต่ยังไม่ได้เริ่มเตรียมจัดส่ง"""
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
@@ -1472,6 +1585,7 @@ def back_office_orders_paid(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่ร้านกำลังเตรียมจัดส่ง”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_preparing(request, store_id):
     """กำลังเตรียมจัดส่ง"""
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
@@ -1497,6 +1611,7 @@ def back_office_orders_preparing(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน >แท็บออเดอร์ที่อยู่ระหว่างการเช่า”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_renting(request, store_id):
     """อยู่ระหว่างการเช่า (ลูกค้ารับชุดไปแล้ว ยังไม่ถึงกำหนดคืน)"""
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
@@ -1522,6 +1637,7 @@ def back_office_orders_renting(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่รอคืนชุด”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_waiting_return(request, store_id):
     """รอคืนชุด (ถึงกำหนดคืนแล้ว / ใกล้ถึงกำหนด)"""
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
@@ -1549,6 +1665,7 @@ def back_office_orders_waiting_return(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่คืนชุดแล้ว”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_returned(request, store_id):
     """คืนชุดแล้ว (เช่าสำเร็จจริง ๆ)"""
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
@@ -1573,6 +1690,7 @@ def back_office_orders_returned(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่พบปัญหาชุดชำรุด”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_damaged(request, store_id):
     """พบปัญหาชุดชำรุด / มีค่าปรับ"""
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
@@ -1597,6 +1715,7 @@ def back_office_orders_damaged(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่กำลังจัดส่ง”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_shipping(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
 
@@ -1624,6 +1743,7 @@ def back_office_orders_shipping(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่ถูกยกเลิก”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_cancelled(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
 
@@ -1650,6 +1770,7 @@ def back_office_orders_cancelled(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่เช่าสำเร็จ”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_orders_completed(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
 
@@ -1677,6 +1798,7 @@ def back_office_orders_completed(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าควบคุมหลังร้าน > รีวิวจากลูกค้า”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_reviews(request, store_id):
     # ร้านต้องเป็นของ user คนนี้เท่านั้น
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
@@ -1729,6 +1851,7 @@ COMMISSION_RATE = Decimal("0.10")  # ค่าคอมแพลตฟอร์�
 
 # ฟังก์ชันนี้คือ “หน้าควบคุมหลังร้าน > การเงิน”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_finance(request, store_id):
     # ร้านต้องเป็นของ user คนนี้
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
@@ -1819,6 +1942,7 @@ def back_office_finance(request, store_id):
 
 # ฟังก์ชันนี้คือ “หน้าควบคุมหลังร้าน > สถิติร้าน”
 @login_required(login_url='dress:login')
+@shop_approved_required
 def back_office_stats(request, store_id):
     store = get_object_or_404(Shop, pk=store_id)
 
@@ -2235,13 +2359,21 @@ def _calc_shipping_from_tiers(tiers, qty):
 def rent_checkout(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
 
+    # เช็คร้านปิด -> เด้งกลับหน้า dress_detail ให้ modal เด้ง
+    blocked = _reject_if_shop_closed(
+        request,
+        dress.shop,
+        redirect_to=("dress:dress_detail", dress.id),
+        render_error=False
+    )
+    if blocked:
+        return blocked
+
     # ---------- เช็คว่าชุดนี้ปิดการเช่าหรือไม่ ----------
-    # ถ้าไม่มี field is_available ให้เปลี่ยนชื่อฟิลด์ตรงนี้ให้ตรงกับโมเดลของคุณ
     if not getattr(dress, "is_available", True):
         messages.error(request, "ชุดนี้ถูกปิดการเช่าชั่วคราว ไม่สามารถทำรายการเช่าได้ในขณะนี้")
         return redirect("dress:dress_detail", dress_id=dress.id)
     # ---------------------------------------------------
-
 
     start_s = (request.POST.get("start_date") or request.GET.get("start_date")
                or request.GET.get("start") or "").strip()
@@ -2337,6 +2469,7 @@ def rent_checkout(request, dress_id):
     return render(request, "dress/rent_checkout.html", ctx)
 
 
+
 # คำนวณราคาเช่าสำหรับ 1 ชุด
 def _quote_for(dress, start_date, end_date, method="pickup"):
     days = _days_inclusive(start_date, end_date)
@@ -2387,6 +2520,17 @@ def _quote_for(dress, start_date, end_date, method="pickup"):
 # =========================
 @login_required(login_url="dress:login")
 def rent_payment(request, dress_id):
+
+    dress = get_object_or_404(Dress, pk=dress_id)
+
+    blocked = _reject_if_shop_closed(
+        request,
+        dress.shop,
+        redirect_to=("dress:dress_detail", dress.id),
+        render_error=False
+    )
+    if blocked:
+        return blocked
     dress = get_object_or_404(Dress, pk=dress_id)
 
     def _norm_method(val: str) -> str:
@@ -3042,50 +3186,284 @@ def shop_chat_thread_messages(request, thread_id):
 
     return JsonResponse({"messages": data})
 
+  
+# =========================
+# เปลี่ยนรหัสผ่าน (ผูก store_id)
+# =========================
+class StorePasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    template_name = "dress/password_change.html"
+    success_url = reverse_lazy("dress:password_change_done")
 
-# หน้าการตั้งค่าร้าน (หลังร้าน)
-@login_required(login_url='dress:login')
+class StorePasswordChangeDoneView(LoginRequiredMixin, PasswordChangeDoneView):
+    template_name = "dress/password_change_done.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        store = get_object_or_404(Shop, owner=self.request.user)
+        context["store_id"] = store.id
+        return context
+
+
+def _get_shop_config(shop: Shop) -> dict:
+    data = getattr(shop, "config", None)
+    if data is None or not isinstance(data, dict):
+        shop.config = {}
+        return shop.config
+    return data
+
+
+def _redirect_with_tab(store_id: int, tab_id: str):
+    """
+    Redirect กลับหน้า settings โดยคง tab เดิมไว้
+    - ใช้ reverse() เพื่อไม่ hardcode URL
+    - มี fallback เผื่อ name/namespace ใน urls.py ยังไม่ตรง
+    """
+    try:
+        url = reverse("dress:store_settings", kwargs={"store_id": store_id})
+        return redirect(f"{url}?tab={tab_id}")
+    except NoReverseMatch:
+        # fallback (พฤติกรรมเดิม)
+        return redirect(f"/my-store/{store_id}/settings/?tab={tab_id}")
+
+
+def _bulk_set_all_dresses_unavailable(store: Shop, is_open: bool):
+    """
+    ถ้าปิดร้าน -> ทำให้ชุดทั้งร้านไม่พร้อมเช่า
+    ถ้าเปิดร้าน -> (ไม่จำเป็นต้องเปิดชุดกลับอัตโนมัติ เพราะบางชุดอาจถูกปิดรายตัว)
+    """
+    if is_open:
+        return
+
+    candidates = [
+        ("dress", "Dress"),
+        ("dress", "Product"),
+        ("dress", "Costume"),
+        ("products", "Dress"),
+        ("products", "Product"),
+    ]
+
+    DressModel = None
+    for app_label, model_name in candidates:
+        try:
+            DressModel = apps.get_model(app_label, model_name)
+            if DressModel:
+                break
+        except Exception:
+            continue
+
+    if not DressModel:
+        return
+
+    qs = DressModel.objects.filter(shop=store)
+
+    field_candidates = [
+        ("is_available", False),
+        ("available", False),
+        ("is_ready", False),
+        ("is_rentable", False),
+        ("is_active", False),
+        ("status", "unavailable"),
+    ]
+
+    existing_fields = {f.name for f in DressModel._meta.get_fields()}
+
+    for fname, val in field_candidates:
+        if fname in existing_fields:
+            try:
+                qs.update(**{fname: val})
+            except Exception:
+                pass
+            break
+
+def _sync_dresses_with_store_open(store: Shop, is_open: bool):
+    """
+    - ถ้าปิดร้าน: ปิดชุดทั้งหมด (is_available=False)
+    - ถ้าเปิดร้าน: เปิดชุดกลับเฉพาะที่ไม่ archived
+    """
+    try:
+        Dress.objects.filter(shop=store).update(is_available=False) if not is_open else \
+            Dress.objects.filter(shop=store, is_archived=False).update(is_available=True)
+    except Exception:
+        # ถ้ามีชื่อโมเดล/ฟิลด์แปลกจริง ๆ ค่อย fallback ใช้ apps.get_model แบบที่คุณทำไว้
+        pass
+
+
+
+@login_required(login_url="dress:login")
 def store_settings(request, store_id):
-    # ดึงร้านของ user คนนี้ เหมือนกับ back_office
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
 
-    days = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"]
+    config = _get_shop_config(store)
+    rental = config.get("rental", {})
+    shipping = config.get("shipping", {})
+    payment = config.get("payment", {})
+    notify = config.get("notify", {})
+
+    form = ShopForm(instance=store)
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+
+        if action == "store_info":
+            form = ShopForm(request.POST, request.FILES, instance=store)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "บันทึกข้อมูลร้านเรียบร้อยแล้ว")
+                return _redirect_with_tab(store.id, "tab-store-info")
+            messages.error(request, "บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูล")
+
+        elif action == "rental_settings":
+            def _to_int(name, default):
+                try:
+                    return int(request.POST.get(name) or default)
+                except ValueError:
+                    return default
+
+            rental["default_rental_days"] = _to_int("default_rental_days", 3)
+            rental["max_rental_days"] = _to_int("max_rental_days", 8)
+            rental["damage_policy"] = (request.POST.get("damage_policy") or "").strip()
+            rental["cancel_policy"] = (request.POST.get("cancel_policy") or "").strip()
+
+            config["rental"] = rental
+            store.config = config
+            store.save(update_fields=["config"])
+
+            messages.success(request, "บันทึกการตั้งค่าการเช่าเรียบร้อยแล้ว")
+            return _redirect_with_tab(store.id, "tab-rental")
+
+        elif action == "shipping":
+            shipping["pickup"] = ("shipping_pickup" in request.POST)
+            shipping["courier"] = ("shipping_courier" in request.POST)
+
+            fee_mode = (request.POST.get("shipping_fee_mode") or "pack").strip()
+            if fee_mode not in ("pack", "manual"):
+                fee_mode = "pack"
+            shipping["fee_mode"] = fee_mode
+
+            fee_to_raw = (request.POST.get("shipping_fee_to") or "").strip()
+            if fee_mode == "manual":
+                try:
+                    shipping["fee_to"] = int(fee_to_raw) if fee_to_raw != "" else None
+                except ValueError:
+                    shipping["fee_to"] = None
+            else:
+                shipping["fee_to"] = None
+
+            config["shipping"] = shipping
+            store.config = config
+            store.save(update_fields=["config"])
+
+            messages.success(request, "บันทึกการตั้งค่าการจัดส่งเรียบร้อยแล้ว")
+            return _redirect_with_tab(store.id, "tab-shipping")
+
+        elif action == "payment":
+            payment["online_payment_method"] = request.POST.get("online_payment_method") or "system_qr"
+            payment["walkin_cash"] = ("walkin_cash" in request.POST)
+            payment["walkin_shop_qr"] = ("walkin_shop_qr" in request.POST)
+            payment["shop_qr_note"] = (request.POST.get("shop_qr_note") or "").strip()
+            payment["payment_note"] = (request.POST.get("payment_note") or "").strip()
+
+            config["payment"] = payment
+            store.config = config
+            store.save(update_fields=["config"])
+
+            messages.success(request, "บันทึกการตั้งค่าการชำระเงินเรียบร้อยแล้ว")
+            return _redirect_with_tab(store.id, "tab-payment")
+
+        elif action == "notification":
+            notify["notify_new_order"] = ("notify_new_order" in request.POST)
+            notify["notify_payment_slip"] = ("notify_payment_slip" in request.POST)
+
+            config["notify"] = notify
+            store.config = config
+            store.save(update_fields=["config"])
+
+            messages.success(request, "บันทึกการตั้งค่าการแจ้งเตือนเรียบร้อยแล้ว")
+            return _redirect_with_tab(store.id, "tab-notification")
+
+        elif action == "storefront":
+            store.is_open = ("store_is_open" in request.POST)
+            store.closed_message = (request.POST.get("store_closed_message") or "").strip()
+            store.default_sort = request.POST.get("default_sort") or "newest"
+            store.allow_reviews = ("allow_reviews" in request.POST)
+
+            store.save(update_fields=["is_open", "closed_message", "default_sort", "allow_reviews"])
+            # เพิ่มบรรทัดนี้: ถ้าเปิดร้าน ให้เปิดชุดกลับ (เฉพาะที่ไม่อยู่คลัง)
+            if store.is_open:
+                Dress.objects.filter(shop=store, is_archived=False).update(is_available=True)
+            else:
+                Dress.objects.filter(shop=store, is_archived=False).update(is_available=False)
+
+            messages.success(request, "บันทึกการตั้งค่าหน้าร้านเรียบร้อยแล้ว")
+            return _redirect_with_tab(store.id, "tab-storefront")
+
+
+
+
+        else:
+            messages.error(request, "ไม่พบ action ของฟอร์ม (ตรวจสอบปุ่ม submit)")
+
+    shipping_rule = getattr(store, "shipping_rule", None)
+    shipping_brackets = shipping_rule.brackets.order_by("min_qty") if shipping_rule else []
+
+    storefront = {
+        "store_is_open": store.is_open,
+        "store_closed_message": store.closed_message,
+        "default_sort": store.default_sort,
+        "allow_reviews": store.allow_reviews,
+    }
 
     context = {
         "store": store,
-        "store_id": store_id,
-        "days": days,
+        "store_id": store.id,
+        "form": form,
+        "rental": rental,
+        "shipping": shipping,
+        "payment": payment,
+        "notify": notify,
+        "storefront": storefront,
+        "shipping_rule": shipping_rule,
+        "shipping_brackets": shipping_brackets,
     }
     return render(request, "dress/store_settings.html", context)
 
 
 
-# โปรไฟล์ร้าน (หน้าร้าน)
 @login_required(login_url="dress:login")
 def store_profile(request, store_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
 
-    # สถิติพื้นฐานของร้าน
+    # โหมดแก้ไข (กดปุ่มแล้วจะเป็น ?edit=1)
+    edit_mode = request.GET.get("edit") == "1"
+
+    # --- ฟอร์มแก้ไขโปรไฟล์ร้าน ---
+    if request.method == "POST":
+        form = ShopForm(request.POST, request.FILES, instance=store)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "บันทึกโปรไฟล์ร้านเรียบร้อยแล้ว")
+            # กลับมาหน้าเดิมแบบยังอยู่โหมดแก้ไข (หรือจะเอาออกก็ได้)
+            return redirect(f"/my-store/{store.id}/profile/?edit=1")
+        else:
+            messages.error(request, "บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลที่กรอก")
+            edit_mode = True  # ถ้าบันทึกไม่ผ่าน ให้ฟอร์มยังโชว์อยู่
+    else:
+        form = ShopForm(instance=store)
+
+    # --- สถิติพื้นฐานของร้าน ---
     orders_qs = RentalOrder.objects.filter(rental_shop=store)
     reviews_qs = Review.objects.filter(dress__shop=store)
-
-    # ใช้ is_available ตามโมเดลของคุณ
     dresses_qs = Dress.objects.filter(shop=store, is_available=True)
-
-    total_orders = orders_qs.count()
-    total_reviews = reviews_qs.count()
-    total_dresses = dresses_qs.count()
-
-    # ถ้าไม่มีฟิลด์ created_at ให้เปลี่ยนเป็น order_by("-id") แทน
-    latest_dresses = dresses_qs.order_by("-id")[:6]
 
     context = {
         "store": store,
         "store_id": store_id,
-        "total_orders": total_orders,
-        "total_reviews": total_reviews,
-        "total_dresses": total_dresses,
-        "latest_dresses": latest_dresses,
+        "total_orders": orders_qs.count(),
+        "total_reviews": reviews_qs.count(),
+        "total_dresses": dresses_qs.count(),
+        "latest_dresses": dresses_qs.order_by("-id")[:6],
+        "form": form,
+        "edit_mode": edit_mode,  # สำคัญมาก
     }
     return render(request, "dress/store_profile.html", context)
 
@@ -3127,10 +3505,13 @@ def unarchive_dress(request, store_id, dress_id):
 
 # ตัวช่วยคำนวณราคาตามจำนวนวันสำหรับหน้าชำระเงิน (cart checkout)
 def _calc_days_cart(start_date: date, end_date: date) -> int:
-    # ให้ตรงกับ JS: end - start (14 -> 16 = 2)
-    if end_date <= start_date:
+    # inclusive: 14 -> 16 = 3
+    if not start_date or not end_date:
         return 0
-    return (end_date - start_date).days
+    if end_date < start_date:
+        return 0
+    return (end_date - start_date).days + 1
+
 
 
 def _get_pack_price_for_days(dress, days: int):
@@ -3175,8 +3556,13 @@ def cart_checkout(request):
         return HttpResponseBadRequest("must be same shop")
 
     shop = items.first().dress.shop
-    total_qty = sum(int(getattr(it, "quantity", 1) or 1) for it in items)
 
+    # ร้านปิด -> ห้ามเช่าต่อ
+    blocked = _reject_if_shop_closed(request, shop, render_error=True)
+    if blocked:
+        return blocked
+
+    total_qty = sum(int(getattr(it, "quantity", 1) or 1) for it in items)
     shipping_fee = shop.outbound_shipping_fee_for_qty(total_qty) if shop else Decimal("0.00")
 
     deposit_total = Decimal("0.00")
@@ -3185,21 +3571,16 @@ def cart_checkout(request):
         deposit = getattr(it.dress, "deposit", Decimal("0.00")) or Decimal("0.00")
         deposit_total += Decimal(str(deposit)) * qty
 
-    # ส่งแพ็คราคาไปให้หน้า checkout คำนวณตามจำนวนวัน
-    # { "<cart_item_id>": { "1": "120.00", "2": "140.00", ... } }
     item_packages = {}
     for it in items:
         pkg = {}
-        # ดึง override ของชุด
         for ov in it.dress.override_prices.all():
             pkg[int(ov.day_count)] = Decimal(ov.total_price)
 
-        # ดึง template ของชุด
         if it.dress.price_template_id:
             for pit in it.dress.price_template.items.all():
                 pkg[int(pit.day_count)] = Decimal(pit.total_price)
 
-        # แปลงเป็น str
         item_packages[str(it.id)] = {str(k): str(v) for k, v in pkg.items()}
 
     return render(request, "dress/cart_checkout.html", {
@@ -3210,6 +3591,7 @@ def cart_checkout(request):
         "deposit_total": deposit_total,
         "item_packages": item_packages,
     })
+
 
 
 @login_required
@@ -3232,7 +3614,9 @@ def cart_checkout_confirm(request):
 
     days = _calc_days_cart(start_date, end_date)
     if days <= 0:
-        return HttpResponseBadRequest("end_date must be greater than start_date")
+        return HttpResponseBadRequest("end_date must be >= start_date")
+
+
 
     items = (
         CartItem.objects
@@ -3247,6 +3631,12 @@ def cart_checkout_confirm(request):
         return HttpResponseBadRequest("must be same shop")
 
     shop = items.first().dress.shop
+
+    # ร้านปิด -> ห้ามเช่าต่อ
+    blocked = _reject_if_shop_closed(request, shop, render_error=True)
+    if blocked:
+        return blocked
+
     total_qty = sum(int(getattr(it, "quantity", 1) or 1) for it in items)
     shipping_fee = shop.outbound_shipping_fee_for_qty(total_qty) if shop else Decimal("0.00")
 
@@ -3277,7 +3667,6 @@ def cart_checkout_confirm(request):
 
     grand_total = rental_total + deposit_total + Decimal(shipping_fee)
 
-    # ไปหน้า Step 3 (สรุปก่อนชำระเงินจริง)
     return render(request, "dress/cart_checkout_confirm.html", {
         "store": shop,
         "items": items,
@@ -3291,6 +3680,7 @@ def cart_checkout_confirm(request):
         "rental_total": rental_total,
         "grand_total": grand_total,
     })
+
 
 
 # จัดการเริ่มต้นการชำระเงินจากตะกร้า (สร้าง Order และ OrderItems)
@@ -3316,20 +3706,29 @@ def cart_payment_start(request):
     if len(shop_ids) != 1:
         return render(request, "dress/error.html", {"message": "ตะกร้าต้องเป็นร้านเดียวกัน"})
 
-    days = (end_date - start_date).days  # 14->16 = 2
-    if days <= 0:
-        return render(request, "dress/error.html", {"message": "วันคืนต้องมากกว่าวันเริ่ม"})
-
     shop = items.first().dress.shop
+
+    # ร้านปิด -> ห้ามสร้างออเดอร์
+    blocked = _reject_if_shop_closed(request, shop, render_error=True)
+    if blocked:
+        return blocked
+
+    days = (end_date - start_date).days + 1
+    if days <= 0:
+        return render(request, "dress/error.html", {"message": "วันคืนต้องมากกว่าหรือเท่ากับวันเริ่ม"})
+
 
     rental_total = Decimal("0.00")
     deposit_total = Decimal("0.00")
     total_qty = 0
 
-    # คำนวณจากแพ็กจริงของแต่ละชุด (ต้องอยู่ในลูป)
     for it in items:
         qty = int(getattr(it, "quantity", 1) or 1)
         total_qty += qty
+
+        # กันรายชุดปิดเช่า (optional แต่แนะนำ)
+        if not getattr(it.dress, "is_available", True):
+            return render(request, "dress/error.html", {"message": f"ชุด '{it.dress.name}' ถูกปิดการเช่าชั่วคราว"})
 
         pack_price, source = _get_pack_price_for_days(it.dress, days)
         if pack_price is None:
@@ -3357,7 +3756,6 @@ def cart_payment_start(request):
     bulk = []
     for it in items:
         qty = int(getattr(it, "quantity", 1) or 1)
-
         pack_price, source = _get_pack_price_for_days(it.dress, days)
         bulk.append(OrderItem(
             order=order,
@@ -3373,6 +3771,7 @@ def cart_payment_start(request):
 
 
 
+
 @login_required(login_url="dress:login")
 def payment_page_by_order(request, order_id: int):
     """
@@ -3382,6 +3781,11 @@ def payment_page_by_order(request, order_id: int):
 
     # ปรับชื่อ Model/Field ให้ตรงโปรเจกต์คุณ
     order = get_object_or_404(Order, id=order_id, user=request.user)
+
+        # ร้านปิด -> ห้ามจ่ายต่อ
+    blocked = _reject_if_shop_closed(request, order.shop, render_error=True)
+    if blocked:
+        return blocked
 
     # ถ้าคุณเก็บ charge id ไว้คนละชื่อ ให้แก้ตรงนี้
     charge_id = getattr(order, "omise_charge_id", None) or getattr(order, "charge_id", None)
@@ -3441,6 +3845,11 @@ def payment_page_by_order(request, order_id: int):
 @require_POST
 def payment_mark_paid_test(request, order_id: int):
     order = get_object_or_404(Order, id=order_id, user=request.user)
+
+        # ร้านปิด -> ห้ามจ่ายต่อ
+    blocked = _reject_if_shop_closed(request, order.shop, render_error=True)
+    if blocked:
+        return blocked
 
     with transaction.atomic():
         # 1) mark paid
@@ -3593,10 +4002,17 @@ def order_detail(request, order_id: int):
 
 
 
+
+
 @login_required
 def shop_pending_notice(request):
     return render(request, "dress/shop_pending_notice.html")
 
 
 def handler403(request, exception=None):
-    return render(request, "403.html", status=403)
+    return render(request, "dress/403.html", status=403)
+
+
+
+
+

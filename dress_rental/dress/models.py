@@ -168,6 +168,7 @@ class StoreTransaction(models.Model):
 # Model: Shop
 # แทน “ร้านเช่าชุด” ในระบบ
 # ============================================================
+
 class Shop(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -177,14 +178,42 @@ class Shop(models.Model):
     name = models.CharField(max_length=200)
     phone = models.CharField(max_length=20, blank=True)
     province = models.CharField(max_length=200, blank=True, null=True)
+
     shop_logo = models.ImageField(upload_to="img_shop_logos/", blank=True, null=True)
+    cover_image = models.ImageField(upload_to="img_shop_covers/", blank=True, null=True)
+
+    line_id = models.CharField(max_length=100, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    map_url = models.URLField(blank=True, null=True)
+
     id_card_image = models.ImageField(upload_to="img_shop_docs/id_cards/", blank=True, null=True)
     bankbook_image = models.ImageField(upload_to="img_shop_docs/bankbooks/", blank=True, null=True)
+
     fee = models.TextField(blank=True, null=True)  # ข้อความกติกา/โน้ต (ไม่ใช้คำนวณ)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # ===== การตั้งค่าหน้าร้าน (field แยก) =====
+    is_open = models.BooleanField(default=True, db_index=True)
+    closed_message = models.TextField(blank=True, default="")
+    products_per_page = models.PositiveIntegerField(default=12)
+    default_sort = models.CharField(
+        max_length=20,
+        default="newest",
+        choices=[
+            ("newest", "สินค้าใหม่ล่าสุด"),
+            ("popular", "ยอดนิยม"),
+            ("price_low", "ราคาต่ำไปสูง"),
+            ("price_high", "ราคาสูงไปต่ำ"),
+        ],
+    )
+    allow_reviews = models.BooleanField(default=True)
+
+    # ===== การตั้งค่าแบบยืดหยุ่น (แท็บอื่น ๆ) =====
+    config = models.JSONField(default=dict, blank=True)
 
 
+
+    # ===== สถานะร้าน =====
     STATUS_PENDING = "pending"
     STATUS_APPROVED = "approved"
     STATUS_REJECTED = "rejected"
@@ -213,8 +242,6 @@ class Shop(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
     reject_reason = models.TextField(blank=True, default="")
 
-
-    # จำนวนวันเช่าสูงสุดค่าเริ่มต้นระดับร้าน (สินค้า override ได้)
     max_rental_days = models.PositiveIntegerField(
         default=8,
         validators=[MinValueValidator(1)],
@@ -226,9 +253,8 @@ class Shop(models.Model):
     def __str__(self):
         return self.name
 
-    # คำนวณค่าส่งขาไปตามจำนวนชิ้นจากกติกาของร้าน
-    def outbound_shipping_fee_for_qty(self, qty: int) -> Decimal:   
-        rule = getattr(self, "shipping_rule", None)  # reverse ของ OneToOne ShippingRule
+    def outbound_shipping_fee_for_qty(self, qty: int) -> Decimal:
+        rule = getattr(self, "shipping_rule", None)
         if not rule:
             return Decimal("0.00")
         b = rule.brackets.filter(min_qty__lte=qty, max_qty__gte=qty).first()
@@ -240,15 +266,8 @@ class Shop(models.Model):
                 return Decimal(top.fee)
         return Decimal("0.00")
 
-    # ค่าคอมฯ ที่ใช้กับร้านนี้ (ถ้ามี ShopCommission จะ override ค่าดีฟอลต์)
     def commission_params(self):
-        """
-        ลำดับการใช้:
-        1) ShopCommission (ถ้ามีและ enabled)
-        2) PlatformSettings.current()
-        3) ค่า fallback 10% / min 0 / vat 0
-        """
-        sc = getattr(self, "commission", None)  # reverse ของ OneToOne ShopCommission
+        sc = getattr(self, "commission", None)
         if sc and sc.enabled:
             return (sc.commission_rate, sc.commission_min_fee, sc.commission_vat_rate)
 
@@ -1153,6 +1172,50 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.dress.name} x {self.qty}"
+    
+
+
+class Report(models.Model):
+    class Category(models.TextChoices):
+        DAMAGE = "DAMAGE", "ชุดชำรุด/เสียหาย"
+        NOT_RETURNED = "NOT_RETURNED", "ไม่คืนชุด"
+        LATE_RETURN = "LATE_RETURN", "คืนช้า"
+        CUSTOMER_SCAM = "CUSTOMER_SCAM", "ลูกค้าโกง/หลอกลวง"
+        PAYMENT_DISPUTE = "PAYMENT_DISPUTE", "ปัญหาชำระเงิน"
+
+    class Status(models.TextChoices):
+        SUBMITTED = "SUBMITTED", "ส่งแล้ว"
+        UNDER_REVIEW = "UNDER_REVIEW", "กำลังตรวจสอบ"
+        NEED_MORE_INFO = "NEED_MORE_INFO", "ขอข้อมูลเพิ่ม"
+        RESOLVED = "RESOLVED", "ปิดเคสแล้ว"
+        REJECTED = "REJECTED", "ปฏิเสธ"
+
+    # ปรับ import ตามโปรเจกต์คุณ
+    shop = models.ForeignKey("dress.Shop", on_delete=models.CASCADE, related_name="reports")
+    order = models.ForeignKey("dress.RentalOrder", on_delete=models.CASCADE, related_name="reports")
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reported_cases")
+
+    category = models.CharField(max_length=30, choices=Category.choices)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+
+    # เผื่อประเมินค่าเสียหาย/เงินที่อยากให้หัก (optional)
+    damage_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    status = models.CharField(max_length=30, choices=Status.choices, default=Status.SUBMITTED)
+    admin_note = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.shop_id} - {self.order_id} - {self.category} - {self.status}"
+
+
+class ReportAttachment(models.Model):
+    report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name="attachments")
+    file = models.ImageField(upload_to="reports/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
     
 
