@@ -1,0 +1,106 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>รายละเอียดการเช่า #{{ order.id }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-sm">
+
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+    <div class="flex items-center justify-between px-8 py-8">
+      <h1 class="text-xl font-bold text-gray-900">รายละเอียดการเช่า</h1>
+      <div class="flex gap-2">
+        <a href="{% url 'dress:my_rentals' %}" class="px-4 py-2 rounded-xl bg-white shadow border">
+          กลับ
+        </a>
+        <a href="{% url 'dress:my_rental_receipt' rental.id %}" class="px-4 py-2 rounded-xl bg-gray-900 text-white shadow">
+          ใบเสร็จ/หลักฐาน
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-6 space-y-4">
+
+    <div class="bg-white rounded-2xl shadow p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="text-gray-500">หมายเลขคำสั่งซื้อ</div>
+          <div class="text-lg font-bold">#{{ order.id }}</div>
+        </div>
+        <div class="text-right">
+          <div class="text-gray-500">สถานะ</div>
+          <div class="font-semibold text-green-700">{{ status_text }}</div>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-gray-700">
+        <div class="rounded-xl bg-gray-50 p-3">
+          <div class="text-gray-500">วันที่สร้างรายการ</div>
+          <div class="font-medium">
+            {{ order.created_at|date:"d/m/Y H:i" }}
+          </div>
+        </div>
+        <div class="rounded-xl bg-gray-50 p-3">
+          <div class="text-gray-500">ยอดรวม</div>
+          <div class="font-bold">฿{{ total|floatformat:2 }}</div>
+        </div>
+        <div class="rounded-xl bg-gray-50 p-3">
+          <div class="text-gray-500">ผู้เช่า</div>
+          <div class="font-medium">{{ order.user.username }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow p-5">
+      <div class="font-semibold text-gray-900 mb-3">รายการชุดที่เช่า</div>
+
+      <div class="space-y-3">
+        {% for it in items %}
+        <div class="border rounded-2xl p-4 flex gap-4 items-center">
+          <div class="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center">
+            {% if it.dress.image %}
+              <img src="{{ it.dress.image.url }}" class="w-full h-full object-cover" alt="">
+            {% else %}
+              <div class="text-gray-400">No Image</div>
+            {% endif %}
+          </div>
+
+          <div class="flex-1">
+            <div class="font-semibold text-gray-900">{{ it.dress.name }}</div>
+            <div class="text-gray-500">ร้าน: {{ it.rental_shop.name }}</div>
+
+            <div class="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-gray-700">
+              <div class="rounded-xl bg-gray-50 p-2">
+                <div class="text-gray-500">วันรับชุด</div>
+                <div class="font-medium">{{ it.pickup_date|date:"d/m/Y" }}</div>
+              </div>
+              <div class="rounded-xl bg-gray-50 p-2">
+                <div class="text-gray-500">วันคืนชุด</div>
+                <div class="font-medium">{{ it.return_date|date:"d/m/Y" }}</div>
+              </div>
+              <div class="rounded-xl bg-gray-50 p-2">
+                <div class="text-gray-500">ราคา</div>
+                <div class="font-bold">฿{{ it.total_price|floatformat:2 }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <a href="{% url 'dress:dress_detail' it.dress.id %}" class="px-4 py-2 rounded-xl border bg-white text-center">
+              ดูหน้าชุด
+            </a>
+          </div>
+        </div>
+        {% empty %}
+          <div class="text-gray-500">ไม่มีรายการ</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>

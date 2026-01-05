@@ -32,21 +32,23 @@
     </div>
 
     <div class="flex items-center space-x-4 relative">
-      <!-- ไอคอนแจ้งเตือนแชท -->
-      <a href="{% url 'dress:shop_chat_inbox' %}" class="relative inline-flex items-center justify-center">
-        <!-- ไอคอน bubble แชท -->
+            <!-- ไอคอนกระดิ่งแจ้งเตือน (แทนไอคอนแชทเดิม) -->
+      <a href="{% url 'dress:shop_notifications' %}" class="relative inline-flex items-center justify-center">
         <div class="w-9 h-9 rounded-full bg-white shadow flex items-center justify-center hover:bg-gray-100 transition">
+          <!-- Bell Icon -->
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 10h8M8 14h5m-9 3l1.5-3A6 6 0 016 6h12a2 2 0 012 2v4a6 6 0 01-6 6H9l-4 3z" />
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 01-6 0m6 0H9" />
           </svg>
         </div>
-        {% if unread_chat_count and unread_chat_count > 0 %}
+
+        {% if shop_unread_count and shop_unread_count > 0 %}
           <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
-            {{ unread_chat_count }}
+            {{ shop_unread_count }}
           </span>
         {% endif %}
       </a>
+
 
       {% if store.shop_logo %}
         <img src="{{ store.shop_logo.url }}" alt="logo" class="w-12 h-12 rounded-full object-cover">
@@ -167,7 +169,7 @@
           <span class="text-2xl">🚚</span>
         </div>
         <p class="text-2xl font-bold text-indigo-700">{{ shipping_count }}</p>
-        <p class="text-gray-800 text-sm mt-1 font-semibold">เตรียมจัดส่งและจัดส่ง</p>
+        <p class="text-gray-800 text-sm mt-1 font-semibold">เตรียมจัดส่ง/จัดส่งเเล้ว</p>
         <p class="text-gray-400 text-xs mt-1">
           ออเดอร์ที่อยู่ระหว่างแพ็กของหรือจัดส่งให้ลูกค้า
         </p>
@@ -195,7 +197,7 @@
           <span class="text-2xl">❌</span>
         </div>
         <p class="text-2xl font-bold text-red-600">{{ cancelled_count }}</p>
-        <p class="text-gray-800 text-sm mt-1 font-semibold">ออเดอร์ยกเลิก</p>
+        <p class="text-gray-800 text-sm mt-1 font-semibold">ออเดอร์ยกเลิก/ปัญหา</p>
         <p class="text-gray-400 text-xs mt-1">
           ออเดอร์ที่ถูกยกเลิกหรือมีปัญหาการเช่า
         </p>

@@ -1,6 +1,9 @@
 from django.apps import AppConfig
 
 
-class dressConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'dress'
+class DressConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "dress"
+
+    def ready(self):
+        import dress.signals  # noqa

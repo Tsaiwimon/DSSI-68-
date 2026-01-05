@@ -58,12 +58,12 @@
       </a>
     </div>
 
-    <!-- แถบแท็บย่อย แสดงตามหมวดที่เข้า -->
+    <!-- แถบแท็บย่อย -->
     <div class="max-w-6xl mx-auto px-6">
       <div class="border-b border-pink-200 flex text-sm font-medium text-gray-500 overflow-x-auto">
 
-        {# หมวด 1: คำเช่าใหม่ / รอชำระเงิน / ชำระเงินสำเร็จ #}
-        {% if active_tab in 'new pending_payment paid' %}
+        {# หมวด 1: คำเช่าใหม่ / ชำระเงินสำเร็จ (ลบ pending_payment) #}
+        {% if active_tab == 'new' or active_tab == 'paid' %}
           <a href="{% url 'dress:back_office_orders_new' store.id %}"
              class="px-6 py-3 border-b-2 whitespace-nowrap
              {% if active_tab == 'new' %}
@@ -72,16 +72,6 @@
                border-transparent hover:text-pink-500
              {% endif %}">
             คำเช่าใหม่
-          </a>
-
-          <a href="{% url 'dress:back_office_orders_pending_payment' store.id %}"
-             class="px-6 py-3 border-b-2 whitespace-nowrap
-             {% if active_tab == 'pending_payment' %}
-               border-pink-500 text-pink-600
-             {% else %}
-               border-transparent hover:text-pink-500
-             {% endif %}">
-            รอชำระเงิน
           </a>
 
           <a href="{% url 'dress:back_office_orders_paid' store.id %}"
@@ -96,7 +86,7 @@
         {% endif %}
 
         {# หมวด 2: เตรียมจัดส่ง / จัดส่งเรียบร้อย #}
-        {% if active_tab in 'preparing shipping' %}
+        {% if active_tab == 'preparing' or active_tab == 'shipping' %}
           <a href="{% url 'dress:back_office_orders_preparing' store.id %}"
              class="px-6 py-3 border-b-2 whitespace-nowrap
              {% if active_tab == 'preparing' %}
@@ -118,8 +108,8 @@
           </a>
         {% endif %}
 
-        {# หมวด 3: อยู่ระหว่างการเช่า / รอคืนชุด / คืนชุดแล้ว #}
-        {% if active_tab in 'renting awaiting_return returned' %}
+        {# หมวด 3: อยู่ระหว่างการเช่า / รอคืนชุด / คืนชุดแล้ว (แก้ waiting_return) #}
+        {% if active_tab == 'renting' or active_tab == 'waiting_return' or active_tab == 'returned' %}
           <a href="{% url 'dress:back_office_orders_renting' store.id %}"
              class="px-6 py-3 border-b-2 whitespace-nowrap
              {% if active_tab == 'renting' %}
@@ -132,7 +122,7 @@
 
           <a href="{% url 'dress:back_office_orders_waiting_return' store.id %}"
              class="px-6 py-3 border-b-2 whitespace-nowrap
-             {% if active_tab == 'awaiting_return' %}
+             {% if active_tab == 'waiting_return' %}
                border-pink-500 text-pink-600
              {% else %}
                border-transparent hover:text-pink-500
@@ -152,7 +142,7 @@
         {% endif %}
 
         {# หมวด 4: พบปัญหาชุดชำรุด / ออเดอร์ยกเลิก #}
-        {% if active_tab in 'damaged cancelled' %}
+        {% if active_tab == 'damaged' or active_tab == 'cancelled' %}
           <a href="{% url 'dress:back_office_orders_damaged' store.id %}"
              class="px-6 py-3 border-b-2 whitespace-nowrap
              {% if active_tab == 'damaged' %}
@@ -238,7 +228,7 @@
                       bg-blue-100 text-blue-700
                     {% elif order.status == 'preparing' or order.status == 'shipping' %}
                       bg-indigo-100 text-indigo-700
-                    {% elif order.status in 'in_rental awaiting_return returned' %}
+                    {% elif order.status == 'in_rental' or order.status == 'renting' or order.status == 'waiting_return' or order.status == 'returned' %}
                       bg-green-100 text-green-700
                     {% elif order.status == 'cancelled' or order.status == 'damaged' %}
                       bg-red-100 text-red-600
@@ -279,7 +269,7 @@
               <!-- ปุ่มล่าง -->
               <div class="mt-4 flex items-center justify-end gap-2">
 
-                <a href="#"
+                <a href="{% url 'dress:back_office_order_detail' store.id order.id %}?next={{ request.get_full_path|urlencode }}"
                    class="border border-gray-300 px-4 py-2 rounded-lg text-xs font-medium
                           text-gray-800 hover:bg-gray-50 transition">
                   ดูรายละเอียดชุด
@@ -295,21 +285,19 @@
                   </a>
                 {% endif %}
 
-              {# ✅ แสดงปุ่มแจ้งปัญหาเฉพาะแท็บ damaged เท่านั้น #}
-              {% if active_tab == 'damaged' %}
-                {% if order.reports.exists %}
-                  <span class="px-4 py-2 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600">
-                    แจ้งปัญหาแล้ว
-                  </span>
-                {% else %}
-                  <a href="{% url 'dress:create_damage_report' store.id order.id %}"
-                     class="px-4 py-2 rounded-lg text-xs font-semibold bg-pink-600 text-white hover:bg-pink-700 transition">
-                    แจ้งปัญหาให้แอดมิน
-                  </a>
+                {% if active_tab == 'damaged' %}
+                  {% if order.reports.exists %}
+                    <span class="px-4 py-2 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600">
+                      แจ้งปัญหาแล้ว
+                    </span>
+                  {% else %}
+                    <a href="{% url 'dress:create_damage_report' store.id order.id %}"
+                       class="px-4 py-2 rounded-lg text-xs font-semibold bg-pink-600 text-white hover:bg-pink-700 transition">
+                      แจ้งปัญหาให้แอดมิน
+                    </a>
+                  {% endif %}
                 {% endif %}
-              {% endif %}
 
-                {# ปุ่มอัปเดตสถานะ ตามหมวดที่กำลังดูอยู่ #}
                 {% if active_tab == 'paid' %}
                   <form method="post"
                         action="{% url 'dress:back_office_update_order_status' store.id order.id %}">
@@ -358,7 +346,7 @@
                     </button>
                   </form>
 
-                {% elif active_tab == 'awaiting_return' %}
+                {% elif active_tab == 'waiting_return' %}
                   <form method="post"
                         action="{% url 'dress:back_office_update_order_status' store.id order.id %}">
                     {% csrf_token %}
@@ -378,7 +366,6 @@
         {% endfor %}
       </div>
     {% else %}
-      <!-- กรณีไม่มีออเดอร์ -->
       <section class="flex flex-col items-center justify-center py-20 text-gray-500">
         <img src="{% static 'img/no-orders.svg' %}" alt="no orders"
              class="w-32 h-32 mb-4 opacity-80">
@@ -387,7 +374,6 @@
           เมื่อมีคำสั่งเช่า ระบบจะแสดงรายการให้คุณจัดการที่นี่
         </p>
 
-        <!-- ✅ แก้เฉพาะส่วนแจ้งปัญหา: ไม่เรียก create_damage_report เพราะไม่มี order.id -->
         <div class="mt-6 flex flex-col sm:flex-row gap-3">
           <a href="{% url 'dress:back_office' store.id %}"
              class="px-5 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition text-center">

@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ใบเสร็จ #{{ order.id }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-sm">
+
+  <div class="max-w-3xl mx-auto px-4 py-6 space-y-4">
+    <div class="flex justify-between items-center">
+      <a href="{% url 'dress:my_rental_detail' order.id %}" class="px-4 py-2 rounded-xl bg-white shadow border">กลับ</a>
+      <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-gray-900 text-white shadow">พิมพ์ใบเสร็จ</button>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow p-6">
+      <div class="flex justify-between">
+        <div>
+          <div class="text-gray-500">ใบเสร็จ/หลักฐานการเช่า</div>
+          <div class="text-lg font-bold">#{{ order.id }}</div>
+          <div class="text-gray-500 mt-1">สถานะ: <span class="font-semibold text-green-700">{{ status_text }}</span></div>
+        </div>
+        <div class="text-right text-gray-700">
+          <div>วันที่ออกเอกสาร</div>
+          <div class="font-medium">{{ order.created_at|date:"d/m/Y H:i" }}</div>
+        </div>
+      </div>
+
+      <div class="mt-4 border-t pt-4">
+        <div class="font-semibold mb-2">รายการ</div>
+        <div class="space-y-2">
+          {% for it in items %}
+            <div class="flex justify-between">
+              <div>{{ it.dress.name }}</div>
+              <div class="font-medium">฿{{ it.price|floatformat:2 }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="mt-4 border-t pt-4 flex justify-between">
+        <div class="text-gray-700">รวมทั้งสิ้น</div>
+        <div class="text-lg font-bold">฿{{ total|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

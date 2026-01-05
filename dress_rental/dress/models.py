@@ -471,13 +471,16 @@ class PriceTemplateItem(models.Model):
         return f"{self.day_count} วัน = {self.total_price}"
 
 
+
+
+
 # ============================================================
 # Model: Dress
 # เก็บข้อมูล “ชุดที่ปล่อยเช่า”
 # ============================================================
 class Dress(models.Model):
     shop = models.ForeignKey(
-        Shop,
+        "Shop",
         on_delete=models.CASCADE,
         related_name="dresses",
     )
@@ -511,7 +514,10 @@ class Dress(models.Model):
         verbose_name="ค่าจัดส่ง",
     )
 
+    # แนะนำให้ใช้เป็นสวิตช์ "เปิดให้เช่า/ปิดให้เช่า" (ไม่ใช่สต็อก)
     is_available = models.BooleanField(default=True, verbose_name="สถานะการเช่า")
+
+    # โหมด A: ใช้ stock เป็น "จำนวนทั้งหมด" ในสต็อก (ไม่ลด/เพิ่มเอง)
     stock = models.PositiveIntegerField(
         default=1,
         verbose_name="จำนวนสินค้า",
@@ -524,12 +530,12 @@ class Dress(models.Model):
         verbose_name="เก็บลงคลัง / ซ่อนจากลูกค้า",
     )
 
-    categories = models.ManyToManyField(Category, blank=True)
+    categories = models.ManyToManyField("Category", blank=True)
     image = models.ImageField(upload_to="dresses/", blank=True, null=True)
 
     # ใช้ราคาแพ็กของร้าน หรือ override รายชิ้น
     price_template = models.ForeignKey(
-        PriceTemplate,
+        "PriceTemplate",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -603,6 +609,135 @@ class Dress(models.Model):
             "grand_total_estimated": grand_est,
         }
 
+    # ============================================================
+    # STOCK AUTO CALC (Mode A)
+    # - stock = จำนวนทั้งหมด (ไม่ลด/เพิ่มเอง)
+    # - คงเหลือ = stock - จำนวนที่กำลังเช่าอยู่ (จ่ายแล้ว แต่ยังไม่คืน)
+    # ============================================================
+
+    # ปรับสถานะตามจริงในระบบคุณได้ (ถ้าชื่อไม่เหมือนนี้)
+    ACTIVE_STATUSES = ("PAID", "RENTING")            # กันสต็อก
+    HISTORY_STATUSES = ("PAID", "RENTING", "RETURNED")  # นับเช่าไปแล้ว
+
+    def _resolve_orderitem_model(self):
+        """
+        พยายามหาโมเดลรายการเช่าที่ผูกกับ Dress ในแอป dress
+        ปรับ/เพิ่มชื่อได้ถ้าของคุณไม่ใช่พวกนี้
+        """
+        candidates = ["OrderItem", "RentalItem", "OrderLine", "RentItem", "BookingItem", "CartItem"]
+        for name in candidates:
+            try:
+                return apps.get_model("dress", name)
+            except LookupError:
+                continue
+        # ถ้าหาไม่เจอ จะชี้ชัดให้ error ไปเลย
+        raise LookupError("ไม่พบโมเดลรายการเช่า (OrderItem/RentalItem/OrderLine/...) ในแอป dress")
+
+    def _resolve_qty_field(self, ModelClass):
+        """หา field จำนวนที่มีอยู่จริง เช่น qty / quantity"""
+        for f in ("qty", "quantity", "count", "amount"):
+            try:
+                ModelClass._meta.get_field(f)
+                return f
+            except Exception:
+                continue
+        # fallback: ถ้าไม่มีฟิลด์จำนวน จะถือเป็น 1 ชิ้นต่อรายการ
+        return None
+
+    def _resolve_parent_rel_and_status_field(self, ItemModel):
+        """
+        หา relation ไปยังโมเดลแม่ (order/rental/booking) และชื่อ field สถานะ
+        ใช้ทำ filter แบบ item.<parent>__<status_field>__in=[...]
+        """
+        parent_rel_candidates = ("order", "rental", "booking", "rent", "checkout")
+        status_field_candidates = ("status", "state", "payment_status", "order_status")
+
+        # หา rel ก่อน
+        parent_rel = None
+        for rel in parent_rel_candidates:
+            try:
+                f = ItemModel._meta.get_field(rel)
+                # ต้องเป็น relation ถึงจะโอเค (FK/OneToOne)
+                if hasattr(f, "related_model") and f.related_model is not None:
+                    parent_rel = rel
+                    parent_model = f.related_model
+                    break
+            except Exception:
+                continue
+
+        if parent_rel is None:
+            # ถ้าไม่มีโมเดลแม่ (บางระบบเก็บ status ไว้ใน item เลย)
+            # จะใช้ status ใน item แทน
+            for sf in status_field_candidates:
+                try:
+                    ItemModel._meta.get_field(sf)
+                    return None, sf  # ไม่มี parent_rel
+                except Exception:
+                    continue
+            return None, "status"  # fallback
+
+        # หา status field ใน parent_model
+        status_field = "status"
+        for sf in status_field_candidates:
+            try:
+                parent_model._meta.get_field(sf)
+                status_field = sf
+                break
+            except Exception:
+                continue
+
+        return parent_rel, status_field
+
+    def active_rented_qty(self) -> int:
+        """
+        จำนวนที่กำลังถูกเช่าอยู่ (กันสต็อก)
+        """
+        ItemModel = self._resolve_orderitem_model()
+        qty_field = self._resolve_qty_field(ItemModel)
+        parent_rel, status_field = self._resolve_parent_rel_and_status_field(ItemModel)
+
+        qs = ItemModel.objects.filter(dress_id=self.id)
+
+        # filter ตาม status
+        if parent_rel:
+            qs = qs.filter(**{f"{parent_rel}__{status_field}__in": self.ACTIVE_STATUSES})
+        else:
+            qs = qs.filter(**{f"{status_field}__in": self.ACTIVE_STATUSES})
+
+        # ถ้าไม่มีฟิลด์จำนวน ให้ถือเป็น 1 ต่อรายการ
+        if not qty_field:
+            return int(qs.count())
+
+        agg = qs.aggregate(total=Coalesce(Sum(qty_field), 0, output_field=IntegerField()))
+        return int(agg["total"] or 0)
+
+    def available_stock(self) -> int:
+        """
+        จำนวนคงเหลือพร้อมให้เช่า (Mode A)
+        """
+        left = int(self.stock) - self.active_rented_qty()
+        return max(left, 0)
+
+    def rented_count(self) -> int:
+        """
+        เช่าไปแล้วกี่ครั้ง (นับจำนวนรายการที่จ่ายแล้วขึ้นไป)
+        """
+        ItemModel = self._resolve_orderitem_model()
+        parent_rel, status_field = self._resolve_parent_rel_and_status_field(ItemModel)
+
+        qs = ItemModel.objects.filter(dress_id=self.id)
+        if parent_rel:
+            qs = qs.filter(**{f"{parent_rel}__{status_field}__in": self.HISTORY_STATUSES})
+        else:
+            qs = qs.filter(**{f"{status_field}__in": self.HISTORY_STATUSES})
+
+        return int(qs.count())
+
+    def can_rent(self) -> bool:
+        """
+        เงื่อนไขเช่าได้จริง (แนะนำใช้ใน view/หน้า detail)
+        """
+        return (not self.is_archived) and self.is_available and (self.available_stock() > 0)
 
 
 # ============================================================
@@ -909,10 +1044,9 @@ class Rental(models.Model):
             self.compute_totals()
         super().save(*args, **kwargs)
 
-
 # ============================================================
 # Model: Notification
-# การแจ้งเตือนต่าง ๆ ให้ผู้ใช้
+# การแจ้งเตือนต่าง ๆ ให้ผู้ใช้/หลังร้าน
 # ============================================================
 class Notification(models.Model):
     TYPE_CHOICES = [
@@ -921,6 +1055,24 @@ class Notification(models.Model):
         ("reminder", "เตือนเวลา"),
         ("shop_message", "ข้อความจากร้าน"),
         ("system", "ระบบ"),
+    ]
+
+    # เพิ่ม: แยกฝั่งลูกค้า/หลังร้าน (ของเดิมทั้งหมดถือเป็น CUSTOMER)
+    AUDIENCE_CHOICES = [
+        ("CUSTOMER", "ลูกค้า/สมาชิก"),
+        ("SHOP", "หลังร้าน"),
+    ]
+
+    # เพิ่ม: โค้ดเหตุการณ์สำหรับหลังร้าน (ตัด payment ออกตามที่คุณต้องการ)
+    EVENT_CHOICES = [
+        ("", "ไม่ระบุ"),
+        ("ORDER_NEW", "ออเดอร์ใหม่เข้า"),
+        ("NEED_SHIP", "ต้องเตรียมจัดส่ง/ส่งมอบ"),
+        ("RETURN_SOON", "ใกล้วันรับคืน"),
+        ("OVERDUE", "เกินกำหนดคืน"),
+        ("ORDER_ISSUE", "ออเดอร์ยกเลิก/มีปัญหา"),
+        ("CHAT_NEW", "ข้อความใหม่จากลูกค้า"),
+        ("REVIEW_NEW", "รีวิวใหม่"),
     ]
 
     user = models.ForeignKey(
@@ -962,15 +1114,56 @@ class Notification(models.Model):
         related_name="notifications",
     )
 
+    # ==========================
+    # เพิ่มใหม่เพื่อทำ “หลังร้าน”
+    # ==========================
+    audience = models.CharField(
+        max_length=10,
+        choices=AUDIENCE_CHOICES,
+        default="CUSTOMER",
+        db_index=True,
+        help_text="ระบุว่าแจ้งเตือนนี้เป็นของลูกค้าหรือหลังร้าน",
+    )
+
+    event_code = models.CharField(
+        max_length=30,
+        choices=EVENT_CHOICES,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="ประเภทเหตุการณ์ของหลังร้าน (ใช้ทำกระดิ่ง/กรอง/สถิติ)",
+    )
+
+    link_url = models.CharField(
+        max_length=300,
+        blank=True,
+        default="",
+        help_text="ลิงก์สำหรับกดไปหน้าที่เกี่ยวข้อง (order detail/chat/review ฯลฯ)",
+    )
+
+    # กันแจ้งซ้ำ โดยเฉพาะแจ้งเตือนเวลา RETURN_SOON / OVERDUE
+    dedupe_key = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="คีย์กันแจ้งซ้ำ (ถ้าเป็น NULL จะไม่บังคับ unique)",
+    )
+
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "dedupe_key"],
+                name="uniq_notification_dedupe_per_user",
+            )
+        ]
 
     def __str__(self):
         return f"{self.title} -> {self.user}"
-    
 
 
 

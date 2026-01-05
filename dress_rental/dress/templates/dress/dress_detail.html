@@ -70,7 +70,7 @@
            class="rounded-lg shadow-lg w-full max-h-[480px] object-cover">
       <!-- ใช้ total_rented -->
       <p class="mt-2 text-gray-500 text-sm">
-        เช่าไปแล้ว {{ total_rented }} ครั้ง
+        เช่าไปแล้ว {{ total_rented }} ชุด
       </p>
 
       <a href="#"
@@ -239,9 +239,6 @@
           <p><span class="font-semibold">ขนาด:</span> {{ dress.size|default:"-" }}</p>
           <p><span class="font-semibold">มัดจำ:</span> ฿ {{ dress.deposit|default:"0" }}</p>
           <p><span class="font-semibold">จำนวนคงเหลือ:</span> {{ remaining_stock }} ชุด</p>
-          <p class="text-xs text-gray-500">
-            เคยถูกเช่าไปแล้วทั้งหมด {{ total_rented }} ครั้ง
-          </p>
           <p class="text-xs text-gray-500">หมายเหตุ: ค่ามัดจำจะโอนคืนหลังร้านตรวจรับชุดเรียบร้อย</p>
         </div>
 
@@ -368,7 +365,7 @@
             </div>
           {% else %}
             <div class="bg-red-100 text-red-700 text-center py-3 rounded font-semibold">
-              สินค้าหมด ไม่สามารถเช่าได้
+              ขณะนี้ไม่มีชุดว่างสำหรับเช่า
             </div>
           {% endif %}
         </div>

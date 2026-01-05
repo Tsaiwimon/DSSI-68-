@@ -31,7 +31,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'dress',
+    "dress.apps.DressConfig",
     'django_extensions',  
     'backoffice',
 ]
@@ -60,6 +60,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "dress.context_processors.unread_notifications",
+                
             ],
         },
     },
@@ -117,16 +118,12 @@ OMISE_SECRET_KEY = os.getenv("OMISE_SECRET_KEY", "")
 OMISE_CURRENCY   = os.getenv("OMISE_CURRENCY", "thb")
 # หมายเหตุ: ใน view ให้ตั้งค่า omise.api_public / omise.api_secret จากตัวแปรข้างบน
 
+# ---- Email ------------------------------------------------------------------
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "no-reply@localhost"
 
 
 
 
 
-# ========== Email (Gmail SMTP) ==========
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'sasiwimon.ko.66@ubu.ac.th'
-EMAIL_HOST_PASSWORD = 'app_password'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+

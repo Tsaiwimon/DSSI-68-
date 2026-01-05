@@ -95,9 +95,9 @@
                   หมายเลขคำสั่งซื้อ: #{{ order.id }}
                 </div>
                 <div class="flex gap-2">
-                  <a href="{% url 'dress:dress_detail' order.dress.id %}"
+                  <a href="{% url 'dress:my_rental_detail' order.id %}"
                      class="px-3 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
-                    ดูรายละเอียดชุด
+                    ดูรายละเอียด
                   </a>
                   {% if order.status == "paid" and order.pickup_date > today %}
                     <form method="post" action="{% url 'dress:cancel_rental' order.id %}">
@@ -183,9 +183,9 @@
                   หมายเลขคำสั่งซื้อ: #{{ order.id }}
                 </div>
                 <div class="flex gap-2">
-                  <a href="{% url 'dress:dress_detail' order.dress.id %}"
+                  <a href="{% url 'dress:my_rental_detail' order.id %}"
                      class="px-3 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
-                    ดูรายละเอียดชุด
+                    ดูรายละเอียด
                   </a>
                   {% if order.status == "paid" and order.pickup_date > today %}
                     <form method="post" action="{% url 'dress:cancel_rental' order.id %}">
@@ -286,9 +286,9 @@
                   หมายเลขคำสั่งซื้อ: #{{ order.id }}
                 </div>
                 <div class="flex gap-2">
-                  <a href="{% url 'dress:dress_detail' order.dress.id %}"
+                  <a href="{% url 'dress:my_rental_detail' order.id %}"
                      class="px-3 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
-                    ดูรายละเอียดชุด
+                    ดูรายละเอียด
                   </a>
                 </div>
               </div>

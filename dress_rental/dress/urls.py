@@ -312,6 +312,19 @@ path(
      views_store.create_damage_report,
      name="store_create_report"),
 
+    path("my-store/<int:store_id>/orders/<int:order_id>/detail/",
+         views.back_office_order_detail,
+         name="back_office_order_detail"),
+   # แจ้งเตือนหลังร้าน
+    path("shop/notifications/", views.shop_notifications, name="shop_notifications"),
+    path("shop/notifications/mark-all-read/", views.shop_notifications_mark_all_read, name="shop_notifications_mark_all_read"),
+    path("shop/notifications/<int:noti_id>/read/", views.shop_notification_mark_read, name="shop_notification_mark_read"),
+    path("shop/notifications/<int:nid>/open/", views.shop_notification_open, name="shop_notification_open"),
+
+    path("my-rentals/", views.rental_list_view, name="my_rentals"),
+    path("my-rentals/<int:rental_id>/", views.my_rental_detail, name="my_rental_detail"),
+    path("my-rentals/<int:rental_id>/receipt/", views.my_rental_receipt, name="my_rental_receipt"),
+
 
 
 ]
