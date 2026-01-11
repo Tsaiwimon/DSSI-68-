@@ -325,8 +325,8 @@ path(
     path("my-rentals/<int:rental_id>/", views.my_rental_detail, name="my_rental_detail"),
     path("my-rentals/<int:rental_id>/receipt/", views.my_rental_receipt, name="my_rental_receipt"),
 
-
-
+    path('ai-try-on/<int:dress_id>/', views.ai_try_on, name='ai_try_on'),
+    path('api/try-on/<int:dress_id>/', views.tryon_api, name='tryon_api'),
 ]
 
 

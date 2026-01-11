@@ -1,52 +1,96 @@
-from decimal import Decimal
+# ------------------------------------------------------------------
+# 1. Standard Python Libraries
+# ------------------------------------------------------------------
 import json
-from PIL import Image
 import uuid
 import time
-from datetime import datetime , timedelta, date
-from urllib import request
-from django.http import Http404
-from django.utils.dateparse import parse_date
-from .decorators import shop_approved_required
-import omise
+import io
+import os
+import base64
+from decimal import Decimal
+from datetime import datetime, timedelta, date
+from urllib.parse import urlparse
+
+# ------------------------------------------------------------------
+# 2. Django Core & Utilities
+# ------------------------------------------------------------------
 from django.conf import settings
-from django.urls import reverse, reverse_lazy, NoReverseMatch
-from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
-from django.db import transaction, IntegrityError
-from django.db.models import Q, Avg, Sum, Count
-from django.db.models.functions import TruncMonth
-from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
+from django.apps import apps
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.exceptions import FieldError
+from django.utils import timezone
+from django.utils.dateparse import parse_date
+from django.utils.http import url_has_allowed_host_and_scheme
+
+# ------------------------------------------------------------------
+# 3. Django Views & HTTP
+# ------------------------------------------------------------------
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest, Http404
+from django.urls import reverse, reverse_lazy, NoReverseMatch
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
-from django.utils import timezone
-from urllib.parse import urlparse
-from django.db.models.functions import TruncDate
-from .utils import get_store_or_403
-from django.contrib.auth import get_user_model
-User = get_user_model()
-from django.apps import apps
-from .forms import ShopForm
-from django.contrib.auth.views import PasswordChangeView, PasswordChangeDoneView
+
+# ------------------------------------------------------------------
+# 4. Django Auth & Decorators
+# ------------------------------------------------------------------
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.utils.http import url_has_allowed_host_and_scheme
-from django.core.exceptions import FieldError
-from .notifications.shop import notify_shop_order_new
-from django.db.models.functions import Coalesce
-from django.db.models import Sum, IntegerField
-from django.db.models import Prefetch
+from django.contrib.auth.views import PasswordChangeView, PasswordChangeDoneView
+from .decorators import shop_approved_required
 
+# ------------------------------------------------------------------
+# 5. Database & Models
+# ------------------------------------------------------------------
+from django.db import transaction, IntegrityError
+from django.db.models import Q, Avg, Sum, Count, IntegerField, Prefetch
+from django.db.models.functions import TruncMonth, TruncDate, Coalesce
 
-
-
+# Import Models ทั้งหมด
 from .models import (
-    Shop,  Dress, Category, Review, Favorite, CartItem, Rental, UserProfile,
+    Shop, Dress, Category, Review, Favorite, CartItem, Rental, UserProfile,
     PriceTemplate, PriceTemplateItem, ShippingRule, ShippingBracket,
-    RentalOrder,Notification,StoreTransaction,WithdrawalRequest, # ใช้สำหรับระบบ "การเช่าของฉัน"
-    ShopChatThread, ShopChatMessage, Order, OrderItem)  # แชททั่วไปก่อนเช่า
+    RentalOrder, Notification, StoreTransaction, WithdrawalRequest,
+    ShopChatThread, ShopChatMessage, Order, OrderItem
+)
+
+# ------------------------------------------------------------------
+# 6. Third-Party Libraries
+# ------------------------------------------------------------------
+import omise
+import requests
+import jwt
+from dotenv import load_dotenv
+import PIL.Image  # ใช้จัดการรูปภาพก่อนส่ง AI
+
+# Google Gemini AI
+import google.generativeai as genai 
+import vertexai
+from vertexai.preview.vision_models import ImageGenerationModel, Image
+# ------------------------------------------------------------------
+# 7. Local Utils & Forms
+# ------------------------------------------------------------------
+from .utils import get_store_or_403
+from .forms import ShopForm
+from .notifications.shop import notify_shop_order_new
+
+# ==================================================================
+# CONFIGURATION (ตั้งค่าเริ่มต้นทันทีหลัง Import)
+# ==================================================================
+
+# 1. เรียก User Model ที่ถูกต้อง
+User = get_user_model()
+
+# 2. ตั้งค่า Google Gemini API Key (สำคัญมาก!)
+# ต้องมั่นใจว่าใน settings.py มีบรรทัด GOOGLE_API_KEY = "..." แล้ว
+if hasattr(settings, 'GOOGLE_API_KEY') and settings.GOOGLE_API_KEY:
+    genai.configure(api_key=settings.GOOGLE_API_KEY)
+else:
+    print("Warning: GOOGLE_API_KEY not found in settings.py")
+
+
 
 # รูป QR fallback (กรณีไม่มีคีย์/เกิดข้อผิดพลาด)
 FALLBACK_QR_URL = "/static/img/mock-qr.svg"
@@ -4317,6 +4361,107 @@ def my_rental_receipt(request, rental_id):
         "today": timezone.localdate(),
     })
 
+
+
+
+def ai_try_on(request, dress_id):
+    """แสดงหน้าเว็บลองชุด"""
+    dress = get_object_or_404(Dress, pk=dress_id)
+    return render(request, 'dress/ai_try_on.html', {'dress': dress})
+
+# =========================================================
+# ⚙️ ตั้งค่า Google Cloud Vertex AI
+# 1. ใส่ชื่อไฟล์ JSON กุญแจที่คุณโหลดมา
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "gcp-key.json"
+
+# 2. ใส่ Project ID ของคุณ (ดูในเว็บ Google Cloud มุมบนซ้าย)
+MY_PROJECT_ID = "ai-try-on-project" 
+LOCATION = "us-central1" # แนะนำใช้ us-central1 เพราะฟีเจอร์ครบสุด
+# =========================================================
+
+@csrf_exempt
+def tryon_api(request, dress_id):
+    if request.method == "POST":
+        try:
+            print(f"--- 🚀 เริ่มต้นการทำงาน: Imagen 3 Mode ---")
+            
+            # 1. Init Vertex AI
+            vertexai.init(project=MY_PROJECT_ID, location=LOCATION)
+
+            # 2. เตรียมรูปคน
+            person_img_file = request.FILES.get("person_image")
+            if not person_img_file:
+                return JsonResponse({"ok": False, "error": "กรุณาอัปโหลดรูปภาพ"})
+            person_img_file.seek(0)
+            
+            # 3. เตรียมข้อมูลชุด
+            try:
+                dress_obj = Dress.objects.get(id=dress_id)
+            except Dress.DoesNotExist:
+                return JsonResponse({"ok": False, "error": "ไม่พบข้อมูลชุด"})
+
+            dress_name = dress_obj.name
+            dress_desc = dress_obj.description if dress_obj.description else "Elegant dress"
+
+            # 4. 🔥 โหลด Model: Imagen 3 (หรือรุ่น High-Fidelity ล่าสุด)
+            # หมายเหตุ: ถ้าบรรทัดนี้ Error ให้เปลี่ยนกลับเป็น 'imagegeneration@006' (Imagen 2 Ultra)
+            try:
+                model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
+            except Exception:
+                print("⚠️ หา Imagen 3 ไม่เจอ หรือไม่มีสิทธิ์ เข้าโหมด Fallback ใช้รุ่น @006 แทน")
+                model = ImageGenerationModel.from_pretrained("imagegeneration@006")
+            
+            vertex_image = Image(person_img_file.read())
+
+            # 5. Prompt สำหรับ Imagen 3 (ชอบภาษาพูดที่เป็นธรรมชาติ)
+            prompt = f"""
+            Photorealistic editing: Replace the person's current outfit with a {dress_desc} ({dress_name}).
+            The new dress should fit naturally on the body.
+            High quality texture, realistic fabric lighting.
+            Important: Keep the person's face, hair, and background exactly as they are in the original image.
+            """
+
+            print(f"กำลังส่งคำสั่งไปที่โมเดล: {model._model_id}")
+
+            # 6. สั่ง Generate
+            images = model.edit_image(
+                base_image=vertex_image,
+                prompt=prompt,
+                number_of_images=1,
+                guidance_scale=20,               # Imagen 3 ชอบค่าสูงๆ เพื่อความแม่น
+                safety_filter_level="block_low", # จำเป็นมากสำหรับ Imagen 3
+                person_generation="allow_adult", # อนุญาตให้สร้างรูปคน
+                # mask_mode="background"       # ถ้ามี mask ให้ใส่ตรงนี้ (แต่นี่เราไม่มี)
+            )
+
+            # 7. บันทึกผลลัพธ์
+            if images:
+                generated_img = images[0]
+                filename = f"tryon_imagen3_{dress_id}_{int(os.times().system)}.png"
+                save_dir = os.path.join("media", "tryon_results")
+                os.makedirs(save_dir, exist_ok=True)
+                save_path = os.path.join(save_dir, filename)
+                generated_img.save(save_path)
+                
+                return JsonResponse({
+                    "ok": True, 
+                    "result_url": f"/media/tryon_results/{filename}", 
+                    "message": "AI (Imagen 3) ทำงานเสร็จแล้ว!"
+                })
+            else:
+                return JsonResponse({"ok": False, "error": "AI ไม่ส่งรูปกลับมา (No output)"})
+
+        except Exception as e:
+            # แปลง Error ให้ดูง่ายขึ้น
+            error_msg = str(e)
+            print(f"❌ Error: {error_msg}")
+            
+            if "404" in error_msg or "Publisher Model" in error_msg:
+                 return JsonResponse({"ok": False, "error": "Project นี้ยังไม่ได้รับสิทธิ์ใช้ Imagen 3 (กรุณาเปลี่ยนกลับเป็นรุ่น @006 หรือ @002)"})
+            
+            return JsonResponse({"ok": False, "error": error_msg})
+
+    return JsonResponse({"ok": False, "error": "Method not allowed"})
 
 @login_required
 def shop_pending_notice(request):

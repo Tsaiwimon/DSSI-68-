@@ -73,10 +73,11 @@
         เช่าไปแล้ว {{ total_rented }} ชุด
       </p>
 
-      <a href="#"
-         class="mt-4 bg-yellow-400 text-gray-900 px-4 py-2 rounded shadow hover:bg-yellow-500 font-medium flex items-center space-x-2 w-fit">
-        <i class="fa-solid fa-camera"></i><span>ลองชุดด้วย AI</span>
-      </a>
+  <a href="{% url 'dress:ai_try_on' dress.id %}"
+   class="mt-4 bg-yellow-400 text-gray-900 px-4 py-2 rounded shadow hover:bg-yellow-500 font-medium flex items-center space-x-2 w-fit">
+    <i class="fa-solid fa-camera"></i>
+    <span>ลองชุดด้วย AI</span>
+</a>
 
       <!-- การ์ดข้อมูลร้าน -->
       <div class="mt-6 bg-white border rounded-xl shadow p-4 flex flex-col sm:flex-row sm:items-center gap-4">

@@ -2,7 +2,6 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-
 # ---- Base & .env ------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")  # โหลดตัวแปรจาก .env ตั้งแต่ต้นไฟล์
@@ -123,7 +122,12 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "no-reply@localhost"
 
 
+# --------------------------------------------------------
+# Google Gemini API 
+# --------------------------------------------------------
+load_dotenv()
 
 
-
+# อ่านค่าจากไฟล์ .env
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
