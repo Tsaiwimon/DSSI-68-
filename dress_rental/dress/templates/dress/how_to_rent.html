@@ -3,92 +3,117 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>วิธีเช่า | Glam & Borrow</title>
+  
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    body { font-family: 'Prompt', sans-serif; }
+    
+    /* เส้นเชื่อมโยงขั้นตอน (แสดงเฉพาะจอใหญ่) */
+    @media (min-width: 768px) {
+      .step-connector::after {
+        content: '';
+        position: absolute;
+        top: 30%;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background-color: #e5e7eb; /* gray-200 */
+        z-index: 0;
+      }
+      .step-connector:last-child::after {
+        display: none;
+      }
+    }
+  </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen flex flex-col items-center">
+<body class="bg-gray-50 min-h-screen flex flex-col">
 
-  <!-- Header -->
-  <header class="fixed top-0 left-0 w-full bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow z-50">
-    <div class="w-full flex justify-between items-center px-10 py-9">
-      <h1 class="text-gray-800 font-semibold text-lg">วิธีเช่า</h1>
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow-sm sticky top-0 z-40 flex-none">
+    <div class="max-w-5xl mx-auto px-7 py-7 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="bg-white/50 p-2 rounded-full backdrop-blur-sm">
+          <i class="fa-solid fa-circle-info text-pink-500 text-lg"></i>
+        </div>
+        <h1 class="text-xl font-bold text-gray-800 tracking-wide">วิธีเช่า</h1>
+      </div>
+      
       <button onclick="history.back()" 
-              class="bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-lg px-4 py-1.5 shadow-sm transition">
-        ย้อนกลับ
+              class="bg-white/80 backdrop-blur text-gray-700 px-4 py-2 rounded-xl hover:bg-white transition shadow-sm font-medium text-sm flex items-center gap-2">
+        <i class="fa-solid fa-arrow-left"></i> ย้อนกลับ
       </button>
     </div>
   </header>
 
-  <!-- Content -->
-  <main class="flex flex-col items-center mt-28 px-4">
-    <div class="bg-[#fffaf6] rounded-2xl shadow-xl p-8 max-w-3xl border border-gray-100">
-      <h2 class="text-2xl font-bold text-gray-800 text-center">ขั้นตอนการเช่าชุด</h2>
-      <p class="text-gray-500 text-center mt-1 mb-8">
-        เช่าง่าย ๆ เพียงไม่กี่ขั้นตอน ไม่ต้องมีบัตรเครดิต
-      </p>
+  <main class="flex-grow flex items-center justify-center py-12 px-4">
+    <div class="max-w-5xl w-full bg-white rounded-3xl shadow-xl overflow-hidden">
+      
+      <div class="bg-gradient-to-b from-pink-50 to-white py-12 px-8 text-center relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" 
+             style="background-image: radial-gradient(#ec4899 1px, transparent 1px); background-size: 20px 20px;"></div>
+             
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4 relative z-10">ขั้นตอนการเช่าชุดง่ายๆ</h2>
+        <p class="text-gray-600 text-lg max-w-2xl mx-auto relative z-10">
+          เริ่มต้นความสวยในไม่กี่ขั้นตอน สะดวก รวดเร็ว ไม่ต้องใช้บัตรเครดิต
+        </p>
+      </div>
 
-      <!-- ขั้นตอนการเช่า -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-        
-        <!-- ขั้นตอนที่ 1 -->
-        <div class="flex flex-col items-center text-center">
-          <div class="bg-yellow-100 p-4 rounded-xl shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" 
-                 stroke="currentColor" class="w-10 h-10 text-yellow-600">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                    d="M3 5h18M3 10h18M3 15h18M3 20h18" />
-            </svg>
+      <div class="py-12 px-8 md:px-16">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-10 relative">
+          
+          <div class="flex flex-col items-center text-center relative z-10 step-connector group">
+            <div class="w-24 h-24 bg-yellow-50 rounded-full flex items-center justify-center shadow-md mb-6 ring-4 ring-yellow-50/50 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-magnifying-glass text-4xl text-yellow-500"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">1. ค้นหา & เลือกชุด</h3>
+            <p class="text-gray-500 leading-relaxed">ค้นหาชุดที่ถูกใจจากหมวดหมู่ หรือพิมพ์ค้นหาตามสไตล์ที่คุณต้องการ</p>
           </div>
-          <p class="font-semibold text-gray-800 mt-3">ค้นหา / เลือกชุด</p>
-          <p class="text-gray-500 text-sm mt-1">พิมพ์ค้นหา ชุดเดรส ชุดทางการ ฯลฯ</p>
-        </div>
 
-        <!-- ขั้นตอนที่ 2 -->
-        <div class="flex flex-col items-center text-center">
-          <div class="bg-pink-100 p-4 rounded-xl shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" 
-                 stroke="currentColor" class="w-10 h-10 text-pink-600">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
+          <div class="flex flex-col items-center text-center relative z-10 step-connector group">
+            <div class="w-24 h-24 bg-pink-50 rounded-full flex items-center justify-center shadow-md mb-6 ring-4 ring-pink-50/50 group-hover:scale-110 transition-transform">
+              <i class="fa-regular fa-calendar-check text-4xl text-pink-500"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">2. จองชุดออนไลน์</h3>
+            <p class="text-gray-500 leading-relaxed">เลือกวันที่ต้องการใช้งานและวันที่คืน ระบบจะคำนวณราคาให้ทันที</p>
           </div>
-          <p class="font-semibold text-gray-800 mt-3">จองชุด</p>
-          <p class="text-gray-500 text-sm mt-1">เลือกวันเริ่มต้น - วันคืนชุด</p>
-        </div>
 
-        <!-- ขั้นตอนที่ 3 -->
-        <div class="flex flex-col items-center text-center">
-          <div class="bg-blue-100 p-4 rounded-xl shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" 
-                 stroke="currentColor" class="w-10 h-10 text-blue-600">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                    d="M3 16V8a2 2 0 012-2h2l2-3h6l2 3h2a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-            </svg>
+          <div class="flex flex-col items-center text-center relative z-10 step-connector group">
+            <div class="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center shadow-md mb-6 ring-4 ring-blue-50/50 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-box-open text-4xl text-blue-500"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">3. รอรับชุดที่บ้าน</h3>
+            <p class="text-gray-500 leading-relaxed">ร้านค้าจะจัดส่งชุดให้ถึงมือคุณตามวันที่กำหนด พร้อมใส่สวยได้เลย</p>
           </div>
-          <p class="font-semibold text-gray-800 mt-3">รับชุด</p>
-          <p class="text-gray-500 text-sm mt-1">รับชุดตามวันที่เลือกไว้</p>
-        </div>
 
-        <!-- ขั้นตอนที่ 4 -->
-        <div class="flex flex-col items-center text-center">
-          <div class="bg-green-100 p-4 rounded-xl shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" 
-                 stroke="currentColor" class="w-10 h-10 text-green-600">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                    d="M3 10h11l3-3m-3 3l3 3m-3-3v9a2 2 0 01-2 2H3a2 2 0 01-2-2V10z" />
-            </svg>
+          <div class="flex flex-col items-center text-center relative z-10 group">
+            <div class="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center shadow-md mb-6 ring-4 ring-green-50/50 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-rotate-left text-4xl text-green-500"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">4. ส่งคืนเมื่อใช้เสร็จ</h3>
+            <p class="text-gray-500 leading-relaxed">แพ็คชุดใส่กล่องเดิมและส่งคืนตามช่องทางที่กำหนด ภายในวันเวลาที่ระบุ</p>
           </div>
-          <p class="font-semibold text-gray-800 mt-3">ส่งชุดคืน</p>
-          <p class="text-gray-500 text-sm mt-1">คืนชุดตามกำหนดเวลา</p>
+
         </div>
       </div>
+
+      <div class="bg-gray-50 py-10 text-center border-t border-gray-100">
+        <h4 class="text-xl font-bold text-gray-800 mb-4">พร้อมที่จะเริ่มหรือยัง?</h4>
+        <a href="{% url 'dress:home' %}" 
+           class="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-red-500 text-white px-8 py-3.5 rounded-full font-bold text-lg shadow-lg hover:shadow-pink-500/30 hover:-translate-y-1 transition transform">
+           <i class="fa-solid fa-bag-shopping"></i> ไปเลือกชุดกันเลย!
+        </a>
+      </div>
+
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="mt-10 text-sm text-gray-400 text-center">
-    © 2025 Glam & Borrow
+  <footer class="py-6 text-sm text-gray-400 text-center bg-white border-t border-gray-100 flex-none">
+    <p>© 2025 Glam & Borrow. All rights reserved.</p>
   </footer>
 
 </body>

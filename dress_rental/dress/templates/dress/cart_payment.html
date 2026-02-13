@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>สแกน QR ชำระเงิน</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<div class="max-w-4xl mx-auto py-10 px-4">
+  <div class="bg-white rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
+    
+    <div class="p-8 bg-blue-50 flex flex-col justify-center items-center text-center">
+        <h2 class="text-gray-500 font-medium mb-2">ยอดที่ต้องชำระ</h2>
+        <p class="text-5xl font-black text-blue-900 mb-4">฿{{ grand_total|floatformat:2 }}</p>
+        
+        <div class="bg-white px-4 py-2 rounded-lg shadow-sm text-sm text-gray-600 mb-6">
+            <i class="fa-regular fa-calendar mr-2"></i> {{ days }} วัน ({{ start_date }} - {{ end_date }})
+        </div>
+
+        <div class="flex items-center gap-2 text-blue-800 bg-blue-100 px-4 py-2 rounded-full text-xs font-bold">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/PromptPay-logo.png/600px-PromptPay-logo.png" class="h-4">
+            PromptPay QR Code
+        </div>
+    </div>
+
+    <div class="p-8 flex flex-col items-center justify-center bg-white">
+        <h3 class="font-bold text-lg text-gray-800 mb-4">สแกนด้วยแอปธนาคาร</h3>
+        
+        <div class="p-2 border-2 border-dashed border-gray-300 rounded-xl mb-6">
+            {% if qr_url %}
+                <img src="{{ qr_url }}" alt="QR Code" class="w-60 h-60 object-contain">
+            {% else %}
+                <div class="w-60 h-60 flex items-center justify-center text-gray-400 bg-gray-100 rounded-lg">
+                    กำลังโหลด QR...
+                </div>
+            {% endif %}
+        </div>
+
+        <p class="text-xs text-gray-500 mb-6 text-center">
+            *นี่คือระบบทดสอบ (Test Mode) สแกนได้แต่ไม่ตัดเงินจริง <br>
+            เมื่อเสร็จแล้วให้กดปุ่มยืนยันด้านล่าง
+        </p>
+
+        <form method="POST" action="{% url 'dress:cart_checkout_process' %}" class="w-full">
+            {% csrf_token %}
+            {% for id in ids %}<input type="hidden" name="ids" value="{{ id }}">{% endfor %}
+            <input type="hidden" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+            <input type="hidden" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+            <input type="hidden" name="omise_charge_id" value="{{ charge_id }}">
+
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-lg transition transform hover:-translate-y-1">
+                <i class="fa-solid fa-check-circle mr-2"></i> ฉันชำระเงินเรียบร้อยแล้ว
+            </button>
+        </form>
+    </div>
+  </div>
+
+  <div class="text-center mt-6">
+      <a href="javascript:history.back()" class="text-gray-400 hover:text-gray-600 text-sm">
+          <i class="fa-solid fa-arrow-left"></i> ยกเลิก / กลับไปแก้ไข
+      </a>
+  </div>
+</div>
+
+</body>
+</html>

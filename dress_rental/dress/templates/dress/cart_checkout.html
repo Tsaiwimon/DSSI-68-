@@ -6,273 +6,217 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ชำระเงิน | Cart | Glam & Borrow</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .flatpickr-day.selected { background: #ec4899 !important; border-color: #ec4899 !important; }
+    body { background-color: #f9fafb; }
+  </style>
 </head>
 
-<body class="bg-gray-50">
-
+<body>
   <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
     <div class="w-full px-8 py-9 flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">ชำระเงิน (Cart)</h1>
-        <p class="text-sm text-gray-600 mt-1">ตรวจสอบรายการ เลือกวันเช่า และยืนยันการชำระเงิน</p>
+        <h1 class="text-2xl font-bold text-gray-800">ชำระเงิน (รายการเช่ารวม)</h1>
+        <p class="text-sm text-gray-600 mt-1">ตรวจสอบรายการจากทุกร้านค้า และเลือกวันเช่าร่วมกัน</p>
       </div>
-
-      <a href="{% url 'dress:cart_view' %}" class="text-gray-700 hover:text-pink-600 transition">
+      <a href="{% url 'dress:cart_view' %}" class="text-gray-700 hover:text-pink-600 transition font-medium">
         ← กลับไปตะกร้า
       </a>
     </div>
   </header>
 
   <main class="max-w-6xl mx-auto py-8 px-6">
-
-    <div class="bg-white rounded-lg shadow p-4 mb-6">
-      <div class="flex items-center justify-between text-sm text-gray-600">
-        <div class="font-semibold text-gray-800">1) เลือกชุด</div>
-        <div class="font-semibold text-pink-600">2) เลือกวันเช่า</div>
-        <div class="font-semibold text-gray-400">3) ยืนยันการชำระเงิน</div>
+    <div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+      <div class="flex items-center justify-between text-sm">
+        <div class="font-bold text-gray-400">1) เลือกชุด</div>
+        <div class="font-bold text-pink-600 flex items-center"><i class="fa-solid fa-calendar-days mr-2"></i> 2) เลือกวันเช่า</div>
+        <div class="font-bold text-gray-400">3) ยืนยันการชำระเงิน</div>
       </div>
-      <div class="mt-3 w-full bg-gray-200 rounded-full h-2">
-        <div class="bg-pink-500 h-2 rounded-full" style="width: 66%;"></div>
+      <div class="mt-4 w-full bg-gray-100 rounded-full h-1.5">
+        <div class="bg-pink-500 h-1.5 rounded-full transition-all duration-500" style="width: 66%;"></div>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-      <!-- LEFT -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div class="lg:col-span-2 space-y-6">
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-start justify-between">
-            <div>
-              <h2 class="text-lg font-bold text-gray-800">รายการชุดที่เลือก</h2>
-              <p class="text-sm text-gray-600 mt-1">ชำระเงินได้เฉพาะสินค้าที่อยู่ร้านเดียวกัน</p>
-            </div>
-            <div class="text-sm text-gray-700">
-              ร้าน: <span class="font-semibold text-gray-900">{{ store.name|default:"-" }}</span><br>
-              จำนวนชุดรวม: <span class="font-semibold text-gray-900">{{ total_qty|default:"0" }}</span> ชุด
-            </div>
+        {% for shop, data in grouped_checkout.items %}
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+          <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h2 class="font-bold text-gray-800 flex items-center">
+                <i class="fa-solid fa-store text-pink-500 mr-2"></i> {{ shop.name }}
+            </h2>
+            {% if data.is_closed %}
+            <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">ร้านปิดชั่วคราว</span>
+            {% endif %}
           </div>
 
-          <div class="mt-5 divide-y">
-            {% for it in items %}
-              <div class="py-4 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                  <div class="w-16 h-20 rounded-lg overflow-hidden bg-gray-100">
-                    {% if it.dress.image %}
-                      <img src="{{ it.dress.image.url }}" alt="{{ it.dress.name }}" class="w-full h-full object-cover">
-                    {% else %}
-                      <img src="{% static 'images/placeholder-4x3.jpg' %}" alt="{{ it.dress.name }}" class="w-full h-full object-cover">
-                    {% endif %}
-                  </div>
-
-                  <div>
-                    <p class="font-medium text-gray-800">{{ it.dress.name }}</p>
-                    <p class="text-sm text-gray-600 mt-1">
-                      ขนาด: <span class="font-semibold text-gray-700">{{ it.dress.size|default:"-" }}</span>
-                      <span class="mx-2 text-gray-300">|</span>
-                      จำนวน: <span class="font-semibold text-gray-700">x{{ it.quantity|default:"1" }}</span>
-                    </p>
-
-                    <p class="text-xs text-gray-500 mt-1">
-                      ราคา/วัน (fallback เฉพาะไม่มีแพ็ค): ฿{{ it.dress.daily_price|floatformat:2 }}
-                    </p>
-
-                    <p class="text-xs text-gray-500 mt-1">
-                      ค่ามัดจำ/ชุด: ฿{{ it.dress.deposit|default_if_none:"0.00"|floatformat:2 }}
-                    </p>
-                  </div>
+          <div class="px-6 divide-y divide-gray-50">
+            {% for it in data.items %}
+            <div class="py-5 flex items-center justify-between">
+              <div class="flex items-center gap-5">
+                <div class="w-20 h-24 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
+                  {% if it.dress.image %}
+                    <img src="{{ it.dress.image.url }}" class="w-full h-full object-cover">
+                  {% else %}
+                    <img src="{% static 'images/placeholder.jpg' %}" class="w-full h-full object-cover">
+                  {% endif %}
                 </div>
-
-                <div class="text-right">
-                  <p class="text-sm text-gray-500">ค่าเช่าตามแพ็ค (ตามจำนวนวัน)</p>
-
-                  <!-- JS จะใส่ค่าเช่าของชุดนี้ ตาม days -->
-                  <p class="font-semibold text-pink-600 item-rental"
-                     data-itemid="{{ it.id }}"
-                     data-qty="{{ it.quantity|default:'1' }}"
-                     data-daily="{{ it.dress.daily_price }}">
-                    ฿0.00
+                <div>
+                  <p class="font-bold text-gray-800">{{ it.dress.name }}</p>
+                  <p class="text-sm text-gray-500 mt-1">
+                    ขนาด: <span class="text-gray-700 font-medium">{{ it.dress.size|default:"-" }}</span> | 
+                    จำนวน: <span class="text-gray-700 font-medium">{{ it.quantity }} ชุด</span>
                   </p>
-
-                  <p class="text-xs text-gray-400 mt-1 item-note" data-itemid="{{ it.id }}"></p>
+                  <p class="text-[11px] text-blue-500 mt-1 font-medium bg-blue-50 w-max px-2 py-0.5 rounded">
+                    มัดจำ: ฿{{ it.dress.deposit|default:"40.00"|floatformat:2 }}/ชุด
+                  </p>
                 </div>
               </div>
-            {% empty %}
-              <div class="py-8 text-center text-gray-500">ไม่มีรายการที่เลือก</div>
+              <div class="text-right">
+                <p class="text-xs text-gray-400 mb-1">ค่าเช่ารวม</p>
+                <p class="font-bold text-pink-600 text-lg item-rental"
+                   data-itemid="{{ it.id }}"
+                   data-qty="{{ it.quantity }}"
+                   data-daily="{{ it.dress.daily_price }}">฿0.00</p>
+                <p class="text-[10px] text-gray-400 item-note" data-itemid="{{ it.id }}">รอเลือกวัน</p>
+              </div>
+            </div>
             {% endfor %}
           </div>
-
-          <!-- สรุปฝั่งซ้าย -->
-          <div class="mt-6 border-t pt-4">
-            <div class="flex justify-between text-sm text-gray-700">
-              <span>ค่ามัดจำรวม (ต่อชุด)</span>
-              <span class="font-semibold">฿{{ deposit_total|floatformat:2 }}</span>
-            </div>
-            <div class="flex justify-between text-sm text-gray-700 mt-2">
-              <span>ค่าส่ง (ต่อร้าน/ต่อออเดอร์)</span>
-              <span class="font-semibold">฿{{ shipping_fee|floatformat:2 }}</span>
-            </div>
+          
+          <div class="bg-pink-50/30 px-6 py-3 text-right">
+            <p class="text-xs text-pink-600 font-medium">ค่าส่งร้านนี้: ฿{{ data.shipping_fee|floatformat:2 }}</p>
           </div>
-
         </div>
+        {% empty %}
+        <div class="bg-white p-20 rounded-2xl shadow-sm text-center">
+            <p class="text-gray-400">ไม่พบรายการสินค้า</p>
+        </div>
+        {% endfor %}
       </div>
 
-      <!-- RIGHT -->
-      <div class="space-y-6">
-        <form method="POST" action="{% url 'dress:checkout_confirm' %}" class="bg-white rounded-lg shadow p-6">
+      <div class="lg:col-span-1">
+        <form method="POST" action="{% url 'dress:cart_checkout_confirm' %}" class="bg-white rounded-2xl shadow-lg border border-pink-100 p-6 sticky top-6" id="checkoutForm">
           {% csrf_token %}
-
-          {% for it in items %}
-            <input type="hidden" name="ids" value="{{ it.id }}">
+          
+          {% for shop, data in grouped_checkout.items %}
+            {% for it in data.items %}
+                <input type="hidden" name="ids" value="{{ it.id }}">
+            {% endfor %}
           {% endfor %}
 
-          <h2 class="text-lg font-bold text-gray-800">เลือกวันเช่า</h2>
-          <p class="text-sm text-gray-600 mt-1">ระบบจะคำนวณ “ราคาแพ็ค” ของแต่ละชุดตามจำนวนวัน</p>
+          <input type="hidden" name="start_date" id="hidden_start_date" required>
+          <input type="hidden" name="end_date" id="hidden_end_date" required>
 
-          <div class="mt-4 space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">วันเริ่มเช่า</label>
-              <input id="start_date" name="start_date" type="date"
-                     class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                     required>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">วันคืน</label>
-              <input id="end_date" name="end_date" type="date"
-                     class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                     required>
-            </div>
-
-            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <div class="flex justify-between text-sm text-gray-700">
-                <span>จำนวนวันเช่า</span>
-                <span class="font-semibold"><span id="days">0</span> วัน</span>
-              </div>
-
-              <div class="flex justify-between text-sm text-gray-700 mt-2">
-                <span>ค่าเช่ารวม (ตามแพ็คทุกชุด)</span>
-                <span class="font-semibold text-gray-900" id="rental_total">฿0.00</span>
-              </div>
-
-              <div class="flex justify-between text-sm text-gray-700 mt-2">
-                <span>ค่ามัดจำรวม (ต่อชุด)</span>
-                <span class="font-semibold text-gray-900" id="deposit_total_view">฿{{ deposit_total|floatformat:2 }}</span>
-              </div>
-
-              <div class="flex justify-between text-sm text-gray-700 mt-2">
-                <span>ค่าส่ง (ต่อร้าน)</span>
-                <span class="font-semibold text-gray-900" id="shipping_fee_view">฿{{ shipping_fee|floatformat:2 }}</span>
-              </div>
-
-              <div class="flex justify-between text-base text-gray-800 mt-3 pt-3 border-t">
-                <span class="font-semibold">ยอดรวมทั้งหมด</span>
-                <span class="font-bold text-pink-600" id="grand_total">฿0.00</span>
-              </div>
-            </div>
-
-            <button type="submit"
-                    class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition">
-              ยืนยันวันเช่า
-            </button>
-
-            <p class="text-xs text-gray-500 leading-relaxed">
-              หมายเหตุ: วันคืนต้องมากกว่าวันเริ่มเช่าอย่างน้อย 1 วัน และค่าส่งคิดต่อออเดอร์ของร้าน
-            </p>
+          <h2 class="text-xl font-bold text-gray-800 mb-4">ระบุวันเช่า</h2>
+          
+          <div class="mb-6">
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ช่วงเวลาเช่า (รับ - คืน)</label>
+            <input type="text" id="date_range_picker" 
+                   class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-300 transition bg-gray-50 font-medium"
+                   placeholder="เลือกวันที่..." required>
           </div>
+
+          <div class="space-y-3 bg-gray-50 rounded-2xl p-5 mb-6">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">จำนวนวันเช่า</span>
+              <span class="font-bold text-gray-800"><span id="days_display">0</span> วัน</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">ค่าเช่ารวมทุกร้าน</span>
+              <span class="font-bold text-gray-800" id="rental_total">฿0.00</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">มัดจำรวมทุกร้าน</span>
+              <span class="font-bold text-gray-800">฿{{ grand_deposit_total|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">ค่าส่งรวมทุกร้าน</span>
+              <span class="font-bold text-gray-800">฿{{ grand_shipping_total|floatformat:2 }}</span>
+            </div>
+            <div class="border-t border-gray-200 pt-3 flex justify-between items-center">
+              <span class="font-bold text-gray-800">ยอดสุทธิ</span>
+              <span class="text-2xl font-black text-pink-600" id="grand_total">฿0.00</span>
+            </div>
+          </div>
+
+          <button type="submit" id="submitBtn" disabled
+                  class="w-full bg-gray-200 text-gray-400 font-black py-4 rounded-xl transition-all duration-300 cursor-not-allowed uppercase tracking-widest shadow-md">
+            กรุณาเลือกวันเช่า
+          </button>
         </form>
       </div>
-
     </div>
   </main>
 
-  <!-- ฝังแพ็คราคาจาก backend -->
   {{ item_packages|json_script:"itemPackagesJSON" }}
+
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script>
 
   <script>
     function formatTHB(n) {
-      return "฿" + Number(n).toFixed(2);
+      return "฿" + Number(n).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
-    // 14 -> 16 = 2 วัน (ตามระบบคุณตอนนี้)
-    function calcDays(start, end) {
-      const s = new Date(start);
-      const e = new Date(end);
-      const diff = (e - s) / (1000 * 60 * 60 * 24);
-      return diff > 0 ? diff : 0;
-    }
-
-    const depositTotal = Number(("{{ deposit_total|default:'0.00' }}").toString().replace(/,/g, "")) || 0;
-    const shippingFee  = Number(("{{ shipping_fee|default:'0.00' }}").toString().replace(/,/g, "")) || 0;
-
-    const pkgNode = document.getElementById("itemPackagesJSON");
-    const ITEM_PACKAGES = pkgNode ? JSON.parse(pkgNode.textContent || "{}") : {};
+    const depositTotal = Number(("{{ grand_deposit_total|default:'0' }}").toString().replace(/,/g, "")) || 0;
+    const shippingFee  = Number(("{{ grand_shipping_total|default:'0' }}").toString().replace(/,/g, "")) || 0;
+    const ITEM_PACKAGES = JSON.parse(document.getElementById("itemPackagesJSON").textContent || "{}");
 
     function getPackPrice(itemId, days) {
       const itemMap = ITEM_PACKAGES[String(itemId)] || {};
       const raw = itemMap[String(days)];
-      if (raw == null) return null;
-      const n = Number(String(raw).replace(/,/g, ""));
-      return isNaN(n) ? null : n;
+      return raw ? Number(String(raw).replace(/,/g, "")) : null;
     }
 
-    function recalc() {
-      const s = document.getElementById("start_date").value;
-      const e = document.getElementById("end_date").value;
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr("#date_range_picker", {
+            locale: "th", // 3. ตั้งค่าให้ใช้ภาษาไทย (เพิ่มใหม่)
+            mode: "range",
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "j M Y",
+            minDate: "today",
+            onChange: function(selectedDates, dateStr, instance) {
+                if (selectedDates.length === 2) {
+                    const diffDays = Math.ceil(Math.abs(selectedDates[1] - selectedDates[0]) / (1000 * 60 * 60 * 24)) + 1;
+                    
+                    document.getElementById('hidden_start_date').value = instance.formatDate(selectedDates[0], "Y-m-d");
+                    document.getElementById('hidden_end_date').value = instance.formatDate(selectedDates[1], "Y-m-d");
+                    document.getElementById("days_display").textContent = diffDays;
 
-      let days = 0;
-      if (s && e) days = calcDays(s, e);
-      document.getElementById("days").textContent = days;
+                    recalculatePrices(diffDays);
 
+                    const btn = document.getElementById('submitBtn');
+                    btn.disabled = false;
+                    btn.className = "w-full bg-pink-500 text-white font-black py-4 rounded-xl hover:bg-pink-600 transition-all shadow-lg hover:shadow-pink-200 uppercase tracking-widest";
+                    btn.innerText = "ไปที่หน้าชำระเงิน";
+                }
+            }
+        });
+    });
+
+    function recalculatePrices(days) {
       let rentalTotal = 0;
-
       document.querySelectorAll(".item-rental").forEach(el => {
         const itemId = el.dataset.itemid;
-        const qty = parseInt(el.dataset.qty || "1", 10);
-        const daily = Number(String(el.dataset.daily || "0").replace(/,/g, "")) || 0;
-
+        const qty = parseInt(el.dataset.qty);
+        const daily = Number(el.dataset.daily) || 0;
         const note = document.querySelector('.item-note[data-itemid="' + itemId + '"]');
 
-        // ถ้ายังไม่เลือกวัน ให้ 0
-        if (days <= 0) {
-          el.textContent = formatTHB(0);
-          if (note) note.textContent = "";
-          return;
-        }
+        let pricePerUnit = getPackPrice(itemId, days) || (daily * days);
+        let lineTotal = pricePerUnit * qty;
+        rentalTotal += lineTotal;
 
-        // 1) ใช้ราคาแพ็ค (ต่อ 1 ชุด) * qty
-        const packPrice = getPackPrice(itemId, days);
-        if (packPrice != null) {
-          const line = packPrice * qty;
-          rentalTotal += line;
-          el.textContent = formatTHB(line);
-          if (note) note.textContent = "ใช้ราคาแพ็ค " + days + " วัน";
-          return;
-        }
-
-        // 2) fallback: daily * days * qty
-        if (daily > 0) {
-          const line = (daily * days) * qty;
-          rentalTotal += line;
-          el.textContent = formatTHB(line);
-          if (note) note.textContent = "ไม่มีแพ็ค " + days + " วัน (ใช้ราคา/วันแทน)";
-          return;
-        }
-
-        // 3) ไม่มีทั้งแพ็คและ daily
-        el.textContent = formatTHB(0);
-        if (note) note.textContent = "ยังไม่ได้ตั้งราคา";
+        el.textContent = formatTHB(lineTotal);
+        note.textContent = getPackPrice(itemId, days) ? `ราคาแพ็ค ${days} วัน` : `ราคาปกติ x ${days} วัน`;
       });
 
       document.getElementById("rental_total").textContent = formatTHB(rentalTotal);
-
-      const grandTotal = rentalTotal + depositTotal + shippingFee;
-      document.getElementById("grand_total").textContent = formatTHB(grandTotal);
+      document.getElementById("grand_total").textContent = formatTHB(rentalTotal + depositTotal + shippingFee);
     }
-
-    document.getElementById("start_date").addEventListener("change", recalc);
-    document.getElementById("end_date").addEventListener("change", recalc);
-    recalc();
   </script>
-
 </body>
 </html>

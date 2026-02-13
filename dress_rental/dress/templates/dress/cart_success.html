@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ทำรายการสำเร็จ</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center px-4">
+
+<div class="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 text-center border-t-8 border-green-500">
+    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <i class="fa-solid fa-check text-4xl text-green-500"></i>
+    </div>
+
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">ชำระเงินสำเร็จ!</h1>
+    <p class="text-gray-500 mb-8">ขอบคุณที่ใช้บริการ ระบบได้บันทึกคำสั่งซื้อของคุณแล้ว</p>
+
+    <div class="bg-gray-50 rounded-xl p-4 mb-8 text-left max-h-40 overflow-y-auto">
+        {% for order in orders %}
+        <div class="flex justify-between py-2 border-b border-gray-200 last:border-0">
+            <span class="font-bold text-gray-700">{{ order.shop.name }}</span>
+            <span class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">Paid</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="flex gap-3">
+        <a href="/" class="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 transition">
+            หน้าหลัก
+        </a>
+        <a href="{% url 'dress:history' %}" class="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition shadow-lg shadow-green-200">
+            ประวัติการสั่งซื้อ
+        </a>
+    </div>
+</div>
+
+</body>
+</html>

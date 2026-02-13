@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net">
+  <diagram name="Use Case Diagram">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- System Boundary -->
+        <mxCell id="system" value="ระบบเว็บเช่าชุดออนไลน์" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="200" y="40" width="900" height="700" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors -->
+        <mxCell id="guest" value="Guest" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="50" y="150" width="50" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="member" value="Member" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="50" y="320" width="50" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="shop" value="Shop Partner" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="250" width="50" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="admin" value="Admin" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="450" width="50" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Guest Use Cases -->
+        <mxCell id="uc1" value="สมัครสมาชิก" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="100" y="80" width="180" height="50" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc2" value="ค้นหาและดูชุดเช่า" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="100" y="160" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc3" value="ดูรีวิวและคะแนน" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="100" y="240" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Member Use Cases -->
+        <mxCell id="uc4" value="จัดการตะกร้าและทำรายการเช่า" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="350" y="200" width="250" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc5" value="ชำระเงิน (QR Omise)" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="380" y="300" width="220" height="50" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc6" value="Virtual Try-On (AI)" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="380" y="380" width="220" height="50" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc7" value="แชทและรับแจ้งเตือน" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="380" y="460" width="220" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Shop Use Cases -->
+        <mxCell id="uc8" value="จัดการชุดเช่าและสต็อก" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="650" y="200" width="230" height="50" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc9" value="จัดการคำสั่งเช่า" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="650" y="280" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc10" value="ดูรายได้ร้าน" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="650" y="360" width="180" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Admin Use Cases -->
+        <mxCell id="uc11" value="อนุมัติร้านเช่า" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="650" y="460" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc12" value="จัดการผู้ใช้และรีวิว" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="650" y="540" width="230" height="50" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc13" value="ดู Dashboard และรายงานระบบ" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="system">
+          <mxGeometry x="650" y="620" width="250" height="50" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

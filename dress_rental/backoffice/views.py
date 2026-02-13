@@ -18,7 +18,7 @@ from django.views.decorators.http import require_POST
 from .decorators import admin_required
 from dress.models import Shop, Dress, RentalOrder, Review, PlatformSettings
 from dress.models import Report, ReportAttachment
-
+from dress.models import RentalOrder
 
 # =============================
 # Utils
@@ -549,6 +549,73 @@ def report_update(request, report_id):
     obj.save()
     messages.success(request, "อัปเดตสถานะรายงานเรียบร้อยแล้ว")
     return redirect("backoffice:report_detail", report_id=report_id)
+
+
+
+def finance_dashboard(request):
+    # 1. กำหนดสถานะ (เอาตามที่คุณกำหนดมา ครบถ้วนดีแล้วครับ)
+    valid_statuses = [
+        'paid', 'preparing', 'shipping', 'in_rental', 
+        'waiting_return', 'returned', 'completed', 
+        'payment_verified', 'waiting_shipment'
+    ]
+
+    # 2. ดึงข้อมูล
+    paid_orders = RentalOrder.objects.filter(
+        status__in=valid_statuses
+    ).order_by('-created_at')
+
+    # 3. ตัวแปรเก็บผลรวม
+    summary = {
+        'total_revenue': Decimal('0.00'),       # รายได้ Admin
+        'total_payout_store': Decimal('0.00'),  # ร้านรับสุทธิ
+        'total_deposit_hold': Decimal('0.00'),  # มัดจำถือไว้
+        'total_cash_in': Decimal('0.00')        # ยอดเงินเข้าทั้งหมด
+    }
+
+    processed_orders = []
+
+    for order in paid_orders:
+        # --- ✅ แก้ไขจุดที่ผิดตรงนี้ครับ ---
+        
+        # 1. ยอดรวมที่ลูกค้าจ่าย (Model ใช้ total_price ไม่ใช่ grand_total)
+        grand_total_val = order.total_price or Decimal('0.00')
+
+        # 2. ค่ามัดจำ (ใช้ Property ที่ Model เตรียมไว้ให้)
+        deposit_val = order.deposit_amount
+
+        # 3. รายได้ Admin (ค่าคอม + VAT)
+        # ดึงจาก Model โดยตรง ไม่ต้องคำนวณซ้ำ (ลดโอกาสคำนวณผิด)
+        admin_income = order.platform_fee + order.vat_amount
+
+        # 4. รายได้ร้านค้า (ค่าเช่าสุทธิ + มัดจำที่ต้องคืนลูกค้า)
+
+        # แบบใหม่ (Admin เก็บมัดจำไว้ ร้านได้เฉพาะค่าของ)
+        store_receive = order.net_income_shop
+
+        # --- สะสมยอด ---
+        summary['total_revenue'] += admin_income
+        summary['total_payout_store'] += store_receive
+        summary['total_deposit_hold'] += deposit_val
+        summary['total_cash_in'] += grand_total_val
+
+        # --- แปะค่ากลับไปแสดงผล ---
+        order.calculated_admin_income = admin_income
+        order.calculated_store_income = store_receive
+        
+        # สร้างตัวแปรใหม่สำหรับแสดงผลหน้าเว็บ (เพื่อไม่ให้สับสนกับชื่อ field)
+        order.grand_total_display = grand_total_val 
+        order.deposit_display = deposit_val
+
+        processed_orders.append(order)
+
+    context = {
+        'orders': processed_orders,
+        'summary': summary,
+        'order_count': paid_orders.count()
+    }
+
+    return render(request, 'backoffice/finance.html', context)
 
 
 # =============================

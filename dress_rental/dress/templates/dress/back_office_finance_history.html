@@ -1,0 +1,107 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ประวัติการเงินทั้งหมด | {{ store.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style> body { font-family: 'Sarabun', sans-serif; } </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <header class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-xl font-bold text-gray-800">ประวัติการเงินทั้งหมด</h1>
+      <a href="{% url 'dress:back_office_finance' store.id %}" class="text-sm text-gray-500 hover:text-gray-900 cursor-pointer flex items-center gap-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        ปิดหน้าต่างนี้
+      </a>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    
+    <section class="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="text-gray-500 border-b uppercase text-xs bg-gray-50">
+            <tr>
+              <th class="py-4 px-6 w-32">วันที่</th>
+              <th class="py-4 px-6">รายละเอียด</th>
+              <th class="py-4 px-6 text-right w-80">สรุปรายรับ (Income Breakdown)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            
+            {% for order in income_orders %}
+            <tr class="hover:bg-gray-50 transition">
+              <td class="py-4 px-6 align-top text-gray-600">{{ order.created_at|date:"d/m/Y" }}</td>
+              
+              <td class="py-4 px-6 align-top">
+                <div class="font-medium text-indigo-600">Order #{{ order.id }}</div>
+                <div class="text-gray-700 mt-1 font-medium">{{ order.dress.name }}</div>
+                
+                <span class="inline-block mt-2 px-2 py-0.5 text-[10px] rounded border border-gray-200 text-gray-500 bg-gray-50">
+                  {{ order.get_status_display }}
+                </span>
+              </td>
+
+              <td class="py-4 px-6 text-right align-top">
+                <div class="space-y-1 flex flex-col items-end">
+                    <div class="text-gray-900 font-bold text-base">
+                        {{ order.total_price|floatformat:2|intcomma }} ฿
+                    </div>
+                    <div class="text-[10px] text-gray-400 mb-2">(ยอดชำระรวม)</div>
+                    
+                    <div class="bg-gray-50/50 rounded border border-gray-100 p-3 w-full space-y-1.5">
+                        
+                        {% if order.deposit_amount > 0 %}
+                        <div class="flex justify-between text-[11px] text-orange-500">
+                            <span>- หักมัดจำ (รอคืน):</span>
+                            <span>-{{ order.deposit_amount|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="flex justify-between text-[11px] text-gray-500 border-b border-gray-200 pb-1 mb-1">
+                            <span>ค่าเช่าจริง:</span>
+                            <span>{{ order.real_rental_price|floatformat:2|intcomma }}</span>
+                        </div>
+
+                        <div class="flex justify-between text-[11px] text-red-400">
+                            <span>- หักค่าคอม (10%):</span>
+                            <span>-{{ order.platform_fee|floatformat:2 }}</span>
+                        </div>
+                        
+                        <div class="flex justify-between text-[11px] text-red-400">
+                            <span>- หัก VAT (7%):</span>
+                            <span>-{{ order.vat_amount|floatformat:2 }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end items-center mt-2 pt-1 gap-2 w-full">
+                        <span class="text-xs text-green-700 font-medium">รายรับสุทธิ:</span>
+                        <span class="text-lg font-bold text-green-600">
+                           +{{ order.net_income_shop|floatformat:2|intcomma }} ฿
+                        </span>
+                    </div>
+
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center py-12 text-gray-400">ยังไม่มีข้อมูลประวัติการเงิน</td></tr>
+            {% endfor %}
+
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+</body>
+</html>

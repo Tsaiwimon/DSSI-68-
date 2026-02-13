@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "dress.apps.DressConfig",
     'django_extensions',  
     'backoffice',
+    'django.contrib.humanize',
 ]
 
 MIDDLEWARE = [

@@ -1,91 +1,194 @@
 {% load static %}
+{% load humanize %}
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>ที่ถูกใจของฉัน</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ที่ถูกใจของฉัน | Glam & Borrow</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background-color: #f9fafb; }
+    .card-zoom:hover img { transform: scale(1.05); }
+    .fade-out { opacity: 0; transform: scale(0.95); transition: all 0.3s ease-out; }
+  </style>
 </head>
-<body class="bg-gray-50">
+<body class="text-gray-700">
 
-<!-- Header -->
-<div class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow p-8 flex justify-between items-center">
-  <h1 class="text-2xl font-semibold text-gray-800">
-    ที่ถูกใจของฉัน ({{ favorites.count }})
-  </h1>
-  <a href="{% url 'dress:member_home' %}" 
-     class="bg-white text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-100 transition">
-     ← กลับหน้าหลัก
-  </a>
-</div>
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow-sm sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-7 py-7 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <div class="bg-white/50 p-2 rounded-full text-pink-500 shadow-sm">
+        <i class="fa-solid fa-heart text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">ที่ถูกใจของฉัน</h1>
+        <p class="text-xs text-gray-600 font-medium">รายการที่คุณบันทึกไว้ <span id="fav-count-badge">({{ favorites.count }})</span> รายการ</p>
+      </div>
+    </div>
+    
+    <a href="{% url 'dress:home' %}" 
+       class="bg-white/80 backdrop-blur text-gray-800 px-4 py-2 rounded-xl hover:bg-white transition shadow-sm font-medium">
+        ← กลับหน้าหลัก
+    </a>
+  </div>
+</header>
 
-<!-- Content -->
-<div class="max-w-7xl mx-auto mt-8 px-6 md:px-10">
+<main class="max-w-7xl mx-auto py-10 px-6">
+  
   {% if favorites %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="favorite-list">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="favorite-list">
       {% for fav in favorites %}
         <div id="fav-{{ fav.dress.id }}" 
-             class="bg-white rounded-lg shadow border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden">
-          <a href="{% url 'dress:dress_detail' fav.dress.id %}">
-            <img src="{{ fav.dress.image.url }}" alt="{{ fav.dress.name }}"
-                 class="w-full h-72 object-cover hover:scale-105 transition-transform duration-300">
-          </a>
+             class="group bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden relative">
+          
+          <div class="relative aspect-[3/4] overflow-hidden bg-gray-100 card-zoom">
+            <a href="{% url 'dress:dress_detail' fav.dress.id %}" class="block w-full h-full">
+              {% if fav.dress.image %}
+                <img src="{{ fav.dress.image.url }}" alt="{{ fav.dress.name }}" class="w-full h-full object-cover transition-transform duration-500">
+              {% else %}
+                <div class="w-full h-full flex items-center justify-center text-gray-300">
+                  <i class="fa-solid fa-image text-3xl"></i>
+                </div>
+              {% endif %}
+            </a>
 
-          <div class="p-4 space-y-1">
-            <p class="text-sm text-gray-500">ร้าน: {{ fav.dress.shop.name }}</p>
-            <h2 class="font-semibold text-gray-800 truncate">{{ fav.dress.name }}</h2>
-            <p class="text-pink-600 font-bold">฿{{ fav.dress.daily_price }}</p>
-            <p class="text-sm text-gray-500">ขนาด: {{ fav.dress.size|default:"-" }}</p>
-
-            <div class="flex justify-between items-center pt-2">
-              <a href="{% url 'dress:dress_detail' fav.dress.id %}" 
-                 class="text-blue-600 hover:underline text-sm">
-                 ดูรายละเอียด
-              </a>
-              <form method="POST" class="remove-favorite-form" data-id="{{ fav.dress.id }}">
+            <form method="POST" class="remove-favorite-form absolute top-3 right-3 z-10" data-id="{{ fav.dress.id }}">
                 {% csrf_token %}
                 <button type="submit" 
-                        class="text-red-500 hover:text-red-700 text-sm font-medium">
-                        ลบออก
+                        class="w-9 h-9 rounded-full bg-white/90 hover:bg-white text-pink-500 hover:text-red-600 shadow-md flex items-center justify-center transition transform hover:scale-110 tooltip-container"
+                        title="ลบออกจากรายการโปรด">
+                    <i class="fa-solid fa-heart text-lg"></i>
                 </button>
-              </form>
+            </form>
+            
+            {% if fav.dress.shop %}
+            <span class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-md font-medium tracking-wide">
+               {{ fav.dress.shop.name }}
+            </span>
+            {% endif %}
+          </div>
+
+          <div class="p-4 flex flex-col flex-grow">
+            <div class="mb-1">
+               <h2 class="font-bold text-gray-800 text-sm md:text-base truncate group-hover:text-pink-600 transition-colors">
+                 <a href="{% url 'dress:dress_detail' fav.dress.id %}">{{ fav.dress.name }}</a>
+               </h2>
+            </div>
+
+            <div class="flex items-center gap-2 mb-3">
+                 <span class="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Size: {{ fav.dress.size|default:"Free" }}</span>
+            </div>
+
+            <div class="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center">
+               <div class="flex flex-col">
+                  <span class="text-[10px] text-gray-400">ราคาเช่าต่อวัน</span>
+                  <span class="text-lg font-bold text-pink-600">฿{{ fav.dress.daily_price|intcomma }}</span>
+               </div>
+               
+               <a href="{% url 'dress:dress_detail' fav.dress.id %}" 
+                  class="bg-gray-800 hover:bg-gray-900 text-white text-xs px-3 py-2 rounded-lg transition shadow-sm">
+                  เช่าเลย
+               </a>
             </div>
           </div>
         </div>
       {% endfor %}
     </div>
-  {% else %}
-    <p class="text-gray-500 text-center mt-10">ยังไม่มีชุดที่ถูกใจ ❤️</p>
-  {% endif %}
-</div>
 
-<!-- ✅ Script ลบรายการแบบไม่รีเฟรช -->
+    <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-center animate-fade-in">
+        <div class="w-24 h-24 bg-pink-50 rounded-full flex items-center justify-center mb-6">
+            <i class="fa-regular fa-heart text-4xl text-pink-300"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">ยังไม่มีชุดที่ถูกใจ</h2>
+        <p class="text-gray-500 mb-8 max-w-sm">ลองค้นหาชุดสวยๆ แล้วกดหัวใจเก็บไว้ดูภายหลังได้เลย</p>
+        <a href="{% url 'dress:home' %}" class="px-8 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl shadow-lg shadow-pink-200 transition font-semibold">
+            ไปเลือกชมชุดกันเลย
+        </a>
+    </div>
+
+  {% else %}
+    <div class="flex flex-col items-center justify-center py-20 text-center">
+        <div class="w-24 h-24 bg-pink-50 rounded-full flex items-center justify-center mb-6">
+            <i class="fa-regular fa-heart text-4xl text-pink-300"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">ยังไม่มีชุดที่ถูกใจ</h2>
+        <p class="text-gray-500 mb-8 max-w-sm">ลองค้นหาชุดสวยๆ แล้วกดหัวใจเก็บไว้ดูภายหลังได้เลย</p>
+        <a href="{% url 'dress:home' %}" class="px-8 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl shadow-lg shadow-pink-200 transition font-semibold">
+            ไปเลือกชมชุดกันเลย
+        </a>
+    </div>
+  {% endif %}
+
+</main>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const forms = document.querySelectorAll(".remove-favorite-form");
+  const favList = document.getElementById("favorite-list");
+  const emptyState = document.getElementById("empty-state");
+  const badge = document.getElementById("fav-count-badge");
+
+  // ฟังก์ชันอัปเดตตัวเลขจำนวนสินค้า
+  const updateCount = (newCount) => {
+      if(badge) badge.textContent = `(${newCount})`;
+  };
 
   forms.forEach(form => {
     form.addEventListener("submit", async (e) => {
-      e.preventDefault(); // ป้องกันการ reload หน้า
+      e.preventDefault();
+      
+      // หาปุ่มและใส่ Effect กด
+      const btn = form.querySelector('button');
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; // Loading icon
+
       const dressId = form.dataset.id;
       const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+      const card = document.getElementById(`fav-${dressId}`);
 
       try {
         const response = await fetch(`/dress/${dressId}/favorite/toggle/`, {
           method: "POST",
-          headers: { "X-CSRFToken": csrfToken },
+          headers: { 
+            "X-CSRFToken": csrfToken,
+            "X-Requested-With": "XMLHttpRequest"
+          },
         });
 
         if (response.ok) {
-          // ลบ card ออกจาก DOM
-          const card = document.getElementById(`fav-${dressId}`);
-          if (card) card.remove();
+          // Animation: ค่อยๆ จางหาย
+          card.classList.add('fade-out');
+          
+          // รอ animation จบแล้วลบออกจาก DOM
+          setTimeout(() => {
+              card.remove();
+              
+              // เช็คว่าเหลือรายการไหม
+              const remainingItems = document.querySelectorAll('#favorite-list > div').length;
+              updateCount(remainingItems);
+
+              if (remainingItems === 0) {
+                  if(favList) favList.classList.add('hidden');
+                  if(emptyState) {
+                      emptyState.classList.remove('hidden');
+                      emptyState.classList.add('flex');
+                  }
+              }
+          }, 300);
+
         } else {
           alert("เกิดข้อผิดพลาดในการลบรายการนี้");
+          btn.innerHTML = originalContent; // คืนค่าเดิมถ้า error
         }
       } catch (err) {
         console.error("Error:", err);
         alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
+        btn.innerHTML = originalContent;
       }
     });
   });

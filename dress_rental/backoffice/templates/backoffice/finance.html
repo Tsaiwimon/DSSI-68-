@@ -1,0 +1,109 @@
+{% extends 'backoffice/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}การเงินและรายได้ | Admin{% endblock %}
+{% block page_title %}สรุปยอดการเงิน{% endblock %}
+{% block page_subtitle %}ภาพรวมรายได้ ค่าคอมมิชชั่น และยอดที่ต้องโอนให้ร้านค้า{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100">
+        <div class="text-sm text-neutral-500 mb-1">รายได้สุทธิ (Admin)</div>
+        <div class="text-3xl font-bold text-emerald-600">฿{{ summary.total_revenue|floatformat:2|intcomma }}</div>
+        <div class="text-xs text-neutral-400 mt-2">ค่าคอมมิชชั่น + VAT</div>
+    </div>
+
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100">
+        <div class="text-sm text-neutral-500 mb-1">ยอดต้องโอนให้ร้านค้า</div>
+        <div class="text-3xl font-bold text-blue-600">฿{{ summary.total_payout_store|floatformat:2|intcomma }}</div>
+        <div class="text-xs text-neutral-400 mt-2">ค่าเช่าหลังหักส่วนแบ่ง</div>
+    </div>
+
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100">
+        <div class="text-sm text-neutral-500 mb-1">เงินมัดจำ (ถือครองไว้)</div>
+        <div class="text-3xl font-bold text-orange-500">฿{{ summary.total_deposit_hold|floatformat:2|intcomma }}</div>
+        <div class="text-xs text-neutral-400 mt-2">รอคืนเมื่อจบออเดอร์</div>
+    </div>
+
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-100 bg-neutral-50">
+        <div class="text-sm text-neutral-500 mb-1">Cash In ทั้งหมด</div>
+        <div class="text-2xl font-bold text-neutral-700">฿{{ summary.total_cash_in|floatformat:2|intcomma }}</div>
+        <div class="text-xs text-neutral-400 mt-2">ยอดเงินเข้าบัญชีรวม</div>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-neutral-100 flex justify-between items-center bg-neutral-50">
+        <h3 class="font-semibold text-neutral-800">รายการธุรกรรมล่าสุด ({{ order_count }})</h3>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-neutral-50 text-neutral-500 text-sm border-b">
+                    <th class="px-6 py-4 font-medium">Order ID</th>
+                    <th class="px-6 py-4 font-medium">วันที่</th>
+                    <th class="px-6 py-4 font-medium">ร้านค้า</th>
+                    <th class="px-6 py-4 font-medium text-right">ยอดลูกค้าจ่าย (Gross)</th>
+                    <th class="px-6 py-4 font-medium text-right text-emerald-600">Admin รับ</th>
+                    <th class="px-6 py-4 font-medium text-right text-blue-600">ร้านค้ารับ</th>
+                    <th class="px-6 py-4 font-medium text-right text-orange-500">มัดจำ</th>
+                    <th class="px-6 py-4 font-medium text-center">สถานะ</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-100">
+                {% for order in orders %}
+                <tr class="hover:bg-neutral-50 transition-colors">
+                    <td class="px-6 py-4 font-medium text-neutral-800">#{{ order.id }}</td>
+                    <td class="px-6 py-4 text-sm text-neutral-600">
+                        {{ order.created_at|date:"d M Y" }}
+                        <div class="text-xs text-neutral-400">{{ order.created_at|date:"H:i" }}</div>
+                    </td>
+                    
+                    <td class="px-6 py-4 text-sm text-neutral-700">{{ order.rental_shop.name }}</td>
+                    
+                    <td class="px-6 py-4 text-right font-medium">
+                        {{ order.grand_total_display|floatformat:2|intcomma }}
+                    </td>
+                    
+                    <td class="px-6 py-4 text-right font-bold text-emerald-600 bg-emerald-50/50">
+                        +{{ order.calculated_admin_income|floatformat:2|intcomma }}
+                    </td>
+                    
+                    <td class="px-6 py-4 text-right font-bold text-blue-600 bg-blue-50/50">
+                        {{ order.calculated_store_income|floatformat:2|intcomma }}
+                    </td>
+
+                    <td class="px-6 py-4 text-right text-orange-500">
+                        {{ order.deposit_display|floatformat:2|intcomma }}
+                    </td>
+
+                    <td class="px-6 py-4 text-center">
+                        {% if order.status == 'completed' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {{ order.get_status_display }}
+                            </span>
+                        {% elif order.status == 'cancelled' %}
+                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                {{ order.get_status_display }}
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ order.get_status_display }}
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="px-6 py-12 text-center text-neutral-400">
+                        ยังไม่มีรายการสั่งซื้อ
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

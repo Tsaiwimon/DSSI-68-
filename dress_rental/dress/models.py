@@ -308,7 +308,7 @@ class RentalOrder(models.Model):
         (STATUS_DAMAGED,        "พบปัญหาชุดชำรุด"),
         (STATUS_CANCELLED,      "ออเดอร์ยกเลิก"),
 
-        # ตัวเลือกเก่า (กันข้อมูลเดิม error / ใช้ transition ช่วงเปลี่ยนระบบ)
+        # ตัวเลือกเก่า
         ("pending",   "รอดำเนินการ (เดิม)"),
         ("completed", "เช่าเสร็จแล้ว (เดิม)"),
     ]
@@ -334,23 +334,61 @@ class RentalOrder(models.Model):
     pickup_date = models.DateField()
     return_date = models.DateField()
 
+    # ยอดเงินรวม (ค่าเช่า + ค่ามัดจำ + ค่าปรับถ้ามี)
     total_price = models.DecimalField(max_digits=8, decimal_places=2)
+    
+    # ✅ (เพิ่มใหม่) เก็บค่ามัดจำแยกไว้ เพื่อความแม่นยำทางบัญชี
+    deposit = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"))
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     status = models.CharField(
-        max_length=30,              # ขยายจาก 20 → 30 ให้พอใส่ waiting_payment
+        max_length=30,
         choices=STATUS_CHOICES,
-        default=STATUS_NEW,         # เดิมคือ "pending"
+        default=STATUS_NEW,
     )
 
     omise_charge_id = models.CharField(max_length=100, blank=True, null=True)
 
-    def __str__(self):
-        return f"ORD-{self.id} ({self.user})"
-    
     returned_at = models.DateTimeField(null=True, blank=True)
     late_days = models.PositiveIntegerField(default=0)
     late_fee_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+
+    def __str__(self):
+        return f"ORD-{self.id} ({self.user})"
+
+    # ---- ✅ ส่วนคำนวณเงินอัตโนมัติ (เพิ่มใหม่) -----------------------
+
+    @property
+    def deposit_amount(self):
+        """ดึงค่ามัดจำ (ถ้าฟิลด์ deposit เป็น 0 ให้ลองดึงจากชุดเป็นค่าสำรอง)"""
+        if self.deposit > 0:
+            return self.deposit
+        # กรณีข้อมูลเก่าที่ไม่ได้บันทึก deposit ลงออเดอร์ ให้ดึงราคาปัจจุบันของชุดมาโชว์แทน
+        return self.dress.deposit if hasattr(self.dress, 'deposit') else Decimal('0.00')
+
+    @property
+    def real_rental_price(self):
+        """ราคาเช่าจริง = ราคารวมทั้งหมด - ค่ามัดจำ"""
+        # ป้องกันกรณีลบแล้วติดลบ (เช่น กรณีเป็นออเดอร์แก้ปัญหา)
+        val = self.total_price - self.deposit_amount
+        return val if val > 0 else Decimal('0.00')
+
+    @property
+    def platform_fee(self):
+        """ค่าคอมมิชชั่น 10% (คิดจากราคาเช่าจริงเท่านั้น ไม่คิดจากมัดจำ)"""
+        return self.real_rental_price * Decimal('0.10')
+
+    @property
+    def vat_amount(self):
+        """VAT 7% (คิดจากค่าคอมมิชชั่น)"""
+        return self.platform_fee * Decimal('0.07')
+
+    @property
+    def net_income_shop(self):
+        """รายรับสุทธิที่ร้านจะได้ (ค่าเช่าจริง - ค่าคอม - VAT)"""
+        # สูตร: เงินเข้ากระเป๋าจริง = ค่าเช่า - ค่าธรรมเนียมทั้งหมด
+        return self.real_rental_price - self.platform_fee - self.vat_amount
 
 
 
@@ -1039,6 +1077,8 @@ class Rental(models.Model):
             - self.commission_vat
         ).quantize(Decimal("0.01"))
 
+    
+
     def save(self, *args, **kwargs):
         if not self.rent_total or not self.grand_total:
             self.compute_totals()
@@ -1340,6 +1380,23 @@ class Order(models.Model):
     shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     grand_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
 
+    applied_commission_rate = models.DecimalField(
+        max_digits=5, decimal_places=4, default=Decimal("0.0000"), 
+        verbose_name="Rate คอมมิชชั่นที่ใช้ (ทศนิยม)"
+    )
+    commission_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"), 
+        verbose_name="ยอดหักค่าคอมมิชชั่น (เข้าแอดมิน)"
+    )
+    vat_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"), 
+        verbose_name="ยอดหัก VAT คอมมิชชั่น (เข้าแอดมิน)"
+    )
+    net_income_shop = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"), 
+        verbose_name="รายได้สุทธิร้านค้า (โอนให้ร้าน)"
+    )
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending_payment")
 
     # สำหรับ Omise
@@ -1349,7 +1406,50 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.id}"
-    
+
+    def save(self, *args, **kwargs):
+        
+        # -------------------------------------------------------------
+        # โหมด Debug: ไม่มี try/except (ถ้าพัง ให้มันแจ้ง Error Page สีเหลืองออกมาเลย)
+        # -------------------------------------------------------------
+        from decimal import Decimal
+        
+        # 1. แปลงค่าเป็น Decimal (ถ้าชื่อ field ไม่ตรงกับที่มีอยู่จริง มันจะ Error บรรทัดนี้)
+        # เช็กชื่อตัวแปรขวามือ ให้ตรงกับ field ที่คุณประกาศไว้ด้านบนใน class Order
+        val_rental   = self.rental_total if self.rental_total else 0
+        val_deposit  = self.deposit_total if self.deposit_total else 0
+        val_shipping = self.shipping_fee if self.shipping_fee else 0
+
+        # แปลงเป็นตัวเลขที่คำนวณได้
+        dec_rental   = Decimal(str(val_rental))
+        dec_deposit  = Decimal(str(val_deposit))
+        dec_shipping = Decimal(str(val_shipping))
+
+        # 2. คำนวณ Grand Total
+        self.grand_total = dec_rental + dec_deposit + dec_shipping
+
+        # 3. ส่วนแบ่ง (Hardcode 10% ไปก่อน เพื่อตัดปัญหาเรื่องหาตาราง Setting ไม่เจอ)
+        # ถ้าผ่านตรงนี้ได้ ค่อยกลับไปแก้ให้ดึงจาก Database ทีหลัง
+        rate = Decimal("0.10")      # 10%
+        vat_rate = Decimal("0.07")  # 7%
+
+        # คำนวณ
+        comm_fee = dec_rental * rate
+        vat = comm_fee * vat_rate
+        
+        # รายได้ร้าน = (ค่าเช่า - คอมมิชชั่น - vatคอม) + ค่าส่ง + มัดจำ
+        shop_income = (dec_rental - comm_fee - vat) + dec_shipping + dec_deposit
+
+        # 4. ยัดค่าใส่ Field
+        self.applied_commission_rate = rate
+        self.commission_fee = comm_fee
+        self.vat_amount = vat
+        self.net_income_shop = shop_income
+        
+        print(f"DEBUG: Rental={dec_rental}, Total={self.grand_total}") 
+
+        # 5. บันทึก
+        super().save(*args, **kwargs)
 
 
 
@@ -1383,7 +1483,7 @@ class Report(models.Model):
         RESOLVED = "RESOLVED", "ปิดเคสแล้ว"
         REJECTED = "REJECTED", "ปฏิเสธ"
 
-    # ปรับ import ตามโปรเจกต์คุณ
+   
     shop = models.ForeignKey("dress.Shop", on_delete=models.CASCADE, related_name="reports")
     order = models.ForeignKey("dress.RentalOrder", on_delete=models.CASCADE, related_name="reports")
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reported_cases")

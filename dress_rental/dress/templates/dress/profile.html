@@ -3,135 +3,232 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>โปรไฟล์ | Glam & Borrow</title>
+  
   <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<!-- Header -->
-<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
-  <div class="flex justify-between items-center px-8 py-8">
-    <h1 class="text-lg font-bold text-gray-800">โปรไฟล์</h1>
+  <style>
+    body { font-family: 'Prompt', sans-serif; }
+    
+    /* Animation สำหรับช่อง Input */
+    .input-transition {
+      transition: all 0.3s ease;
+    }
+    
+    /* ซ่อน Scrollbar แต่งให้สวย */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow-sm sticky top-0 z-40">
+  <div class="max-w-5xl mx-auto px-7 py-7 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <div class="bg-white/50 p-2 rounded-full backdrop-blur-sm">
+        <i class="fa-solid fa-id-card text-pink-500 text-lg"></i>
+      </div>
+      <h1 class="text-xl font-bold text-gray-800 tracking-wide">ข้อมูลส่วนตัว</h1>
+    </div>
+    
     <div class="flex gap-3">
-      <a href="{% url 'dress:member_home' %}" class="bg-white text-gray-700 px-4 py-2 rounded shadow hover:bg-gray-100 transition">
-        ← กลับหน้าหลัก
+      <a href="{% url 'dress:member_home' %}" 
+         class="bg-white/80 backdrop-blur text-gray-700 px-4 py-2 rounded-xl hover:bg-white transition shadow-sm font-medium text-sm flex items-center gap-2">
+        <i class="fa-solid fa-arrow-left"></i> กลับหน้าหลัก
       </a>
-      <button id="edit-btn" class="bg-blue-500 text-white px-5 py-2 rounded hover:bg-blue-600 transition">
-        แก้ไข
+      <button id="edit-btn" 
+              class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-5 py-2 rounded-xl hover:shadow-lg transition transform hover:-translate-y-0.5 font-medium text-sm flex items-center gap-2">
+        <i class="fa-solid fa-pen-to-square"></i> <span>แก้ไขข้อมูล</span>
       </button>
     </div>
   </div>
 </header>
 
-<!-- Main Content -->
-<main class="max-w-3xl mx-auto mt-8 px-6">
-  <form id="profile-form" action="{% url 'dress:update_profile' %}" method="POST" enctype="multipart/form-data"
-        class="bg-white shadow-lg rounded-xl p-8">
-    {% csrf_token %}
+<main class="flex-grow flex items-center justify-center py-5 px-5">
+  <div class="max-w-3xl w-full">
+    
+    <form id="profile-form" action="{% url 'dress:update_profile' %}" method="POST" enctype="multipart/form-data"
+          class="bg-white rounded-3xl shadow-xl overflow-hidden relative">
+      {% csrf_token %}
 
-    <!-- รูปโปรไฟล์ -->
-    <div class="flex flex-col items-center mb-6">
-      <div class="relative">
-        {% if profile.profile_image %}
-          <img id="preview-image" src="{{ profile.profile_image.url }}" class="w-32 h-32 rounded-full object-cover border shadow">
-        {% else %}
-          <img id="preview-image" src="{% static 'img/default-avatar.png' %}" class="w-32 h-32 rounded-full object-cover border shadow">
-        {% endif %}
-        <label for="profile_image"
-               class="absolute bottom-0 right-0 bg-white border rounded-full p-1.5 shadow cursor-pointer hover:bg-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-               stroke="currentColor" class="w-5 h-5 text-gray-600">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M15.232 5.232l3.536 3.536M9 13h3l7-7a2.828 2.828 0 00-4-4l-6 6v3z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16 21H5a2 2 0 01-2-2v-7h2v7h11v2z"/>
-          </svg>
-        </label>
-        <input id="profile_image" name="profile_image" type="file" accept="image/*" class="hidden" onchange="previewImage(event)">
-      </div>
-    </div>
-
-    <!-- ข้อมูลผู้ใช้ -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-      <div>
-        <label class="block text-gray-600 text-sm mb-1">ชื่อผู้ใช้</label>
-        <input type="text" name="username" value="{{ request.user.username }}" readonly
-               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
+      <div class="h-32 bg-gradient-to-r from-pink-100 to-blue-100 relative">
+         <div class="absolute inset-0 bg-white/30 backdrop-blur-[2px]"></div>
       </div>
 
-      <div>
-        <label class="block text-gray-600 text-sm mb-1">วันเดือนปีเกิด</label>
-        <input type="date" name="birth_date" value="{{ profile.birth_date|date:'Y-m-d' }}" readonly
-               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
+      <div class="px-8 pb-10">
+        
+        <div class="relative -mt-16 mb-8 flex flex-col items-center">
+          <div class="relative group">
+            <div class="w-36 h-36 rounded-full p-1 bg-white shadow-lg ring-4 ring-pink-50 overflow-hidden relative">
+              {% if profile.profile_image %}
+                <img id="preview-image" src="{{ profile.profile_image.url }}" class="w-full h-full rounded-full object-cover">
+              {% else %}
+                <img id="preview-image" src="{% static 'img/default-avatar.png' %}" class="w-full h-full rounded-full object-cover">
+              {% endif %}
+              
+              <div id="image-overlay" class="absolute inset-0 bg-black/30 hidden items-center justify-center transition opacity-0 group-hover:opacity-100">
+                <p class="text-white text-xs font-light">เปลี่ยนรูป</p>
+              </div>
+            </div>
+
+            <label for="profile_image" id="upload-icon"
+                   class="absolute bottom-2 right-2 bg-white text-gray-600 p-2.5 rounded-full shadow-md cursor-pointer hover:bg-blue-50 hover:text-blue-600 transition border border-gray-100 pointer-events-none opacity-50">
+              <i class="fa-solid fa-camera"></i>
+            </label>
+            <input id="profile_image" name="profile_image" type="file" accept="image/*" class="hidden" onchange="previewImage(event)" disabled>
+          </div>
+          <h2 class="mt-3 text-2xl font-bold text-gray-800">{{ request.user.username }}</h2>
+          <p class="text-gray-500 text-sm">สมาชิกทั่วไป</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+          
+          <div class="group">
+            <label class="block text-gray-500 text-xs font-medium mb-1 pl-1 uppercase tracking-wider">ชื่อผู้ใช้</label>
+            <div class="relative">
+              <span class="absolute left-4 top-3 text-gray-400"><i class="fa-regular fa-user"></i></span>
+              <input type="text" name="username" value="{{ request.user.username }}" readonly
+                     class="input-field w-full bg-gray-50 border-transparent text-gray-500 rounded-xl px-4 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-300 font-medium input-transition cursor-default">
+            </div>
+          </div>
+
+          <div class="group">
+            <label class="block text-gray-500 text-xs font-medium mb-1 pl-1 uppercase tracking-wider">วันเดือนปีเกิด</label>
+            <div class="relative">
+              <span class="absolute left-4 top-3 text-gray-400"><i class="fa-solid fa-cake-candles"></i></span>
+              <input type="date" name="birth_date" value="{{ profile.birth_date|date:'Y-m-d' }}" readonly
+                     class="input-field w-full bg-gray-50 border-transparent text-gray-500 rounded-xl px-4 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-300 font-medium input-transition cursor-default">
+            </div>
+          </div>
+
+          <div class="group">
+            <label class="block text-gray-500 text-xs font-medium mb-1 pl-1 uppercase tracking-wider">เพศ</label>
+            <div class="relative">
+              <span class="absolute left-4 top-3 text-gray-400"><i class="fa-solid fa-venus-mars"></i></span>
+              <input type="text" name="gender" value="{{ profile.gender }}" readonly
+                     class="input-field w-full bg-gray-50 border-transparent text-gray-500 rounded-xl px-4 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-300 font-medium input-transition cursor-default">
+            </div>
+          </div>
+
+          <div class="group">
+            <label class="block text-gray-500 text-xs font-medium mb-1 pl-1 uppercase tracking-wider">เบอร์โทรศัพท์</label>
+            <div class="relative">
+              <span class="absolute left-4 top-3 text-gray-400"><i class="fa-solid fa-phone"></i></span>
+              <input type="text" name="phone" value="{{ profile.phone }}" readonly
+                     class="input-field w-full bg-gray-50 border-transparent text-gray-500 rounded-xl px-4 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-300 font-medium input-transition cursor-default">
+            </div>
+          </div>
+
+          <div class="group">
+            <label class="block text-gray-500 text-xs font-medium mb-1 pl-1 uppercase tracking-wider">อีเมล</label>
+            <div class="relative">
+              <span class="absolute left-4 top-3 text-gray-400"><i class="fa-regular fa-envelope"></i></span>
+              <input type="email" name="email" value="{{ request.user.email }}" readonly
+                     class="input-field w-full bg-gray-50 border-transparent text-gray-500 rounded-xl px-4 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-300 font-medium input-transition cursor-default">
+            </div>
+          </div>
+
+          <div class="group">
+            <label class="block text-gray-500 text-xs font-medium mb-1 pl-1 uppercase tracking-wider">รหัสผ่าน</label>
+            <div class="relative">
+              <span class="absolute left-4 top-3 text-gray-400"><i class="fa-solid fa-lock"></i></span>
+              <input type="password" value="********" readonly
+                     class="w-full bg-gray-50 border-transparent text-gray-500 rounded-xl px-4 py-2.5 pl-10 cursor-not-allowed select-none">
+            </div>
+          </div>
+
+          <div class="md:col-span-2 group">
+            <label class="block text-gray-500 text-xs font-medium mb-1 pl-1 uppercase tracking-wider">ที่อยู่จัดส่ง</label>
+            <div class="relative">
+              <span class="absolute left-4 top-3 text-gray-400"><i class="fa-solid fa-location-dot"></i></span>
+              <input type="text" name="address" value="{{ profile.address }}" readonly
+                     class="input-field w-full bg-gray-50 border-transparent text-gray-500 rounded-xl px-4 py-2.5 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-300 font-medium input-transition cursor-default">
+            </div>
+          </div>
+        </div>
+
+        <div id="edit-buttons" class="hidden mt-10 border-t pt-6 flex justify-end gap-3 animate-fade-in-up">
+          <button type="button" id="cancel-btn" 
+                  class="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50 transition">
+            ยกเลิก
+          </button>
+          <button type="submit" 
+                  class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-2.5 rounded-xl shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 transition font-medium">
+            บันทึกการเปลี่ยนแปลง
+          </button>
+        </div>
+
       </div>
-
-      <div>
-        <label class="block text-gray-600 text-sm mb-1">เพศ</label>
-        <input type="text" name="gender" value="{{ profile.gender }}" readonly
-               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
-      </div>
-
-      <div>
-        <label class="block text-gray-600 text-sm mb-1">เบอร์โทรศัพท์</label>
-        <input type="text" name="phone" value="{{ profile.phone }}" readonly
-               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
-      </div>
-
-      <div>
-        <label class="block text-gray-600 text-sm mb-1">อีเมล</label>
-        <input type="email" name="email" value="{{ request.user.email }}" readonly
-               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
-      </div>
-
-      <div>
-        <label class="block text-gray-600 text-sm mb-1">รหัสผ่าน</label>
-        <input type="password" value="********" readonly
-               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
-      </div>
-
-      <div class="md:col-span-2">
-        <label class="block text-gray-600 text-sm mb-1">ที่อยู่</label>
-        <input type="text" name="address" value="{{ profile.address }}" readonly
-               class="input-field w-full border rounded px-3 py-2 focus:ring focus:ring-blue-300">
-      </div>
-    </div>
-
-    <!-- ปุ่ม -->
-    <div id="edit-buttons" class="hidden mt-8 flex justify-center gap-4">
-      <button type="button" id="cancel-btn" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">ยกเลิก</button>
-      <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">บันทึก</button>
-    </div>
-
-  </form>
+    </form>
+  </div>
 </main>
 
 <script>
-// เปิด/ปิดโหมดแก้ไข
+// Logic เดิม แต่เพิ่มการจัดการ Visual Classes
 const editBtn = document.getElementById("edit-btn");
 const cancelBtn = document.getElementById("cancel-btn");
 const form = document.getElementById("profile-form");
 const inputs = form.querySelectorAll(".input-field");
 const buttons = document.getElementById("edit-buttons");
+const uploadIcon = document.getElementById("upload-icon");
+const fileInput = document.getElementById("profile_image");
+const imageOverlay = document.getElementById("image-overlay");
+const btnText = editBtn.querySelector("span");
+const btnIcon = editBtn.querySelector("i");
 
-editBtn.addEventListener("click", () => {
-  editBtn.textContent = "กำลังแก้ไข";
-  inputs.forEach(i => i.readOnly = false);
-  buttons.classList.remove("hidden");
-});
+// Function สลับโหมด
+function toggleEditMode(isEditing) {
+  inputs.forEach(input => {
+    input.readOnly = !isEditing;
+    if (isEditing) {
+      // โหมดแก้ไข: พื้นขาว, มีขอบ, สีตัวหนังสือเข้ม
+      input.classList.remove("bg-gray-50", "border-transparent", "text-gray-500", "cursor-default");
+      input.classList.add("bg-white", "border", "border-gray-300", "text-gray-800", "shadow-sm");
+    } else {
+      // โหมดอ่าน: พื้นเทา, ไม่มีขอบ, สีจาง
+      input.classList.add("bg-gray-50", "border-transparent", "text-gray-500", "cursor-default");
+      input.classList.remove("bg-white", "border", "border-gray-300", "text-gray-800", "shadow-sm");
+    }
+  });
 
-cancelBtn.addEventListener("click", () => {
-  inputs.forEach(i => i.readOnly = true);
-  buttons.classList.add("hidden");
-  editBtn.textContent = "แก้ไข";
-  form.reset();
-});
+  if (isEditing) {
+    buttons.classList.remove("hidden");
+    editBtn.classList.add("hidden"); // ซ่อนปุ่ม Edit ด้านบน
+    
+    // เปิดใช้งานปุ่มอัปโหลดรูป
+    uploadIcon.classList.remove("pointer-events-none", "opacity-50");
+    fileInput.disabled = false;
+    imageOverlay.classList.replace("hidden", "flex"); // Show overlay text
+  } else {
+    buttons.classList.add("hidden");
+    editBtn.classList.remove("hidden"); // แสดงปุ่ม Edit ด้านบนกลับมา
+    
+    // ปิดการอัปโหลดรูป
+    uploadIcon.classList.add("pointer-events-none", "opacity-50");
+    fileInput.disabled = true;
+    imageOverlay.classList.replace("flex", "hidden");
+    
+    form.reset();
+  }
+}
 
-// พรีวิวรูปใหม่ก่อนอัปโหลด
+editBtn.addEventListener("click", () => toggleEditMode(true));
+cancelBtn.addEventListener("click", () => toggleEditMode(false));
+
+// Preview Image logic
 function previewImage(event) {
   const reader = new FileReader();
   reader.onload = function(){
     document.getElementById("preview-image").src = reader.result;
   }
-  reader.readAsDataURL(event.target.files[0]);
+  if(event.target.files[0]){
+      reader.readAsDataURL(event.target.files[0]);
+  }
 }
 </script>
 

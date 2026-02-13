@@ -1,276 +1,232 @@
 {% extends "backoffice/base.html" %}
 
-{% block title %}ดูรายงาน{% endblock %}
-{% block page_title %}ดูรายงาน{% endblock %}
+{% block title %}รายละเอียดรายงาน #{{ report.id }}{% endblock %}
+{% block page_title %}ตรวจสอบรายงาน{% endblock %}
 {% block page_subtitle %}รายละเอียดรายงานปัญหาที่ร้านส่งมา{% endblock %}
 
 {% block content %}
-<div class="space-y-5">
+<div class="max-w-7xl mx-auto pb-10">
 
-  <!-- Top bar -->
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <a href="{% url 'backoffice:reports' %}"
-       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-black/10 text-sm font-semibold text-neutral-800 hover:bg-neutral-50">
-      กลับไปหน้ารายงาน
-    </a>
-
-    <!-- Status badge -->
-    <div>
-      {% with st=report.status %}
-        {% if st == "SUBMITTED" %}
-          <span class="inline-flex items-center px-3 py-1 rounded-full bg-red-50 text-red-700 text-xs font-semibold border border-red-100">ส่งรายงานแล้ว</span>
-        {% elif st == "PROCESSING" %}
-          <span class="inline-flex items-center px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold border border-amber-100">กำลังตรวจสอบ</span>
-        {% elif st == "RESOLVED" %}
-          <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">จัดการแล้ว</span>
-        {% elif st == "REJECTED" %}
-          <span class="inline-flex items-center px-3 py-1 rounded-full bg-neutral-100 text-neutral-700 text-xs font-semibold border border-neutral-200">ปฏิเสธ</span>
-        {% else %}
-          <span class="inline-flex items-center px-3 py-1 rounded-full bg-neutral-100 text-neutral-700 text-xs font-semibold border border-neutral-200">
-            {{ st|default:"ไม่ระบุสถานะ" }}
-          </span>
-        {% endif %}
-      {% endwith %}
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'backoffice:reports' %}"
+         class="h-10 w-10 flex items-center justify-center rounded-xl bg-white border border-black/10 text-neutral-600 hover:bg-neutral-50 transition">
+        ←
+      </a>
+      <div>
+        <div class="flex items-center gap-3">
+          <h1 class="text-2xl font-bold text-neutral-900">รายงาน #{{ report.id }}</h1>
+          {% with st=report.status %}
+            {% if st == "SUBMITTED" %}
+              <span class="px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold">ส่งรายงานแล้ว</span>
+            {% elif st == "PROCESSING" %}
+              <span class="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">กำลังตรวจสอบ</span>
+            {% elif st == "RESOLVED" %}
+              <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">จัดการแล้ว</span>
+            {% elif st == "REJECTED" %}
+              <span class="px-3 py-1 rounded-full bg-neutral-100 text-neutral-600 text-xs font-bold">ปฏิเสธ</span>
+            {% else %}
+              <span class="px-3 py-1 rounded-full bg-neutral-100 text-neutral-600 text-xs font-bold">{{ st|default:"ไม่ระบุสถานะ" }}</span>
+            {% endif %}
+          {% endwith %}
+        </div>
+        <div class="text-sm text-neutral-500 mt-1">
+          วันที่แจ้ง: 
+          {% if report.created_at %}
+            {{ report.created_at|date:"d M Y เวลา H:i" }}
+          {% elif report.reported_at %}
+            {{ report.reported_at|date:"d M Y เวลา H:i" }}
+          {% else %} - {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Main card -->
-  <div class="bg-white rounded-2xl shadow border border-black/5 overflow-hidden">
-    <div class="px-6 py-5 border-b border-black/5 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <div class="text-sm text-neutral-600">รายงานเลขที่</div>
-        <div class="text-xl font-semibold text-neutral-900">#{{ report.id }}</div>
-      </div>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-      <div class="text-right">
-        <div class="text-sm text-neutral-600">วันที่ส่งรายงาน</div>
-        <div class="text-sm font-semibold text-neutral-900">
-          {% if report.created_at %}
-            {{ report.created_at|date:"d/m/Y H:i" }}
-          {% elif report.reported_at %}
-            {{ report.reported_at|date:"d/m/Y H:i" }}
-          {% else %}
-            -
+    <div class="lg:col-span-2 space-y-6">
+      
+      <div class="bg-white rounded-2xl shadow-sm border border-black/5 overflow-hidden">
+        <div class="p-5 border-b border-black/5 bg-neutral-50 flex justify-between items-center">
+          <h3 class="font-bold text-neutral-900">ข้อมูลคู่กรณี & ออเดอร์</h3>
+          {% if report.order %}
+            <span class="text-xs font-medium bg-white border px-2 py-1 rounded text-neutral-600">
+              Order #{{ report.order.id }}
+            </span>
           {% endif %}
         </div>
+        
+        <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <div class="text-xs font-bold text-neutral-400 uppercase mb-2">ผู้รายงาน (Reporter)</div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-blue-50/50 border border-blue-100">
+               <div class="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">R</div>
+               <div>
+                 <div class="font-bold text-neutral-900 text-sm">
+                    {% if report.shop %}
+                      {{ report.shop.name|default:report.shop }} (ร้าน)
+                    {% elif report.reporter %}
+                      {{ report.reporter.username|default:report.reporter }}
+                    {% elif report.created_by %}
+                      {{ report.created_by.username|default:report.created_by }}
+                    {% else %} - {% endif %}
+                 </div>
+                 <div class="text-xs text-neutral-500">ผู้เปิดเคส</div>
+               </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="text-xs font-bold text-neutral-400 uppercase mb-2">ผู้ถูกรายงาน (Reported)</div>
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-red-50/50 border border-red-100">
+               <div class="h-10 w-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">U</div>
+               <div>
+                 <div class="font-bold text-neutral-900 text-sm">
+                    {% if report.customer %}
+                      {{ report.customer.username|default:report.customer }}
+                    {% elif report.user %}
+                      {{ report.user.username|default:report.user }}
+                    {% else %} - {% endif %}
+                 </div>
+                 <div class="text-xs text-neutral-500">คู่กรณี</div>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {% if report.order %}
+        <div class="px-5 pb-5 pt-0">
+          <div class="p-4 rounded-xl bg-neutral-50 border border-black/5 text-sm grid grid-cols-2 gap-4">
+             <div>
+                <span class="text-neutral-500 text-xs block">สถานะออเดอร์</span>
+                <span class="font-medium text-neutral-900">
+                  {% if report.order.get_status_display %}
+                    {{ report.order.get_status_display }}
+                  {% else %}
+                    {{ report.order.status|default:"-" }}
+                  {% endif %}
+                </span>
+             </div>
+             <div>
+                <span class="text-neutral-500 text-xs block">ลูกค้าในออเดอร์</span>
+                <span class="font-medium text-neutral-900">
+                  {% if report.order.user %}
+                    {{ report.order.user.username|default:report.order.user }}
+                  {% else %} - {% endif %}
+                </span>
+             </div>
+          </div>
+        </div>
+        {% endif %}
       </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-black/5 p-6 min-h-[200px]">
+        <div class="mb-4">
+           <span class="text-xs font-bold text-neutral-400 uppercase">หัวข้อปัญหา</span>
+           <div class="text-lg font-bold text-neutral-900 mt-1">
+             {% if report.get_report_type_display %}
+               {{ report.get_report_type_display }}
+             {% elif report.report_type %}
+               {{ report.report_type }}
+             {% elif report.category %}
+               {{ report.category }}
+             {% else %} ทั่วไป {% endif %}
+           </div>
+        </div>
+        
+        <hr class="border-black/5 mb-4">
+
+        <span class="text-xs font-bold text-neutral-400 uppercase block mb-2">รายละเอียด</span>
+        <div class="text-neutral-700 leading-relaxed whitespace-pre-line bg-neutral-50 p-4 rounded-xl border border-neutral-100">
+           {% with desc=report.description detail=report.detail title=report.title reason=report.reason message=report.message %}
+             {% if desc %}{{ desc }}
+             {% elif detail %}{{ detail }}
+             {% elif reason %}{{ reason }}
+             {% elif message %}{{ message }}
+             {% elif title %}{{ title }}
+             {% else %}- ไม่ระบุรายละเอียด -{% endif %}
+           {% endwith %}
+        </div>
+      </div>
+
     </div>
 
-    <div class="p-6">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="space-y-6">
 
-        <!-- Left: report summary -->
-        <div class="lg:col-span-2 bg-neutral-50 rounded-2xl border border-black/5 p-5">
-          <div class="text-sm font-semibold text-neutral-900">สรุปรายงาน</div>
-
-          <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div class="bg-white rounded-xl border border-black/5 p-4">
-              <div class="text-neutral-500 text-xs">ร้าน</div>
-              <div class="font-semibold text-neutral-900 mt-1">
-                {% if report.shop %}{{ report.shop.name|default:report.shop }}{% else %}-{% endif %}
-              </div>
-            </div>
-
-            <div class="bg-white rounded-xl border border-black/5 p-4">
-              <div class="text-neutral-500 text-xs">ผู้รายงาน</div>
-              <div class="font-semibold text-neutral-900 mt-1">
-                {% if report.shop %}
-                  {{ report.shop.name|default:report.shop }}
-                {% elif report.reporter %}
-                  {{ report.reporter.username|default:report.reporter }}
-                {% elif report.created_by %}
-                  {{ report.created_by.username|default:report.created_by }}
-                {% else %}
-                  -
-                {% endif %}
-              </div>
-            </div>
-
-            <div class="bg-white rounded-xl border border-black/5 p-4">
-              <div class="text-neutral-500 text-xs">ผู้ถูกรายงาน</div>
-              <div class="font-semibold text-neutral-900 mt-1">
-                {% if report.customer %}
-                  {{ report.customer.username|default:report.customer }}
-                {% elif report.user %}
-                  {{ report.user.username|default:report.user }}
-                {% else %}
-                  -
-                {% endif %}
-              </div>
-            </div>
-
-            <div class="bg-white rounded-xl border border-black/5 p-4">
-              <div class="text-neutral-500 text-xs">ประเภทปัญหา</div>
-              <div class="font-semibold text-neutral-900 mt-1">
-                {% if report.get_report_type_display %}
-                  {{ report.get_report_type_display }}
-                {% elif report.report_type %}
-                  {{ report.report_type }}
-                {% elif report.category %}
-                  {% if report.get_category_display %}
-                    {{ report.get_category_display }}
-                  {% else %}
-                    {{ report.category }}
-                  {% endif %}
-                {% else %}
-                  -
-                {% endif %}
-              </div>
-            </div>
-          </div>
-
-          <!-- Order info -->
-          <div class="mt-5">
-            <div class="text-sm font-semibold text-neutral-900">ข้อมูลออเดอร์</div>
-
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div class="bg-white rounded-xl border border-black/5 p-4">
-                <div class="text-neutral-500 text-xs">ออเดอร์</div>
-                <div class="font-semibold text-neutral-900 mt-1">
-                  {% if report.order %}#{{ report.order.id }}{% else %}-{% endif %}
-                </div>
-              </div>
-
-              <div class="bg-white rounded-xl border border-black/5 p-4">
-                <div class="text-neutral-500 text-xs">สถานะออเดอร์</div>
-                <div class="font-semibold text-neutral-900 mt-1">
-                  {% if report.order %}
-                    {% if report.order.get_status_display %}
-                      {{ report.order.get_status_display }}
-                    {% else %}
-                      {{ report.order.status|default:"-" }}
-                    {% endif %}
-                  {% else %}
-                    -
-                  {% endif %}
-                </div>
-              </div>
-
-              <div class="bg-white rounded-xl border border-black/5 p-4">
-                <div class="text-neutral-500 text-xs">ลูกค้า (ในออเดอร์)</div>
-                <div class="font-semibold text-neutral-900 mt-1">
-                  {% if report.order and report.order.user %}
-                    {{ report.order.user.username|default:report.order.user }}
-                  {% else %}
-                    -
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Detail -->
-          <div class="mt-5">
-            <div class="text-xs text-neutral-500">รายละเอียด</div>
-
-            {% with desc=report.description detail=report.detail title=report.title reason=report.reason message=report.message %}
-              <div class="mt-2 text-neutral-800 whitespace-pre-line">
-                {% if desc %}{{ desc }}
-                {% elif detail %}{{ detail }}
-                {% elif reason %}{{ reason }}
-                {% elif message %}{{ message }}
-                {% elif title %}{{ title }}
-                {% else %}-{% endif %}
-              </div>
-            {% endwith %}
-          </div>
-
-          <!-- Admin action -->
-          <div class="mt-6 border-t border-black/10 pt-5">
-            <div class="text-sm font-semibold text-neutral-900">การจัดการโดยแอดมิน</div>
-
-            <form method="post" action="{% url 'backoffice:report_update' report.id %}" class="mt-3 space-y-3">
-              {% csrf_token %}
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <div class="text-xs text-neutral-500 mb-1">เปลี่ยนสถานะ</div>
-                  <select name="status"
-                          class="h-11 w-full rounded-xl border border-black/10 bg-white px-4 text-sm focus:outline-none">
-                    <option value="SUBMITTED" {% if report.status == "SUBMITTED" %}selected{% endif %}>ส่งรายงานแล้ว</option>
-                    <option value="PROCESSING" {% if report.status == "PROCESSING" %}selected{% endif %}>กำลังตรวจสอบ</option>
-                    <option value="RESOLVED" {% if report.status == "RESOLVED" %}selected{% endif %}>จัดการแล้ว</option>
-                    <option value="REJECTED" {% if report.status == "REJECTED" %}selected{% endif %}>ปฏิเสธ</option>
-                  </select>
-                </div>
-
-                <div>
-                  <div class="text-xs text-neutral-500 mb-1">หมายเหตุแอดมิน (ถ้ามี)</div>
-                  <input type="text" name="admin_note"
-                         value="{{ admin_note_value|default:'' }}"
-                         class="h-11 w-full rounded-xl border border-black/10 bg-white px-4 text-sm focus:outline-none"
-                         placeholder="เช่น แจ้งร้านให้ติดต่อ, รอหลักฐานเพิ่ม..." />
-                </div>
-              </div>
-
-              <div class="flex items-center gap-3">
-                <button type="submit"
-                        class="h-11 px-6 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
-                  บันทึกการเปลี่ยนแปลง
-                </button>
-              </div>
-            </form>
-          </div>
-
+      <div class="bg-white rounded-2xl shadow-sm border border-black/5 overflow-hidden">
+        <div class="p-4 bg-neutral-900 text-white font-semibold flex items-center gap-2">
+           <span>🛠️ การจัดการโดยแอดมิน</span>
         </div>
+        <div class="p-5">
+           <form method="post" action="{% url 'backoffice:report_update' report.id %}">
+             {% csrf_token %}
+             
+             <div class="space-y-4">
+               <div>
+                 <label class="text-xs font-semibold text-neutral-500 mb-1 block">เปลี่ยนสถานะ</label>
+                 <div class="relative">
+                   <select name="status" class="w-full h-11 pl-3 pr-8 rounded-xl border border-neutral-300 text-sm focus:outline-none focus:border-neutral-900 bg-white">
+                      <option value="SUBMITTED" {% if report.status == "SUBMITTED" %}selected{% endif %}>🔴 ส่งรายงานแล้ว</option>
+                      <option value="PROCESSING" {% if report.status == "PROCESSING" %}selected{% endif %}>🟡 กำลังตรวจสอบ</option>
+                      <option value="RESOLVED" {% if report.status == "RESOLVED" %}selected{% endif %}>🟢 จัดการแล้ว</option>
+                      <option value="REJECTED" {% if report.status == "REJECTED" %}selected{% endif %}>⚪ ปฏิเสธ</option>
+                   </select>
+                 </div>
+               </div>
 
-        <!-- Right: attachments / meta -->
-        <div class="bg-white rounded-2xl border border-black/5 p-5">
-          <div class="text-sm font-semibold text-neutral-900">ไฟล์แนบ</div>
-          <div class="text-xs text-neutral-500 mt-1">ถ้าไม่มีไฟล์แนบ ระบบจะแสดงเป็น -</div>
+               <div>
+                 <label class="text-xs font-semibold text-neutral-500 mb-1 block">หมายเหตุ (Admin Note)</label>
+                 <textarea name="admin_note" rows="3" 
+                           class="w-full p-3 rounded-xl border border-neutral-300 text-sm focus:outline-none focus:border-neutral-900"
+                           placeholder="ระบุสิ่งที่ดำเนินการไป...">{{ admin_note_value|default:'' }}</textarea>
+               </div>
 
-          <div class="mt-4 space-y-2">
-            {% if attachments %}
-              {% for a in attachments %}
-                {% if a.file %}
-                  <a href="{{ a.file.url }}"
-                     class="block px-4 py-3 rounded-xl border border-black/5 hover:bg-neutral-50 text-sm">
-                    {{ a.file.name|default:"ไฟล์แนบ" }}
-                  </a>
-                {% endif %}
-              {% empty %}
-                <div class="px-4 py-3 rounded-xl bg-neutral-50 border border-black/5 text-sm text-neutral-700">-</div>
-              {% endfor %}
-            {% else %}
-              <div class="px-4 py-3 rounded-xl bg-neutral-50 border border-black/5 text-sm text-neutral-700">-</div>
-            {% endif %}
-          </div>
-
-          <div class="mt-6 border-t border-black/5 pt-4 space-y-2 text-sm">
-            <div class="flex items-center justify-between">
-              <span class="text-neutral-500">อัปเดตล่าสุด</span>
-              <span class="font-semibold text-neutral-900">
-                {% if report.updated_at %}
-                  {{ report.updated_at|date:"d/m/Y H:i" }}
-                {% else %}
-                  -
-                {% endif %}
-              </span>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <span class="text-neutral-500">ผู้ดูแล</span>
-              <span class="font-semibold text-neutral-900">
-                {% if report.handled_by %}
-                  {{ report.handled_by.username|default:report.handled_by }}
-                {% else %}
-                  -
-                {% endif %}
-              </span>
-            </div>
-          </div>
-
-          <div class="mt-5">
-            <a href="{% url 'backoffice:reports' %}"
-               class="w-full inline-flex items-center justify-center h-11 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
-              ไปหน้ารายงานทั้งหมด
-            </a>
-          </div>
+               <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-100">
+                 บันทึกการเปลี่ยนแปลง
+               </button>
+             </div>
+           </form>
         </div>
-
       </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-black/5 p-5">
+        <h3 class="font-bold text-neutral-900 mb-3 text-sm">📎 ไฟล์แนบ / หลักฐาน</h3>
+        <div class="space-y-2 mb-6">
+           {% if attachments %}
+             {% for a in attachments %}
+               {% if a.file %}
+                 <a href="{{ a.file.url }}" target="_blank" class="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 hover:bg-neutral-50 transition group">
+                    <div class="h-8 w-8 rounded-lg bg-neutral-100 flex items-center justify-center text-lg group-hover:bg-white">📄</div>
+                    <div class="text-sm text-blue-600 font-medium truncate">{{ a.file.name }}</div>
+                 </a>
+               {% endif %}
+             {% endfor %}
+           {% else %}
+             <div class="text-sm text-neutral-400 bg-neutral-50 p-3 rounded-xl border border-dashed text-center">ไม่มีไฟล์แนบ</div>
+           {% endif %}
+        </div>
+
+        <div class="border-t pt-4 space-y-2 text-xs text-neutral-500">
+          <div class="flex justify-between">
+            <span>อัปเดตล่าสุด:</span>
+            <span class="text-neutral-900">
+              {% if report.updated_at %}
+                {{ report.updated_at|date:"d/m/Y H:i" }}
+              {% else %}-{% endif %}
+            </span>
+          </div>
+          <div class="flex justify-between">
+            <span>ผู้ดูแลเคส:</span>
+            <span class="text-neutral-900">
+              {% if report.handled_by %}
+                {{ report.handled_by.username|default:report.handled_by }}
+              {% else %}-{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
-
 </div>
 {% endblock %}

@@ -1,4 +1,4 @@
-from django.urls import path, reverse_lazy
+from django.urls import include, path, reverse_lazy
 from . import views
 from django.contrib.auth import views as auth_views
 from .report import views_admin_report, views_store
@@ -18,6 +18,8 @@ urlpatterns = [
     path("signup/", views.signup_view, name="signup"),
     path("logout/", views.logout_view, name="logout"),
     path("redirect/", views.login_redirect, name="login_redirect"),
+
+    path('backoffice/', include('backoffice.urls')),
 
     path("password-reset/",
          auth_views.PasswordResetView.as_view(
@@ -59,6 +61,8 @@ urlpatterns = [
     path("my-store/<int:store_id>/edit-dress/<int:dress_id>/", views.edit_dress, name="edit_dress"),
     path("my-store/<int:store_id>/delete-dress/<int:dress_id>/", views.delete_dress, name="delete_dress"),
     path("my-store/<int:store_id>/toggle/<int:dress_id>/", views.toggle_availability, name="toggle_availability"),
+    # เพิ่ม path ใหม่สำหรับหน้าประวัติทั้งหมด
+    path('store/<int:store_id>/finance/history/', views.back_office_finance_history, name='finance_history'),
     # Chat กับลูกค้า
     path('chat/shop/<int:shop_id>/', views.shop_chat_view, name='shop_chat'),
     path('chat/shop/<int:shop_id>/send/', views.shop_chat_send_message, name='shop_chat_send'),
@@ -235,6 +239,7 @@ path(
     path("cart/remove_bulk/", views.remove_bulk, name="remove_bulk"),
     path("cart/move_to_favorite/", views.move_to_favorite, name="move_to_favorite"),
     path("cart/update_quantity/", views.update_quantity, name="update_quantity"),
+    path('cart/checkout/confirm/', views.cart_checkout_confirm, name='cart_checkout_confirm'),
 
     # Profile / Rentals
     path("rental-history/", views.rental_history_view, name="rental_history"),
@@ -326,7 +331,8 @@ path(
     path("my-rentals/<int:rental_id>/receipt/", views.my_rental_receipt, name="my_rental_receipt"),
 
     path('ai-try-on/<int:dress_id>/', views.ai_try_on, name='ai_try_on'),
-    path('api/try-on/<int:dress_id>/', views.tryon_api, name='tryon_api'),
+    path('api/try-on/<int:dress_id>/', views.api_virtual_tryon, name='tryon_api'),
+    
 ]
 
 

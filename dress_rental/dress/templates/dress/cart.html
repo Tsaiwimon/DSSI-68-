@@ -1,352 +1,367 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ตะกร้าสินค้า | Glam & Borrow</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    body {
+      padding-bottom: 120px;
+      background-color: #fcfcfc;
+    }
+
+    .modal-animate {
+      animation: fadeInScale 0.2s ease-out forwards;
+    }
+
+    @keyframes fadeInScale {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .animate-bounce-x {
+      animation: bounceX 1s infinite;
+    }
+
+    @keyframes bounceX {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      50% {
+        transform: translateX(-5px);
+      }
+    }
+  </style>
 </head>
+
 <body class="bg-gray-50">
 
-<!-- Header -->
-<header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
-  <div class="w-full px-8 py-9 flex justify-between items-center">
-    <h1 class="text-2xl font-bold text-gray-800">ตะกร้าสินค้า ({{ cart_items.count }})</h1>
-    <div class="flex items-center gap-4">
-      <a href="{% url 'dress:member_home' %}" class="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition">
+  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+    <div class="w-full px-8 py-9 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-gray-800">ตะกร้าสินค้า ({{ cart_items.count }})</h1>
+      
+      <a href="{% url 'dress:member_home' %}"
+        class="bg-white/80 backdrop-blur text-gray-800 px-4 py-2 rounded-xl hover:bg-white transition shadow-sm font-medium">
         ← กลับหน้าหลัก
       </a>
-      <button id="edit-btn" class="bg-white text-gray-700 px-4 py-2 rounded-lg shadow hover:bg-gray-100 transition">
-        แก้ไข
-      </button>
     </div>
-  </div>
-</header>
+  </header>
 
-<!-- Main -->
-<main class="max-w-6xl mx-auto py-8 px-6">
-  {% for shop, data in grouped_cart.items %}
-    <div class="mb-6 bg-white-50 rounded-lg shadow p-4 shop-group"
-         data-shop="{{ shop.name }}"
-         data-shop-id="{{ shop.id }}"
-         data-shop-closed="{% if data.shop_closed %}1{% else %}0{% endif %}">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="font-bold text-lg">{{ shop.name }} <span class="text-gray-500">></span></h2>
+  <main class="max-w-6xl mx-auto py-8 px-6">
+    {% csrf_token %}
+    {% for shop, data in grouped_cart.items %}
+    <div class="mb-8 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden shop-group"
+      data-shop-id="{{ shop.id }}" data-shop-closed="{% if data.shop_closed %}1{% else %}0{% endif %}">
 
+      <div class="hidden shipping-rules-data">
+        {% if data.shipping_rules %}
+        {% for rule in data.shipping_rules %}
+        <span data-min="{{ rule.min }}" data-max="{{ rule.max }}" data-fee="{{ rule.fee }}"></span>
+        {% endfor %}
+        {% endif %}
+      </div>
+      <div class="bg-gray-50/50 px-6 py-4 flex items-center justify-between border-b border-gray-100">
+        <h2 class="font-bold text-lg text-gray-800 flex items-center">
+          <i class="fa-solid fa-store text-pink-500 mr-2"></i>{{ shop.name }}
+        </h2>
         {% if data.shop_closed %}
-          <span class="text-xs font-semibold px-3 py-1 rounded-full bg-yellow-50 border border-yellow-200 text-yellow-800">
-            ร้านปิดชั่วคราว
-          </span>
+        <span
+          class="text-[10px] font-bold px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 uppercase">ร้านปิดชั่วคราว</span>
         {% else %}
-          <span class="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700">
-            เปิดให้บริการ
-          </span>
+        <span
+          class="text-[10px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase">เปิดให้บริการ</span>
         {% endif %}
       </div>
 
-      {% for item in data.items %}
-        <div class="flex items-center justify-between border-b py-3 item-row" data-item-id="{{ item.id }}">
-          <div class="flex items-start gap-4">
-            <!-- Checkbox (ใช้เลือก ลบ/ย้าย/ชำระเงิน) -->
-            <input
-              type="checkbox"
-              class="edit-checkbox hidden w-5 h-5 accent-pink-500"
-              data-id="{{ item.id }}"
-              data-store-id="{{ shop.id }}"
-            >
+      <div class="px-6">
+        {% for item in data.items %}
+        <div
+          class="flex items-center justify-between border-b border-gray-50 py-6 item-row hover:bg-gray-50/30 transition last:border-0"
+          data-item-id="{{ item.id }}" data-daily-price="{{ item.dress.daily_price }}"
+          data-deposit="{{ item.calculated_deposit }}">
 
-            <!-- รูป -->
-            <a href="{% url 'dress:dress_detail' item.dress.id %}"
-               class="transition transform hover:scale-105 hover:shadow-lg cursor-pointer rounded-lg">
+          <div class="flex items-start gap-5">
+            <div class="flex items-center h-24">
+              <input type="checkbox" class="edit-checkbox w-6 h-6 rounded-lg accent-pink-500 cursor-pointer"
+                data-id="{{ item.id }}" data-store-id="{{ shop.id }}">
+            </div>
+
+            <div class="w-24 h-32 bg-gray-100 rounded-2xl overflow-hidden shadow-sm border border-gray-100">
               {% if item.dress.image %}
-                <img src="{{ item.dress.image.url }}" alt="{{ item.dress.name }}" class="w-20 h-24 object-cover rounded-lg">
+              <img src="{{ item.dress.image.url }}" class="w-full h-full object-cover">
               {% else %}
-                <img src="{% static 'images/placeholder-4x3.jpg' %}" alt="{{ item.dress.name }}" class="w-20 h-24 object-cover rounded-lg">
+              <img src="{% static 'images/placeholder.jpg' %}" class="w-full h-full object-cover">
               {% endif %}
-            </a>
+            </div>
 
-            <!-- ข้อมูลสินค้า -->
-            <div>
-              <a href="{% url 'dress:dress_detail' item.dress.id %}"
-                 class="font-medium text-gray-800 hover:text-pink-600 transition cursor-pointer">
-                {{ item.dress.name }}
-              </a>
-
-              <p><span class="font-semibold">ขนาด:</span> {{ item.dress.size|default:"-" }}</p>
-              <p class="text-sm text-gray-600 mt-1">จำนวน: <span class="font-semibold">1</span> ชุด</p>
-
-              <a href="{% url 'dress:dress_detail' item.dress.id %}"
-                 class="inline-block mt-1 bg-pink-100 text-pink-600 px-3 py-1 rounded hover:bg-pink-200 transition text-xs font-medium">
-                ดูรายละเอียด
-              </a>
-
-              {% if data.shop_closed %}
-                <div class="mt-2 text-xs text-yellow-800 bg-yellow-50 border border-yellow-200 px-3 py-2 rounded">
-                  ร้านปิดชั่วคราว — ยังไม่สามารถชำระเงินสินค้าร้านนี้ได้
-                </div>
-              {% endif %}
+            <div class="flex flex-col justify-between py-1">
+              <div>
+                <h3 class="text-lg font-bold text-gray-800">{{ item.dress.name }}</h3>
+                <p class="text-sm text-gray-500 mt-1">ไซส์: {{ item.dress.size|default:"-" }}</p>
+                <p class="text-xs text-pink-500 mt-1 font-bold ">มัดจำ ฿{{ item.calculated_deposit|floatformat:0 }}</p>
+              </div>
+              <div class="flex gap-4 mt-4">
+                <button
+                  class="move-to-fav text-gray-400 hover:text-pink-500 text-sm transition font-medium flex items-center"
+                  data-id="{{ item.id }}">
+                  <i class="fa-regular fa-heart mr-1.5"></i> ย้ายไปที่ถูกใจ
+                </button>
+                <button
+                  class="quick-delete text-gray-400 hover:text-red-500 text-sm transition font-medium flex items-center"
+                  data-id="{{ item.id }}">
+                  <i class="fa-solid fa-trash-can mr-1.5"></i> ลบ
+                </button>
+              </div>
             </div>
           </div>
 
-          <!-- ราคา/วัน (เช่า 1 ชุดต่อรายการ) -->
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-gray-500">ราคา/วัน</span>
-            <p class="font-semibold text-pink-600 item-total" data-price="{{ item.dress.daily_price }}">
-              ฿{{ item.dress.daily_price|floatformat:2 }}
-            </p>
+          <div class="text-right">
+            <span class="text-xs text-gray-400 block mb-1 uppercase font-bold tracking-tighter">เช่าต่อวัน</span>
+            <p class="text-xl font-black text-pink-600">฿{{ item.dress.daily_price|floatformat:2 }}</p>
           </div>
         </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
 
-      <!-- รวมร้าน (ราคา/วัน) -->
-      <div class="mt-3 flex justify-end items-center">
-        <p class="font-semibold text-pink-700 shop-total">
-          รวมร้าน {{ shop.name }}: ฿{{ data.total|floatformat:2 }}
-        </p>
+      <div class="bg-gray-50/30 px-6 py-4 flex flex-col items-end border-t border-gray-100">
+
+        <div class="text-xs text-gray-400 font-bold uppercase tracking-widest" style="display: none;">
+          ค่าส่งร้านนี้: <span class="text-gray-800 shop-shipping-display">฿0.00</span>
+        </div>
+
+        <div class="text-gray-800 font-bold mt-1 text-right">
+          รวมร้านนี้: <span class="text-pink-600 shop-subtotal-display">฿0.00</span>
+
+          <div class="text-xs text-red-500 font-normal mt-1">
+            (ราคายังไม่รวมค่าจัดส่ง)
+          </div>
+        </div>
+
+      </div>
+      {% empty %}
+      <div class="text-center py-32 bg-white rounded-3xl border-2 border-dashed border-gray-100">
+        <i class="fa-solid fa-cart-shopping text-6xl text-gray-100 mb-6"></i>
+        <p class="text-gray-400 text-lg">ยังไม่มีสินค้าในตะกร้า</p>
+        <a href="{% url 'dress:member_home' %}"
+          class="inline-block mt-8 bg-pink-500 text-white px-10 py-3.5 rounded-2xl hover:bg-pink-600 transition shadow-lg shadow-pink-100 font-bold">ไปเลือกชุดกัน!</a>
+      </div>
+      {% endfor %}
+  </main>
+
+  <div
+    class="fixed bottom-0 left-0 w-full bg-white shadow-[0_-15px_40px_rgba(0,0,0,0.12)] border-t border-gray-200 z-50">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+
+      <div id="bulk-actions" class="hidden flex items-center gap-6">
+        <div class="flex flex-col border-r border-gray-100 pr-6">
+          <span class="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">เลือกไว้</span>
+          <span class="text-sm font-black text-gray-800 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
+            <span id="selected-count-badge">0</span> ชุด
+          </span>
+        </div>
+        <div class="flex gap-5">
+          <button id="fav-selected"
+            class="text-pink-500 hover:text-pink-700 text-sm font-bold flex items-center gap-1.5 transition-colors">
+            <i class="fa-solid fa-heart"></i> ย้ายไปที่ถูกใจ
+          </button>
+          <button id="delete-selected"
+            class="text-red-400 hover:text-red-600 text-sm font-bold flex items-center gap-1.5 transition-colors">
+            <i class="fa-solid fa-trash-can"></i> ลบออก
+          </button>
+        </div>
+      </div>
+
+      <div id="bulk-placeholder" class="text-sm text-gray-400 font-medium">
+        <i class="fa-solid fa-arrow-left-long mr-2 animate-bounce-x"></i> กรุณาเลือกชุดที่ต้องการเช่าเพื่อคำนวณราคา
+      </div>
+
+      <div class="flex items-center gap-10">
+        <div class="text-right">
+          <p class="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">ยอดชำระรวมสุทธิ</p>
+          <p id="selected-total" class="text-3xl font-black text-gray-900 tracking-tight">฿0.00</p>
+        </div>
+        <div class="relative">
+          <button id="checkout-btn" data-checkout-url="{% url 'dress:cart_checkout' %}"
+            class="bg-blue-600 text-white px-12 py-4 rounded-2xl text-xl font-black hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all duration-300 transform hover:-translate-y-0.5 disabled:bg-gray-100 disabled:shadow-none disabled:text-gray-300 disabled:transform-none">
+            ชำระเงิน
+          </button>
+          <p id="checkout-hint"
+            class="text-[10px] text-red-500 mt-2 absolute w-full text-center hidden font-bold bg-red-50 py-1 rounded-md border border-red-100">
+            <i class="fa-solid fa-circle-exclamation mr-1"></i> มีร้านที่ปิดให้บริการอยู่
+          </p>
+        </div>
       </div>
     </div>
-  {% empty %}
-    <p class="text-center text-gray-500 mt-10">ยังไม่มีสินค้าในตะกร้า</p>
-  {% endfor %}
-
-  <!-- ปุ่มโหมดแก้ไข -->
-  <div id="edit-actions" class="hidden mt-8 text-right space-x-3">
-    <button id="delete-selected" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-      ลบที่เลือก
-    </button>
-    <button id="move-favorite" class="bg-pink-500 text-white px-4 py-2 rounded hover:bg-pink-600">
-      ย้ายไปสินค้าที่ถูกใจ
-    </button>
-    <button id="cancel-edit" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
-      ยกเลิก
-    </button>
   </div>
 
-  <!-- รวมทั้งหมด -->
-  <div class="mt-10 flex justify-between items-center border-t pt-6">
-    <div></div>
-    <div class="text-right">
-      <p class="text-lg text-gray-600">
-        ยอดรวมตามที่เลือก (ราคา/วัน):
-        <span id="selected-total" class="font-bold text-pink-600">฿0.00</span>
-      </p>
-
-      <button id="checkout-btn"
-              data-checkout-url="{% url 'dress:cart_checkout' %}"
-              class="mt-2 bg-blue-600 text-white px-8 py-2 rounded hover:bg-blue-700">
-        ชำระเงิน
-      </button>
-      <p id="checkout-hint" class="text-xs text-gray-500 mt-2 hidden">
-        * ร้านปิดชั่วคราว — ไม่สามารถชำระเงินได้
-      </p>
+  <div id="actionModal" class="fixed inset-0 hidden items-center justify-center z-[70] p-4">
+    <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onclick="closeModal()"></div>
+    <div class="relative bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-10 modal-animate text-center">
+      <div id="modal-icon" class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"></div>
+      <h3 id="modal-title" class="text-2xl font-black text-gray-800 mb-2"></h3>
+      <p id="modal-desc" class="text-gray-500 mb-8 px-4 leading-relaxed"></p>
+      <div class="flex gap-4">
+        <button onclick="closeModal()"
+          class="flex-1 py-4 rounded-2xl bg-gray-50 text-gray-500 font-bold hover:bg-gray-100 transition">ยกเลิก</button>
+        <button id="confirm-action-btn"
+          class="flex-1 py-4 rounded-2xl text-white font-bold transition shadow-lg"></button>
+      </div>
     </div>
   </div>
-</main>
 
-<!-- Modal: เลือกได้แค่ร้านเดียว (ตอนกดชำระเงินเท่านั้น) -->
-<div id="storeLimitModal" class="fixed inset-0 hidden items-center justify-center z-50">
-  <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const checkboxes = document.querySelectorAll(".edit-checkbox");
+      const totalText = document.getElementById("selected-total");
+      const checkoutBtn = document.getElementById("checkout-btn");
+      const checkoutHint = document.getElementById("checkout-hint");
+      const badge = document.getElementById("selected-count-badge");
 
-  <div class="relative bg-white w-full max-w-md rounded-xl shadow-lg p-6">
-    <h3 class="text-lg font-semibold text-gray-800">แจ้งเตือน</h3>
-    <p class="text-sm text-gray-600 mt-2">
-      เลือกชำระเงินได้เฉพาะสินค้าที่อยู่ร้านเดียวกันเท่านั้น
-    </p>
+      function updateCartUI() {
+        let grandTotal = 0;
+        let totalCount = 0;
+        let anyShopClosedSelected = false;
 
-    <div class="mt-5 flex justify-end">
-      <button id="closeStoreLimitModal"
-        class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700">
-        ตกลง
-      </button>
-    </div>
-  </div>
-</div>
+        document.querySelectorAll('.shop-group').forEach(shopBox => {
+          let shopItemCount = 0;
+          let shopRentSubtotal = 0;
+          let shopDepositSubtotal = 0;
+          const isClosed = shopBox.dataset.shopClosed === "1";
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const editBtn = document.getElementById("edit-btn");
-  const editActions = document.getElementById("edit-actions");
-  const checkboxes = document.querySelectorAll(".edit-checkbox");
-  const cancelBtn = document.getElementById("cancel-edit");
-  const deleteBtn = document.getElementById("delete-selected");
-  const moveBtn = document.getElementById("move-favorite");
-  const totalText = document.getElementById("selected-total");
-  const checkoutBtn = document.getElementById("checkout-btn");
-  const checkoutHint = document.getElementById("checkout-hint");
+          // 1. นับจำนวนสินค้าและราคารวม (Rent + Deposit)
+          shopBox.querySelectorAll(".edit-checkbox:checked").forEach(cb => {
+            const row = cb.closest(".item-row");
+            shopRentSubtotal += parseFloat(row.dataset.dailyPrice || 0);
+            shopDepositSubtotal += parseFloat(row.dataset.deposit || 0);
+            shopItemCount++;
+            totalCount++;
+            if (isClosed) anyShopClosedSelected = true;
+          });
 
-  let editMode = false;
+          // =========================================================
+          // ส่วนที่แก้ไข: คำนวณค่าส่ง (แบบเหมาจ่าย เรทสูงสุดเมื่อเกินตาราง)
+          // =========================================================
+          let shippingFee = 0;
 
-  // ===== Modal เปิด/ปิด =====
-  const modal = document.getElementById("storeLimitModal");
-  const closeModalBtn = document.getElementById("closeStoreLimitModal");
+          if (shopItemCount > 0) {
+            const rules = shopBox.querySelectorAll('.shipping-rules-data span');
+            let foundMatch = false;
+            let maxRuleFee = 0; // ตัวแปรเก็บค่าส่งของเรทสูงสุด
+            let globalMaxQty = -1;
 
-  function openModal() {
-    modal.classList.remove("hidden");
-    modal.classList.add("flex");
-  }
+            rules.forEach(rule => {
+              const min = parseInt(rule.dataset.min);
+              const max = parseInt(rule.dataset.max);
+              const fee = parseFloat(rule.dataset.fee);
 
-  function closeModal() {
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
-  }
+              // หาว่ากฎข้อไหนรองรับจำนวนเยอะสุด เก็บราคานั้นไว้เป็นเพดาน (Ceiling Price)
+              if (max > globalMaxQty) {
+                globalMaxQty = max;
+                maxRuleFee = fee;
+              }
 
-  closeModalBtn.addEventListener("click", closeModal);
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) closeModal();
-  });
+              // เช็คว่าจำนวนที่สั่ง ตกอยู่ในช่วงตารางปกติหรือไม่
+              if (shopItemCount >= min && shopItemCount <= max) {
+                shippingFee = fee;
+                foundMatch = true;
+              }
+            });
 
-  // ===== csrf =====
-  const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || "";
+            // กรณีพิเศษ: ถ้าจำนวนที่สั่ง "เกิน" ตารางที่กำหนด (Exceed Max)
+            // ให้ใช้ "ราคาของเรทสูงสุด" (Flat Rate) ทันที
+            if (!foundMatch && rules.length > 0 && shopItemCount > globalMaxQty) {
+              shippingFee = maxRuleFee;
+            }
+          }
+          // =========================================================
 
-  // ===== toggle โหมดแก้ไข (แสดง checkbox) =====
-  editBtn.addEventListener("click", () => {
-    editMode = !editMode;
-    checkboxes.forEach(cb => cb.classList.toggle("hidden", !editMode));
-    editActions.classList.toggle("hidden", !editMode);
-    editBtn.textContent = editMode ? "กลับ" : "แก้ไข";
-    updateSelectedTotal();
-  });
+          const shopTotal = shopRentSubtotal + shopDepositSubtotal + shippingFee;
 
-  // ===== ยกเลิก =====
-  cancelBtn.addEventListener("click", () => {
-    editMode = false;
-    checkboxes.forEach(cb => { cb.checked = false; cb.classList.add("hidden"); });
-    editActions.classList.add("hidden");
-    editBtn.textContent = "แก้ไข";
-    updateSelectedTotal();
-  });
+          shopBox.querySelector(".shop-shipping-display").textContent = `฿${shippingFee.toFixed(2)}`;
+          shopBox.querySelector(".shop-subtotal-display").textContent = `฿${shopTotal.toLocaleString()}`;
+          grandTotal += shopTotal;
+        });
 
-  // ===== คำนวณรวมร้าน (ราคา/วัน) =====
-  function recalcAllTotals() {
-    document.querySelectorAll(".shop-group").forEach(shop => {
-      let shopTotal = 0;
+        totalText.textContent = `฿${grandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
+        badge.textContent = totalCount;
+        document.getElementById("bulk-actions").classList.toggle("hidden", totalCount === 0);
+        document.getElementById("bulk-placeholder").classList.toggle("hidden", totalCount > 0);
 
-      shop.querySelectorAll(".item-row").forEach(item => {
-        const price = parseFloat(item.querySelector(".item-total").dataset.price || "0");
-        const qty = 1;
-        shopTotal += (price * qty);
+        // Disable checkout button if no items or closed shop selected
+        checkoutBtn.disabled = (totalCount === 0 || anyShopClosedSelected);
+        checkoutHint.classList.toggle("hidden", !anyShopClosedSelected);
+      }
+
+      checkboxes.forEach(cb => cb.addEventListener("change", updateCartUI));
+
+      // Modal & Action Logic
+      const modal = document.getElementById("actionModal");
+      let currentCallback = null;
+      window.openModal = (type, callback) => {
+        currentCallback = callback;
+        const iconDiv = document.getElementById("modal-icon");
+        const confirmBtn = document.getElementById("confirm-action-btn");
+        if (type === 'fav') {
+          iconDiv.innerHTML = '<i class="fa-solid fa-heart text-3xl text-pink-500"></i>';
+          iconDiv.className = "w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-6";
+          document.getElementById("modal-title").innerText = "เก็บไว้ที่ถูกใจ?";
+          document.getElementById("modal-desc").innerText = "ย้ายไปรายการที่ถูกใจ?";
+          confirmBtn.innerText = "ย้ายไปที่ถูกใจ";
+          confirmBtn.className = "flex-1 py-4 rounded-2xl bg-pink-500 text-white font-bold hover:bg-pink-600 transition shadow-lg shadow-pink-100";
+        } else {
+          iconDiv.innerHTML = '<i class="fa-solid fa-trash-can text-3xl text-red-500"></i>';
+          iconDiv.className = "w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6";
+          document.getElementById("modal-title").innerText = "ลบรายการนี้?";
+          document.getElementById("modal-desc").innerText = "ต้องการลบออกจากตะกร้าใช่ไหม?";
+          confirmBtn.innerText = "ยืนยันลบ";
+          confirmBtn.className = "flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 transition shadow-lg shadow-red-100";
+        }
+        modal.classList.replace("hidden", "flex");
+      };
+      window.closeModal = () => modal.classList.replace("flex", "hidden");
+      document.getElementById("confirm-action-btn").addEventListener("click", () => {
+        if (currentCallback) currentCallback();
+        closeModal();
+      });
+      document.querySelectorAll(".quick-delete, .move-to-fav, #delete-selected, #fav-selected").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const isFav = btn.classList.contains("move-to-fav") || btn.id === "fav-selected";
+          let ids = (btn.id === "delete-selected" || btn.id === "fav-selected") ?
+            Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.dataset.id) :
+            [btn.dataset.id];
+          if (ids.length > 0) openModal(isFav ? 'fav' : 'del', () => processAction(ids, isFav));
+        });
+      });
+      function processAction(ids, isFav) {
+        const url = isFav ? "/cart/move_to_favorite/" : "/cart/remove_bulk/";
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+          body: JSON.stringify({ ids: ids })
+        }).then(res => res.ok ? location.reload() : alert("Error"));
+      }
+      checkoutBtn.addEventListener("click", () => {
+        const ids = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.dataset.id);
+        window.location.href = `${checkoutBtn.dataset.checkoutUrl}?${ids.map(id => `ids=${id}`).join("&")}`;
       });
 
-      const shopTotalNode = shop.querySelector(".shop-total");
-      if (shopTotalNode) {
-        shopTotalNode.textContent = "รวมร้าน " + shop.dataset.shop + ": ฿" + shopTotal.toFixed(2);
-      }
+      updateCartUI(); // Initial Run
     });
-  }
-
-  // ===== ยอดรวมตามที่เลือก (ราคา/วัน) + ปิดปุ่มชำระเงินถ้าร้านปิด =====
-  function updateSelectedTotal() {
-    let selectedTotal = 0;
-    const checked = Array.from(checkboxes).filter(cb => cb.checked);
-
-    checked.forEach(cb => {
-      const row = cb.closest(".item-row");
-      if (!row) return;
-
-      const price = parseFloat(row.querySelector(".item-total").dataset.price || "0");
-      const qty = 1;
-      selectedTotal += price * qty;
-    });
-
-    totalText.textContent = "฿" + selectedTotal.toFixed(2);
-
-    // === disable checkout ถ้าเลือกร้านปิด ===
-    let disableCheckout = false;
-
-    if (checked.length) {
-      const storeId = checked[0].dataset.storeId;
-      const shopGroup = document.querySelector(`.shop-group[data-shop-id="${storeId}"]`);
-      disableCheckout = shopGroup?.dataset.shopClosed === "1";
-    }
-
-    checkoutBtn.disabled = disableCheckout;
-
-    if (disableCheckout) {
-      checkoutBtn.classList.remove("bg-blue-600", "hover:bg-blue-700", "text-white");
-      checkoutBtn.classList.add("bg-gray-300", "text-gray-700", "cursor-not-allowed");
-      checkoutHint.classList.remove("hidden");
-    } else {
-      checkoutBtn.classList.remove("bg-gray-300", "text-gray-700", "cursor-not-allowed");
-      checkoutBtn.classList.add("bg-blue-600", "hover:bg-blue-700", "text-white");
-      checkoutHint.classList.add("hidden");
-    }
-  }
-
-  checkboxes.forEach(cb => cb.addEventListener("change", updateSelectedTotal));
-
-  // ===== Utilities: selected ids / stores =====
-  function getSelectedIds() {
-    return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.dataset.id);
-  }
-
-  function getSelectedStores() {
-    const stores = new Set();
-    Array.from(checkboxes).filter(cb => cb.checked).forEach(cb => {
-      stores.add(cb.dataset.storeId);
-    });
-    return stores;
-  }
-
-  // ===== กดชำระเงิน: เช็คร้านเดียวกัน + เช็คร้านปิด =====
-  checkoutBtn.addEventListener("click", () => {
-    const selectedIds = getSelectedIds();
-
-    if (!selectedIds.length) {
-      alert("กรุณาเลือกสินค้าที่ต้องการชำระเงิน");
-      return;
-    }
-
-    const stores = getSelectedStores();
-    if (stores.size > 1) {
-      openModal();
-      return;
-    }
-
-    // เช็คร้านปิด
-    const selectedStoreId = Array.from(stores)[0];
-    const shopGroup = document.querySelector(`.shop-group[data-shop-id="${selectedStoreId}"]`);
-    const shopClosed = shopGroup?.dataset.shopClosed === "1";
-    if (shopClosed) {
-      alert("ร้านปิดชั่วคราว — ไม่สามารถชำระเงินได้ตอนนี้");
-      return;
-    }
-
-    const checkoutUrl = checkoutBtn.dataset.checkoutUrl;
-    const qs = selectedIds.map(id => `ids=${encodeURIComponent(id)}`).join("&");
-    window.location.href = `${checkoutUrl}?${qs}`;
-  });
-
-  // ===== ลบที่เลือก =====
-  deleteBtn.addEventListener("click", () => {
-    const selectedIds = getSelectedIds();
-    if (!selectedIds.length) return alert("กรุณาเลือกสินค้าที่ต้องการลบ");
-    if (!confirm("ต้องการลบสินค้าที่เลือกหรือไม่?")) return;
-
-    fetch("/cart/remove_bulk/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-      body: JSON.stringify({ ids: selectedIds })
-    }).then(() => location.reload());
-  });
-
-  // ===== ย้ายไปถูกใจ =====
-  moveBtn.addEventListener("click", () => {
-    const selectedIds = getSelectedIds();
-    if (!selectedIds.length) return alert("กรุณาเลือกสินค้าที่ต้องการย้ายไปถูกใจ");
-
-    fetch("/cart/move_to_favorite/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-      body: JSON.stringify({ ids: selectedIds })
-    }).then(() => location.reload());
-  });
-
-  // เริ่มต้น
-  recalcAllTotals();
-  updateSelectedTotal();
-});
-</script>
-
+  </script>
 </body>
+
 </html>

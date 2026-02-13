@@ -7,84 +7,86 @@
   <title>สมัครสมาชิก</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="min-h-screen flex items-center justify-center bg-gradient-to-b from-yellow-100 via-blue-100 to-pink-200 px-3">
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-b from-yellow-100 via-blue-100 to-pink-200 px-3 py-6">
 
-  <div class="bg-white p-6 sm:p-6 rounded-2xl shadow-lg w-full max-w-md h-auto max-h-[85vh] overflow-y-auto">
-    <h2 class="text-2xl font-bold text-center mb-2">สมัครสมาชิก</h2>
-    <p class="text-center text-gray-600 mb-4 text-sm">สร้างบัญชีใหม่เพื่อเริ่มต้นการใช้งาน</p>
+  <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg w-full max-w-lg h-auto">
+    <h2 class="text-2xl font-bold text-center mb-1">สมัครสมาชิก</h2>
+    <p class="text-center text-gray-600 mb-5 text-sm">สร้างบัญชีใหม่เพื่อเริ่มต้นการใช้งาน</p>
 
     {% if messages %}
-      <div class="mb-3">
+      <div class="mb-4">
         {% for message in messages %}
-          <p class="text-xs {% if message.tags == 'error' %}text-red-500{% elif message.tags == 'success' %}text-green-600{% else %}text-gray-600{% endif %}">
+          <p class="text-xs text-center {% if message.tags == 'error' %}text-red-500{% elif message.tags == 'success' %}text-green-600{% else %}text-gray-600{% endif %}">
             {{ message }}
           </p>
         {% endfor %}
       </div>
     {% endif %}
 
-    <form method="POST" action="{% url 'dress:signup' %}" class="space-y-2">
+    <form method="POST" action="{% url 'dress:signup' %}" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {% csrf_token %}
 
-      <div>
-        <label class="block text-gray-700 text-sm mb-0.5">ชื่อผู้ใช้ (Username)</label>
+      <div class="sm:col-span-2">
+        <label class="block text-gray-700 text-xs font-bold mb-1">ชื่อผู้ใช้ (Username)</label>
         <input type="text" name="username" required
-               class="w-full border border-gray-300 px-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+               class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
       <div>
-        <label class="block text-gray-700 text-sm mb-0.5">ชื่อ</label>
+        <label class="block text-gray-700 text-xs font-bold mb-1">ชื่อ</label>
         <input type="text" name="first_name" required
-               class="w-full border border-gray-300 px-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+               class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
       <div>
-        <label class="block text-gray-700 text-sm mb-0.5">นามสกุล</label>
+        <label class="block text-gray-700 text-xs font-bold mb-1">นามสกุล</label>
         <input type="text" name="last_name" required
-               class="w-full border border-gray-300 px-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+               class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
-      <div>
-        <label class="block text-gray-700 text-sm mb-0.5">อีเมล์</label>
+      <div class="sm:col-span-2">
+        <label class="block text-gray-700 text-xs font-bold mb-1">อีเมล</label>
         <input type="email" name="email" required
-               class="w-full border border-gray-300 px-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+               class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
       <div>
-        <label class="block text-gray-700 text-sm mb-0.5">เพศ</label>
-        <select name="gender" class="w-full border border-gray-300 px-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+        <label class="block text-gray-700 text-xs font-bold mb-1">เบอร์ติดต่อ</label>
+        <input type="text" name="phone" required
+               class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
+      </div>
+
+      <div>
+        <label class="block text-gray-700 text-xs font-bold mb-1">เพศ</label>
+        <select name="gender" class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm bg-white">
           <option value="male">ชาย</option>
           <option value="female">หญิง</option>
         </select>
       </div>
 
       <div>
-        <label class="block text-gray-700 text-sm mb-0.5">เบอร์ติดต่อ</label>
-        <input type="text" name="phone" required
-               class="w-full border border-gray-300 px-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
-      </div>
-
-      <div>
-        <label class="block text-gray-700 text-sm mb-0.5">รหัสผ่าน</label>
+        <label class="block text-gray-700 text-xs font-bold mb-1">รหัสผ่าน</label>
         <input type="password" name="password" required
-               class="w-full border border-gray-300 px-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+               class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
       <div>
-        <label class="block text-gray-700 text-sm mb-0.5">ยืนยันรหัสผ่าน</label>
+        <label class="block text-gray-700 text-xs font-bold mb-1">ยืนยันรหัสผ่าน</label>
         <input type="password" name="confirm_password" required
-               class="w-full border border-gray-300 px-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+               class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
-      <button type="submit"
-              class="w-full bg-black text-white py-2 rounded-lg font-semibold hover:bg-gray-800 transition duration-200 mt-2">
-        สมัครสมาชิก
-      </button>
+      <div class="sm:col-span-2 mt-2">
+        <button type="submit"
+                class="w-full bg-black text-white py-2.5 rounded-lg font-bold text-sm hover:bg-gray-800 transition duration-200">
+          สมัครสมาชิก
+        </button>
+      </div>
     </form>
 
-    <p class="text-center text-xs mt-3 text-gray-600">
+    <p class="text-center text-xs mt-4 text-gray-600">
       มีบัญชีอยู่แล้ว?
-      <a href="{% url 'dress:login' %}" class="text-black font-semibold hover:underline">เข้าสู่ระบบ</a>
+      <a href="{% url 'dress:login' %}" class="text-black font-bold hover:underline">เข้าสู่ระบบ</a>
     </p>
   </div>
 

@@ -20,6 +20,9 @@ urlpatterns = [
     path("reports/<int:report_id>/", views.report_detail, name="report_detail"),
     path("reports/<int:report_id>/update/", views.report_update, name="report_update"),
 
+    
+    path('finance/', views.finance_dashboard, name='finance_dashboard'),
+
     path("bookings/", views.bookings_page, name="bookings"),
     path("reviews/", views.reviews_page, name="reviews"),
     path("settings/", views.settings_page, name="settings"),
