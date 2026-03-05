@@ -1,0 +1,34 @@
+/* static/css/global.css */
+
+/* นำเข้าฟอนต์ Sarabun */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --main-font: 'Sarabun', sans-serif;
+    
+    /* สี Header Gradient ใหม่: ชมพูม่วงตามรูปภาพตัวอย่าง */
+    --header-bg: linear-gradient(to right, #FBCFE8, #F9A8D4, #D8B4FE, #A5B4FC); 
+    
+    /* สีปุ่มหลัก (Deep Blue/Black ตามรูป) */
+    --btn-primary: #1f2937; 
+    --btn-hover: #111827;
+}
+
+body {
+    font-family: var(--main-font) !important;
+    background-color: #f9fafb;
+}
+
+/* Class สำหรับส่วนหัว (Header) */
+.custom-header {
+    background: var(--header-bg) !important;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+/* คุมสีปุ่ม "บันทึก" ให้เข้ากับดีไซน์ */
+.btn-save {
+    background-color: var(--btn-primary);
+    color: white;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+}

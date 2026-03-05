@@ -7,17 +7,19 @@
   <title>เข้าสู่ระบบ</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="h-screen flex flex-col items-center justify-center bg-gradient-to-b from-yellow-100 via-blue-100 to-pink-200">
+<body style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.4)), linear-gradient(to bottom, #FFE88D 0%, #7AAAC0 36%, #93DBFC 61%, #E5A6D3 90%, #527281 100%);">  
 
   <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
     <h2 class="text-2xl font-bold text-center mb-2">เข้าสู่ระบบ</h2>
     <p class="text-center text-gray-600 mb-6">ลงชื่อเพื่อเข้าสู่ระบบของคุณ</p>
 
-    <!-- ปิด autofill ระดับฟอร์ม -->
-    <form method="POST" action="{% url 'dress:login' %}" autocomplete="off" novalidate>
+    <div id="js-error-message" class="hidden mb-4">
+        <p class="text-red-500 text-sm text-center font-medium">กรุณากรอกข้อมูลให้ครบ</p>
+    </div>
+
+    <form id="loginForm" method="POST" action="{% url 'dress:login' %}" autocomplete="off" novalidate>
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ next }}">
-
 
       {% if messages %}
         <div class="mb-4">
@@ -27,7 +29,6 @@
         </div>
       {% endif %}
 
-      <!-- ฟิลด์หลอกเพื่อดัก password manager ของเบราว์เซอร์ -->
       <input type="text" name="fake-user" autocomplete="username" class="hidden" tabindex="-1">
       <input type="password" name="fake-pass" autocomplete="current-password" class="hidden" tabindex="-1">
 
@@ -44,7 +45,6 @@
           spellcheck="false"
           inputmode="email"
           class="w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-          required
         >
       </div>
 
@@ -57,7 +57,6 @@
           placeholder="รหัสผ่าน"
           autocomplete="new-password"
           class="w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-          required
         >
       </div>
 
@@ -78,6 +77,28 @@
       <a href="{% url 'dress:signup' %}" class="text-black font-semibold hover:underline">สมัครใช้งาน</a>
     </p>
   </div>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const errorMessage = document.getElementById('js-error-message');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+
+    loginForm.addEventListener('submit', function(e) {
+      // ตรวจสอบว่ามีฟิลด์ไหนว่างหรือไม่
+      if (!usernameInput.value.trim() || !passwordInput.value.trim()) {
+        e.preventDefault(); // หยุดการส่งฟอร์ม
+        errorMessage.classList.remove('hidden'); // แสดงข้อความเตือน
+        
+        // ใส่สีขอบสีแดงที่ช่องที่ว่าง (Optional)
+        if(!usernameInput.value.trim()) usernameInput.classList.add('border-red-500');
+        else usernameInput.classList.remove('border-red-500');
+        
+        if(!passwordInput.value.trim()) passwordInput.classList.add('border-red-500');
+        else passwordInput.classList.remove('border-red-500');
+      }
+    });
+  </script>
 
 </body>
 </html>

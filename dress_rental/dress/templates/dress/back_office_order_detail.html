@@ -6,22 +6,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>รายละเอียดออเดอร์ #{{ order.id }}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Prompt', sans-serif; }
+  </style>
 </head>
 
 <body class="bg-gray-50 text-sm">
 
-  <!-- Header -->
-  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <header style="background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.4)), linear-gradient(to right, #FFE88D 0%, #7AAAC0 36%, #93DBFC 61%, #E5A6D3 90%, #527281 100%);" class="shadow-lg w-full sticky top-0 z-30">
     <div class="flex items-center justify-between px-8 py-8">
       <h1 class="text-2xl font-bold text-gray-900">ระบบหลังร้าน</h1>
-
       <div class="flex items-center gap-3">
         <div class="text-right">
           <div class="text-sm font-semibold text-gray-900">{{ store.name|default:"My Shop" }}</div>
           <div class="text-xs text-gray-600">{{ request.user.username|default:"" }}</div>
-        </div>
-
-        
         </div>
       </div>
     </div>
@@ -29,7 +28,6 @@
 
   <main class="max-w-5xl mx-auto px-4 py-6">
 
-    <!-- Top -->
     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <div class="text-lg font-semibold text-gray-900">รายละเอียดออเดอร์ #{{ order.id }}</div>
@@ -37,7 +35,6 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- Status badge (TH + GREEN always) -->
         <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-100">
           สถานะ:
           {% if order.status == "RETURNED" or order.status == "returned" %} คืนชุดแล้ว
@@ -51,23 +48,15 @@
         </span>
 
         {% if back_url %}
-          <a href="{{ back_url }}"
-             class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">
-            ← กลับไปหน้าเดิม
-          </a>
+          <a href="{{ back_url }}" class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">← กลับไปหน้าเดิม</a>
         {% else %}
-          <button onclick="history.back()"
-             class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">
-            ← กลับไปหน้าเดิม
-          </button>
+          <button onclick="history.back()" class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">← กลับไปหน้าเดิม</button>
         {% endif %}
       </div>
     </div>
 
-    <!-- Content -->
     <div class="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-      <!-- Left: Dress -->
       <section class="lg:col-span-4 rounded-2xl border border-gray-200 bg-white p-4">
         <div class="flex gap-3">
           <div class="w-28 h-40 sm:w-32 sm:h-44 overflow-hidden rounded-xl bg-gray-100 shrink-0">
@@ -79,9 +68,7 @@
           </div>
 
           <div class="min-w-0 flex-1">
-            <div class="font-semibold text-gray-900 truncate">
-              {{ order.dress.name|default:"(ไม่พบข้อมูลชุด)" }}
-            </div>
+            <div class="font-semibold text-gray-900 truncate">{{ order.dress.name|default:"(ไม่พบข้อมูลชุด)" }}</div>
             <div class="text-xs text-gray-500 mt-1">ร้าน: {{ store.name|default:"-" }}</div>
 
             <div class="mt-3 grid grid-cols-2 gap-2">
@@ -89,17 +76,10 @@
                 <div class="text-[11px] text-gray-500">ราคา/วัน</div>
                 <div class="font-semibold text-gray-900 mt-1">฿{{ order.dress.daily_price|default:"-" }}</div>
               </div>
-
               <div class="rounded-xl border border-gray-200 p-2.5">
                 <div class="text-[11px] text-gray-500">มัดจำ</div>
                 <div class="font-semibold text-gray-900 mt-1">฿{{ order.dress.deposit|default:"-" }}</div>
               </div>
-
-              <div class="rounded-xl border border-gray-200 p-2.5 col-span-2">
-                <div class="text-[11px] text-gray-500">ค่าจัดส่ง</div>
-                <div class="font-semibold text-gray-900 mt-1">฿{{ order.dress.shipping_fee|default:"0" }}</div>
-              </div>
-
               <div class="rounded-xl border border-gray-200 p-2.5 col-span-2">
                 <div class="text-[11px] text-gray-500">ไซส์</div>
                 <div class="font-semibold text-gray-900 mt-1">{{ order.dress.size|default:"-" }}</div>
@@ -107,104 +87,68 @@
             </div>
           </div>
         </div>
-
-        <details class="mt-3">
-          <summary class="cursor-pointer text-xs font-semibold text-gray-700 hover:text-gray-900">
-            รายละเอียดชุด
-          </summary>
-          <div class="mt-2 text-xs text-gray-600 leading-relaxed">
-            {{ order.dress.description|default:"-" }}
-          </div>
-        </details>
       </section>
 
-      <!-- Right -->
       <section class="lg:col-span-8 space-y-4">
 
-        <!-- Customer -->
-        <div class="rounded-2xl border border-gray-200 bg-white p-4">
-          <div class="font-semibold text-gray-900 mb-3">ข้อมูลลูกค้า</div>
+        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            ข้อมูลการจัดส่ง
+          </div>
+          
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="rounded-xl border border-gray-200 p-3">
-              <div class="text-[11px] text-gray-500">ชื่อผู้ใช้</div>
-              <div class="font-semibold text-gray-900 mt-1">{{ order.user.username|default:"-" }}</div>
+            <div class="rounded-xl border border-gray-100 bg-gray-50 p-3">
+              <div class="text-[11px] text-gray-500 font-medium">ชื่อ-นามสกุลผู้รับ</div>
+              <div class="font-semibold text-gray-900 mt-1">
+                {{ parent_order.recipient_name|default:order.user.get_full_name }}
+              </div>
             </div>
-            <div class="rounded-xl border border-gray-200 p-3">
-              <div class="text-[11px] text-gray-500">อีเมล</div>
-              <div class="font-semibold text-gray-900 mt-1">{{ order.user.email|default:"-" }}</div>
+
+            <div class="rounded-xl border border-gray-100 bg-gray-50 p-3">
+              <div class="text-[11px] text-gray-500 font-medium">เบอร์โทรศัพท์ติดต่อ</div>
+              <div class="font-semibold text-emerald-600 mt-1 text-base">
+                {{ parent_order.phone|default:"- ไม่ระบุ -" }}
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-gray-100 bg-gray-50 p-3 sm:col-span-2">
+              <div class="text-[11px] text-gray-500 font-medium">ที่อยู่สำหรับการจัดส่ง</div>
+              <div class="font-medium text-gray-800 mt-1 leading-relaxed">
+                {{ parent_order.address|default:"- ไม่ระบุที่อยู่ -" }}
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Rental -->
         <div class="rounded-2xl border border-gray-200 bg-white p-4">
           <div class="font-semibold text-gray-900 mb-3">ช่วงเวลาเช่า</div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="rounded-xl border border-gray-200 p-3">
+            <div class="rounded-xl border border-gray-200 p-3 text-center">
               <div class="text-[11px] text-gray-500">วันรับชุด</div>
               <div class="font-semibold text-gray-900 mt-1">{{ order.pickup_date|date:"d/m/Y" }}</div>
             </div>
-            <div class="rounded-xl border border-gray-200 p-3">
+            <div class="rounded-xl border border-gray-200 p-3 text-center">
               <div class="text-[11px] text-gray-500">วันคืนชุด</div>
               <div class="font-semibold text-gray-900 mt-1">{{ order.return_date|date:"d/m/Y" }}</div>
             </div>
-            <div class="rounded-xl border border-gray-200 p-3">
-              <div class="text-[11px] text-gray-500">จำนวนวันเช่า</div>
-              <div class="font-semibold text-gray-900 mt-1">
-                {% if rental_days %}{{ rental_days }} วัน{% else %}-{% endif %}
-              </div>
+            <div class="rounded-xl border border-gray-200 p-3 text-center bg-blue-50">
+              <div class="text-[11px] text-blue-500">จำนวนวัน</div>
+              <div class="font-semibold text-blue-700 mt-1">{% if rental_days %}{{ rental_days }} วัน{% else %}-{% endif %}</div>
             </div>
           </div>
         </div>
 
-        <!-- Payment -->
         <div class="rounded-2xl border border-gray-200 bg-white p-4">
-          <div class="font-semibold text-gray-900 mb-3">สรุปการชำระเงิน</div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="rounded-xl border border-gray-200 p-3">
-              <div class="text-[11px] text-gray-500">ยอดรวมทั้งหมด</div>
-              <div class="font-semibold text-gray-900 mt-1">฿{{ order.total_price|default:"0.00" }}</div>
-            </div>
-
-            <div class="rounded-xl border border-gray-200 p-3">
-              <div class="text-[11px] text-gray-500">ยอดชำระแล้ว</div>
-              <div class="font-semibold text-gray-900 mt-1">฿{{ order.total_price|default:"0.00" }}</div>
-              <div class="text-[11px] text-gray-400 mt-1">ถ้ามี paid_amount ค่อยเปลี่ยนมาใช้</div>
-            </div>
-
-            <!-- Status in payment (TH + GREEN always) -->
-            <div class="rounded-xl border border-gray-200 p-3">
-              <div class="text-[11px] text-gray-500">สถานะออเดอร์</div>
-
-              <div class="mt-2">
-                <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-100">
-                  {% if order.status == "RETURNED" or order.status == "returned" %} คืนชุดแล้ว
-                  {% elif order.status == "WAITING_RETURN" or order.status == "waiting_return" %} รอคืนชุด
-                  {% elif order.status == "IN_RENTAL" or order.status == "in_rental" %} อยู่ระหว่างการเช่า
-                  {% elif order.status == "PAID" or order.status == "paid" %} ชำระเงินสำเร็จ
-                  {% elif order.status == "NEW" or order.status == "new" %} คำเช่าใหม่
-                  {% elif order.status == "CANCELLED" or order.status == "cancelled" %} ยกเลิก
-                  {% else %} {{ order.status|default:"-" }}
-                  {% endif %}
-                </span>
-              </div>
-            </div>
+          <div class="font-semibold text-gray-900 mb-3">สรุปยอดชำระ</div>
+          <div class="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
+             <div class="text-sm text-gray-600 font-medium">ยอดชำระทั้งหมด (รวมมัดจำและค่าส่ง)</div>
+             <div class="text-xl font-bold text-pink-600 underline">฿{{ order.total_price|default:"0.00" }}</div>
           </div>
         </div>
-
-        <details class="rounded-2xl border border-gray-200 bg-white p-4">
-          <summary class="cursor-pointer text-xs font-semibold text-gray-800">ข้อมูลเพิ่มเติม (สำหรับตรวจสอบ)</summary>
-          <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div class="rounded-xl border border-gray-200 p-3">
-              <div class="text-[11px] text-gray-500">เลขออเดอร์</div>
-              <div class="font-semibold text-gray-900 mt-1">{{ order.id }}</div>
-            </div>
-            <div class="rounded-xl border border-gray-200 p-3">
-              <div class="text-[11px] text-gray-500">ร้าน</div>
-              <div class="font-semibold text-gray-900 mt-1">{{ store.name|default:"-" }}</div>
-            </div>
-          </div>
-        </details>
 
       </section>
     </div>

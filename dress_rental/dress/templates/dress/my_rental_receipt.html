@@ -1,50 +1,81 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ใบเสร็จ #{{ order.id }}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 text-sm">
 
-  <div class="max-w-3xl mx-auto px-4 py-6 space-y-4">
-    <div class="flex justify-between items-center">
-      <a href="{% url 'dress:my_rental_detail' order.id %}" class="px-4 py-2 rounded-xl bg-white shadow border">กลับ</a>
-      <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-gray-900 text-white shadow">พิมพ์ใบเสร็จ</button>
-    </div>
+{% block title %}ใบเสร็จ #{{ order.id }} | Glam & Borrow{% endblock %}
 
-    <div class="bg-white rounded-2xl shadow p-6">
-      <div class="flex justify-between">
-        <div>
-          <div class="text-gray-500">ใบเสร็จ/หลักฐานการเช่า</div>
-          <div class="text-lg font-bold">#{{ order.id }}</div>
-          <div class="text-gray-500 mt-1">สถานะ: <span class="font-semibold text-green-700">{{ status_text }}</span></div>
-        </div>
-        <div class="text-right text-gray-700">
-          <div>วันที่ออกเอกสาร</div>
-          <div class="font-medium">{{ order.created_at|date:"d/m/Y H:i" }}</div>
-        </div>
-      </div>
+{% block extra_head %}
+<style>
+    /* ตั้งค่าฟอนต์ Prompt เป็นหลัก */
+    body { font-family: 'Prompt', sans-serif !important; }
 
-      <div class="mt-4 border-t pt-4">
-        <div class="font-semibold mb-2">รายการ</div>
-        <div class="space-y-2">
-          {% for it in items %}
-            <div class="flex justify-between">
-              <div>{{ it.dress.name }}</div>
-              <div class="font-medium">฿{{ it.price|floatformat:2 }}</div>
+    /* ซ่อนส่วนที่ไม่ต้องการให้เห็นตอนพิมพ์ลงกระดาษ */
+    @media print {
+        .no-print { display: none !important; }
+        .print-shadow-none { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
+        body { background-color: white !important; }
+        header, footer { display: none !important; } /* ซ่อนหัว/ท้ายเว็บหลักตอนพิมพ์ */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header style="background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.4)), linear-gradient(to right, #FFE88D 0%, #7AAAC0 36%, #93DBFC 61%, #E5A6D3 90%, #527281 100%);" class="shadow-lg w-full sticky top-0 z-30">    <div class="max-w-3xl mx-auto px-4 py-6 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="bg-white/50 p-2 rounded-full backdrop-blur-sm">
+                <i class="fa-solid fa-file-invoice-dollar text-pink-500 text-lg"></i>
             </div>
-          {% endfor %}
+            <h1 class="text-xl font-bold text-gray-800 tracking-wide">รายละเอียดการเช่า</h1>
         </div>
-      </div>
-
-      <div class="mt-4 border-t pt-4 flex justify-between">
-        <div class="text-gray-700">รวมทั้งสิ้น</div>
-        <div class="text-lg font-bold">฿{{ total|floatformat:2 }}</div>
-      </div>
+        
+        <a href="{% url 'dress:my_rental_detail' order.id %}" 
+           class="bg-white/80 backdrop-blur text-gray-700 px-4 py-2 rounded-xl hover:bg-white transition shadow-sm font-medium text-sm flex items-center gap-2">
+            <i class="fa-solid fa-arrow-left"></i> ย้อนกลับ
+        </a>
     </div>
-  </div>
-</body>
-</html>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 py-6 space-y-4">
+    <div class="flex justify-end items-center no-print">
+        <button onclick="window.print()" class="px-5 py-2 rounded-xl bg-gray-900 text-white shadow-md hover:bg-gray-800 transition flex items-center gap-2 font-medium">
+            <i class="fa-solid fa-print"></i> พิมพ์ใบเสร็จ
+        </button>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow p-8 print-shadow-none">
+        <div class="flex justify-between items-start">
+            <div>
+                <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">ใบเสร็จ/หลักฐานการเช่า</div>
+                <div class="text-2xl font-bold text-gray-900">#{{ order.id }}</div>
+                <div class="mt-2 text-gray-600 flex items-center gap-2">
+                    สถานะ: <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 font-semibold text-xs">{{ status_text }}</span>
+                </div>
+            </div>
+            <div class="text-right text-gray-700">
+                <div class="text-xs text-gray-400">วันที่ออกเอกสาร</div>
+                <div class="font-medium">{{ order.created_at|date:"d/m/Y H:i" }}</div>
+            </div>
+        </div>
+
+        <div class="mt-8 border-t border-gray-100 pt-6">
+            <div class="font-semibold text-gray-800 mb-4">รายการสินค้า</div>
+            <div class="space-y-3">
+                {% for it in items %}
+                <div class="flex justify-between items-center">
+                    <div class="text-gray-700">{{ it.dress.name }}</div>
+                    <div class="font-bold text-gray-900">฿{{ it.price|floatformat:2 }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="mt-8 border-t-2 border-dashed border-gray-100 pt-6 flex justify-between items-center">
+            <div class="text-gray-600 font-medium">ยอดรวมทั้งสิ้น</div>
+            <div class="text-2xl font-bold text-gray-900">฿{{ total|floatformat:2 }}</div>
+        </div>
+    </div>
+    
+    <p class="text-center text-gray-400 text-xs no-print italic mt-4">
+        ขอบคุณที่ใช้บริการ Glam & Borrow
+    </p>
+</main>
+{% endblock %}

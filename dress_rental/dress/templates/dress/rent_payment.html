@@ -7,7 +7,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- สไตล์พิมพ์ (ซ่อนส่วนที่ไม่เกี่ยวเวลา print) -->
   <style>
     @media print {
       header, .no-print { display: none !important; }
@@ -24,9 +23,7 @@
 </head>
 <body class="bg-gray-50">
 
-  <!-- Header + Stepper -->
-  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+<header style="background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.4)), linear-gradient(to right, #FFE88D 0%, #7AAAC0 36%, #93DBFC 61%, #E5A6D3 90%, #527281 100%);" class="shadow-lg w-full sticky top-0 z-30">    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
       <div class="flex items-center gap-3">
         <button onclick="history.back()" class="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 hover:bg-white shadow">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -62,11 +59,9 @@
     </div>
   </header>
 
-  <!-- ใช้ pay_method จาก view -->
   {% with pm=pay_method %}
   <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
     <section class="bg-white rounded-xl shadow border">
-      <!-- แท็บวิธีชำระ แสดงสถานะปัจจุบัน -->
       <div class="px-4 sm:px-6 pt-4">
         <div class="inline-flex rounded-md bg-teal-50 p-1">
           {% if pm == 'pay_at_store' %}
@@ -82,7 +77,6 @@
       </div>
 
       <div class="p-4 sm:p-6 grid md:grid-cols-2 gap-6">
-        <!-- ซ้าย: รายการที่สั่ง/รายละเอียด -->
         <div>
           <h2 class="text-base font-semibold text-gray-800">รายละเอียดคำสั่งซื้อ</h2>
           <div class="mt-4 flex gap-3">
@@ -118,7 +112,6 @@
           </p>
         </div>
 
-        <!-- ขวา: โหมดชำระ “หน้าร้าน” -->
         {% if pm == 'pay_at_store' %}
           <div class="rounded-lg border p-4">
             <h3 class="font-semibold text-gray-800">ใบรับชุดสำหรับยื่นหน้าร้าน</h3>
@@ -163,8 +156,7 @@
             </div>
           </div>
         {% else %}
-        <!-- ขวา: โหมดพร้อมเพย์ (แสดง QR) -->
-          <div>
+        <div>
             <div class="rounded-lg border p-4">
               <h3 class="font-semibold text-gray-800">ข้อมูลการชำระ</h3>
               <dl class="mt-3 space-y-2 text-sm">
@@ -210,7 +202,6 @@
                 QR นี้หมดเวลาแล้ว โปรดรีเฟรชหน้าเพื่อขอ QR ใหม่
               </p>
 
-              <!-- ปุ่มยืนยันการชำระ (ไปหน้าเสร็จสิ้น) -->
               <div class="mt-4 flex gap-2">
                 <a id="paidBtn"
                    href="#"
@@ -229,7 +220,6 @@
     </section>
   </main>
 
-  <!-- สคริปต์สร้าง QR — จะทำงานเฉพาะโหมดพร้อมเพย์ -->
   {% if pm != 'pay_at_store' %}
   <script>
     const METHOD = "{{ method|default:'pickup' }}";
@@ -278,22 +268,27 @@
     }
 
     function buildSuccessHref(chargeId){
-      // ส่งพารามิเตอร์ไป rent_success เพื่อให้หน้าเสร็จสิ้นแสดงข้อมูลถูกต้อง
-      const params = new URLSearchParams({
-        pay_method: 'promptpay',
-        method: "{{ method|default:'pickup' }}",
-        start_date: "{{ start_date|date:'Y-m-d' }}",
-        end_date: "{{ end_date|date:'Y-m-d' }}",
-        days: "{{ days|default:'0' }}",
-        rental_fee: "{{ rental_fee|default:'0' }}",
-        deposit: "{{ deposit|default:'0' }}",
-        shipping: "{{ shipping|default:'0' }}",
-        amount_baht: "{{ amount_baht|default:'0' }}",
-        pickup_slot: "{{ pickup_slot|default:'' }}",
-        return_slot: "{{ return_slot|default:'' }}",
-        charge_id: chargeId || ''
-      });
-      return `${SUCCESS_URL}?${params.toString()}`;
+      // 1. กวาดเอาพารามิเตอร์เดิมทั้งหมดที่ส่งมาจากหน้า Checkout (รวมถึง ชื่อ เบอร์โทร ที่เคยตกหล่นไป)
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      // 2. เติม/อัปเดตข้อมูลของหน้าชำระเงินเข้าไป
+      urlParams.set('pay_method', 'promptpay');
+      urlParams.set('charge_id', chargeId || '');
+      
+      // 3. ถ้าพารามิเตอร์ไหนหายไป (เซฟตี้ไว้) ให้ดึงจาก Context ของ Django
+      if (!urlParams.has('method')) urlParams.set('method', "{{ method|default:'pickup' }}");
+      if (!urlParams.has('start_date')) urlParams.set('start_date', "{{ start_date|date:'Y-m-d' }}");
+      if (!urlParams.has('end_date')) urlParams.set('end_date', "{{ end_date|date:'Y-m-d' }}");
+      if (!urlParams.has('days')) urlParams.set('days', "{{ days|default:'0' }}");
+      if (!urlParams.has('rental_fee')) urlParams.set('rental_fee', "{{ rental_fee|default:'0' }}");
+      if (!urlParams.has('deposit')) urlParams.set('deposit', "{{ deposit|default:'0' }}");
+      if (!urlParams.has('shipping')) urlParams.set('shipping', "{{ shipping|default:'0' }}");
+      if (!urlParams.has('amount_baht')) urlParams.set('amount_baht', "{{ amount_baht|default:'0' }}");
+      if (!urlParams.has('pickup_slot')) urlParams.set('pickup_slot', "{{ pickup_slot|default:'' }}");
+      if (!urlParams.has('return_slot')) urlParams.set('return_slot', "{{ return_slot|default:'' }}");
+
+      // คืนค่าเป็นลิงก์ที่สมบูรณ์
+      return `${SUCCESS_URL}?${urlParams.toString()}`;
     }
 
     async function createCharge(){

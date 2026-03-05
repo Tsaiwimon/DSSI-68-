@@ -5,47 +5,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Glam & Borrow{% endblock %}</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Prompt', 'sans-serif'], // สั่งให้ฟอนต์ Sans (ฟอนต์ทั่วไป) เป็น Prompt
-            },
-            colors: {
-              primary: '#ec4899', // สีชมพูหลักของเว็บ (Pink-500)
-            }
-          },
-        },
-      }
-    </script>
-    
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-      /* 4. ✅ บังคับ CSS ให้ใช้ Prompt ทั่วทั้ง Body เพื่อความชัวร์ */
-      body {
-        font-family: 'Prompt', sans-serif !important;
-      }
+        body { font-family: 'Prompt', sans-serif; color: #4b5563; }
     </style>
-
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-gray-50 text-gray-700 flex flex-col min-h-screen">
+<body class="bg-gray-50">
+    <header class="bg-gradient-to-r from-pink-100 via-yellow-50 to-blue-100 shadow-sm sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/60 p-2 rounded-full backdrop-blur-sm">
+                    <i class="fa-solid fa-stars text-pink-300"></i>
+                </div>
+                <span class="text-xl font-bold text-gray-600 tracking-tight">Glam & Borrow</span>
+            </div>
+            <div class="text-right">
+                <div class="text-sm font-semibold text-gray-600">{{ store.name|default:"SasiShop" }}</div>
+            </div>
+        </div>
+    </header>
 
-    <main class="flex-grow">
-        {% block content %}
-        {% endblock %}
-    </main>
+    {% block content %}{% endblock %}
 
     {% block scripts %}{% endblock %}
-
 </body>
 </html>

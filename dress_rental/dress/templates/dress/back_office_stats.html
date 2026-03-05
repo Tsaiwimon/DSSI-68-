@@ -1,16 +1,20 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
   <meta charset="UTF-8">
   <title>สถิติร้านค้า | {{ store.name }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-50">
 
   <!-- Header (โครงสร้างเหมือนหน้าอื่น) -->
-  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+  <header
+    style="background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.4)), linear-gradient(to right, #FFE88D 0%, #7AAAC0 36%, #93DBFC 61%, #E5A6D3 90%, #527281 100%);"
+    class="shadow-lg w-full sticky top-0 z-30">
     <div class="flex items-center justify-between px-10 py-10">
       <div class="flex items-center space-x-3">
         <h1 class="text-2xl font-bold text-gray-900">สถิติร้านค้า</h1>
@@ -18,9 +22,9 @@
 
       <div class="flex items-center space-x-3">
         {% if store.shop_logo %}
-          <img src="{{ store.shop_logo.url }}" alt="logo" class="w-12 h-12 rounded-full object-cover">
+        <img src="{{ store.shop_logo.url }}" alt="logo" class="w-12 h-12 rounded-full object-cover">
         {% else %}
-          <img src="{% static 'images/store-placeholder.png' %}" alt="logo" class="w-12 h-12 rounded-full object-cover">
+        <img src="{% static 'images/store-placeholder.png' %}" alt="logo" class="w-12 h-12 rounded-full object-cover">
         {% endif %}
         <span class="font-semibold text-lg">{{ store.name }}</span>
       </div>
@@ -30,15 +34,15 @@
   <!-- Tabs บนสุด -->
   <div class="flex justify-center space-x-3 bg-white shadow py-3 px-4 border-t border-gray-100">
     <a href="{% url 'dress:my_store' store.id %}"
-       class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
+      class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
       หน้าร้าน
     </a>
     <a href="{% url 'dress:store_dress' store.id %}"
-       class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
+      class="flex-1 text-center py-3 rounded-lg border font-semibold hover:bg-gray-100 transition">
       รายการสินค้า
     </a>
     <a href="{% url 'dress:back_office' store.id %}"
-       class="flex-1 text-center py-3 rounded-lg bg-black text-white font-semibold hover:bg-gray-800 transition">
+      class="flex-1 text-center py-3 rounded-lg bg-black text-white font-semibold hover:bg-gray-800 transition">
       หลังร้าน
     </a>
   </div>
@@ -47,7 +51,7 @@
   <section class="max-w-6xl mx-auto px-6 pt-6">
     <div class="flex justify-end">
       <a href="{% url 'dress:back_office' store.id %}"
-         class="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 transition">
+        class="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 transition">
         ← ย้อนกลับหลังร้าน
       </a>
     </div>
@@ -160,8 +164,19 @@
           <tr class="border-b hover:bg-gray-50">
             <td class="py-2">#{{ o.id }}</td>
             <td class="py-2">
-              {{ o.status }}
-            </td>
+  <span class="inline-flex px-3 py-1 text-[11px] font-semibold rounded-full
+    {% if o.status == 'pending' or o.status == 'waiting_payment' %} bg-yellow-100 text-yellow-800
+    {% elif o.status == 'paid' %} bg-blue-100 text-blue-800
+    {% elif o.status == 'preparing' %} bg-orange-100 text-orange-800
+    {% elif o.status == 'shipping' %} bg-indigo-100 text-indigo-800
+    {% elif o.status == 'in_rental' or o.status == 'renting' %} bg-pink-100 text-pink-800
+    {% elif o.status == 'waiting_return' %} bg-purple-100 text-purple-800
+    {% elif o.status == 'returned' or o.status == 'completed' %} bg-green-100 text-green-800
+    {% elif o.status == 'cancelled' or o.status == 'damaged' %} bg-red-100 text-red-800
+    {% else %} bg-gray-100 text-gray-800 {% endif %}">
+    {{ o.get_status_display }}
+  </span>
+</td>
             <td class="py-2 text-center">
               {{ o.created_at|date:"d/m/Y H:i" }}
             </td>
@@ -216,10 +231,10 @@
 
   <script>
     // ข้อมูลจาก view (เป็น JSON string ที่ส่งมาจาก context)
-    const revenueLabels = {{ revenue_labels|safe }};
-    const revenueData = {{ revenue_data|safe }};
-    const statusLabels = {{ status_labels|safe }};
-    const statusData = {{ status_data|safe }};
+    const revenueLabels = {{ revenue_labels| safe }};
+    const revenueData = {{ revenue_data| safe }};
+    const statusLabels = {{ status_labels| safe }};
+    const statusData = {{ status_data| safe }};
 
     // กราฟรายได้รายวัน (Line Chart)
     const revenueCtx = document.getElementById('revenueChart').getContext('2d');
@@ -278,4 +293,5 @@
   </script>
 
 </body>
+
 </html>

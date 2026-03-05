@@ -9,7 +9,7 @@
 <body class="bg-gray-50">
 
 <!-- แถบหัว -->
-<div class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-100 shadow-sm p-8 flex justify-between items-center">
+<div style="background: linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.4)), linear-gradient(to right, #FFE88D 0%, #7AAAC0 36%, #93DBFC 61%, #E5A6D3 90%, #527281 100%);" class="shadow-sm p-8 flex justify-between items-center">
     <h1 class="text-lg font-semibold text-gray-800">คะแนนรีวิว ({{ reviews.count }})</h1>
     <div class="flex gap-2">
         <a href="{% url 'dress:dress_detail' dress.id %}"

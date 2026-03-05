@@ -9,8 +9,7 @@
 </head>
 <body class="bg-gray-50">
 
-  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+<header style="background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.4)), linear-gradient(to right, #FFE88D 0%, #7AAAC0 36%, #93DBFC 61%, #E5A6D3 90%, #527281 100%);" class="shadow-lg w-full sticky top-0 z-30">    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
       <div class="flex items-center gap-3">
         <button onclick="history.back()" class="w-9 h-9 flex items-center justify-center rounded-full bg-white/70 hover:bg-white shadow">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -155,7 +154,6 @@
             <p class="text-xs text-gray-500">* ค่าส่งคำนวณตามจำนวนชุดในออเดอร์ (1–2 ชุด ฿50 | 3–5 ชุด ฿65 | มากกว่า 5 ชุด ฿65)</p>
           </div>
 
-          <!-- เติม: วิธีชำระเงิน (แสดงเฉพาะกรณีมารับเอง) -->
           <div id="payMethodBox" class="mt-4 hidden">
             <p class="text-sm font-semibold text-gray-800">วิธีชำระเงิน</p>
             <div class="mt-2 space-x-6 text-sm">
@@ -165,8 +163,7 @@
               </label>
             </div>
           </div>
-          <!-- จบส่วนเติม -->
-        </div>
+          </div>
 
         <div class="mt-6">
           <p class="text-sm font-semibold text-gray-800">ข้อมูลผู้เช่า</p>
@@ -367,11 +364,17 @@
       const methodEl   = document.querySelector('input[name="receive_method"]:checked');
       const method     = methodEl ? methodEl.value : "";
 
+      // 🔥 ตรงนี้คือจุดที่เราเพิ่มตัวแปรที่ขาดหายไปเข้าไปใน URL params
       const params = new URLSearchParams({
         start_date: sd,
         end_date: ed,
         days: ds,
-        method: method
+        method: method,
+        rental_fee: RENT,
+        deposit: DEPOSIT,
+        shipping: method === 'delivery' ? calcShipping(QTY) : 0,
+        recipient_name: nameInput ? nameInput.value : '',
+        phone: phoneInput ? digits(phoneInput.value) : '' // ส่งตัวเลขเพียวๆ ไป
       });
 
       if (method === "delivery") {

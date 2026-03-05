@@ -1370,6 +1370,9 @@ class Order(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     shop = models.ForeignKey("Shop", on_delete=models.CASCADE)
+    recipient_name = models.CharField(max_length=255, verbose_name="ชื่อผู้รับ", blank=True, null=True)
+    phone = models.CharField(max_length=20, verbose_name="เบอร์โทรศัพท์", blank=True, null=True)
+    address = models.TextField(verbose_name="ที่อยู่จัดส่ง", blank=True, null=True)
 
     start_date = models.DateField()
     end_date = models.DateField()

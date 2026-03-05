@@ -9,18 +9,19 @@
 
 <body class="bg-gray-50">
 
-  <!-- Header -->
-  <div class="bg-gradient-to-r from-yellow-100 via-pink-200 to-blue-100 shadow-sm p-4 flex justify-between items-center">
+  <div class="bg-gradient-to-r from-yellow-100 via-pink-200 to-blue-100 shadow-sm p-6 flex justify-between items-center">
     <h1 class="text-lg font-semibold text-gray-800">แก้ไขรีวิวของ {{ dress.name }}</h1>
-    <a href="{% url 'review_list' dress.id %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700">← กลับหน้ารายการรีวิว</a>
+    
+    <a href="{% url 'dress:review_list' dress.id %}"
+      class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700 text-sm shadow-sm transition font-medium">
+      ← กลับหน้ารายการรีวิว
+    </a>
   </div>
 
-  <!-- ฟอร์มแก้ไขรีวิว -->
   <div class="max-w-lg mx-auto mt-8 bg-white shadow-md rounded-lg p-6">
     <form method="POST" enctype="multipart/form-data">
       {% csrf_token %}
 
-      <!-- คะแนน -->
       <div class="mb-4">
         <label for="rating" class="block font-medium mb-1">ให้คะแนน:</label>
         <select name="rating" id="rating" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-yellow-300">
@@ -32,7 +33,6 @@
         </select>
       </div>
 
-      <!-- ความคิดเห็น -->
       <div class="mb-4">
         <label for="comment" class="block font-medium mb-1">ความคิดเห็นของคุณ:</label>
         <textarea name="comment" id="comment" rows="4"
@@ -40,7 +40,6 @@
                   placeholder="พิมพ์ความคิดเห็นของคุณ...">{{ review.comment }}</textarea>
       </div>
 
-      <!-- รูปภาพรีวิว -->
       <div class="mb-4">
         <label for="image" class="block font-medium mb-1">อัปโหลดรูปภาพใหม่ (ถ้ามี):</label>
         {% if review.image %}
@@ -52,9 +51,8 @@
                class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-yellow-300">
       </div>
 
-      <!-- ปุ่มบันทึก -->
       <div class="text-right">
-        <button type="submit" class="px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600">
+        <button type="submit" class="px-6 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 shadow-md transition">
           บันทึกการเปลี่ยนแปลง
         </button>
       </div>

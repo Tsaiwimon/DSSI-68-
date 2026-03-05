@@ -91,7 +91,7 @@ os.environ["REPLICATE_API_TOKEN"] = os.getenv("REPLICATE_API_TOKEN")
 # ------------------------------------------------------------------
 # 1. ฟังก์ชันสำหรับเปิดหน้าเว็บ (HTML)
 # ชื่อต้องเป็น ai_try_on ให้ตรงกับ urls.py เดิม
-
+@login_required(login_url='dress:login')
 def ai_try_on(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
     # ส่งข้อมูลไปที่หน้า HTML
@@ -100,6 +100,7 @@ def ai_try_on(request, dress_id):
 # 2. ฟังก์ชันสำหรับคุยกับ AI (API)
 # ชื่อนี้ต้องเอาไปเพิ่มใน urls.py ใหม่
 
+@login_required(login_url='dress:login')
 @csrf_exempt
 def api_virtual_tryon(request, dress_id):
     # ตรวจสอบ Key
@@ -172,7 +173,7 @@ def api_virtual_tryon(request, dress_id):
                     "category": category_input,
                     "crop": False,
                     "seed": 42,
-                    "steps": 30
+                    "steps": 35
                 }
             )
             
@@ -686,6 +687,8 @@ def add_dress(request, store_id):
 def _assert_store_owner(store: Shop, user):
     return (store.owner_id == getattr(user, "id", None)) or getattr(user, "is_superuser", False)
 
+
+
 # แก้ไขชุด
 @login_required(login_url="dress:login")
 @shop_approved_required
@@ -957,7 +960,8 @@ def dress_detail(request, dress_id):
         is_favorite = Favorite.objects.filter(user=request.user, dress=dress).exists()
 
     # ชุดอื่นในร้านเดียวกัน
-    related_dresses = Dress.objects.filter(shop=dress.shop).exclude(id=dress.id)[:4]
+    # ชุดอื่นในร้านเดียวกัน
+    related_dresses = Dress.objects.filter(shop=dress.shop, is_archived=False).exclude(id=dress.id)[:4]
 
     # แพ็กเกจราคา
     pack_prices = []
@@ -1309,7 +1313,6 @@ def cart_checkout(request):
     })
 
 
-
 @login_required
 @require_POST
 def cart_checkout_confirm(request):
@@ -1321,6 +1324,13 @@ def cart_checkout_confirm(request):
     end_date_raw = request.POST.get("end_date")
     if not start_date_raw or not end_date_raw:
         return HttpResponseBadRequest("missing dates")
+
+    # --- ส่วนที่เพิ่มใหม่: รับค่าข้อมูลที่อยู่จัดส่งจากหน้าก่อนหน้า ---
+    recipient_name = request.POST.get("recipient_name", "")
+    phone_number = request.POST.get("phone_number", "")
+    address_detail = request.POST.get("address_detail", "")
+    province = request.POST.get("province", "")
+    zip_code = request.POST.get("zip_code", "")
 
     try:
         start_date = date.fromisoformat(start_date_raw)
@@ -1340,7 +1350,7 @@ def cart_checkout_confirm(request):
     if not items.exists():
         return HttpResponseBadRequest("items not found")
 
-    # --- ส่วนที่แก้ไข: ปลดล็อก Multi-shop และจัดกลุ่มข้อมูลใหม่ ---
+    # --- จัดกลุ่มข้อมูล Multi-shop ---
     shops_data = {}
     total_rental_all = Decimal("0.00")
     total_deposit_all = Decimal("0.00")
@@ -1404,6 +1414,13 @@ def cart_checkout_confirm(request):
         "rental_total": total_rental_all,
         "shipping_total": total_shipping_all,
         "grand_total": grand_total,
+        # --- ส่งข้อมูลที่อยู่และ ID ต่อไปที่หน้า HTML ---
+        "recipient_name": recipient_name,
+        "phone_number": phone_number,
+        "address_detail": address_detail,
+        "province": province,
+        "zip_code": zip_code,
+        "ids": ids,
     })
 
 @login_required
@@ -1559,6 +1576,9 @@ def cart_payment_start(request):
                 days=days,             # <--- เพิ่ม: ระบุจำนวนวัน (Mandatory Field)
                 start_date=start_date,
                 end_date=end_date,
+                recipient_name=recipient_name,
+                phone=phone_number,
+                address=full_address,
                 rental_total=total_rent,
                 deposit_total=total_deposit,
                 shipping_fee=total_shipping,
@@ -1617,21 +1637,31 @@ def add_to_cart(request, dress_id):
         messages.error(request, "ชุดนี้ถูกปิดการเช่าชั่วคราว ไม่สามารถทำรายการเช่าได้ในขณะนี้")
         return redirect("dress:dress_detail", dress_id=dress.id)
 
-    cart_item, created = CartItem.objects.get_or_create(user=request.user, dress=dress)
+    # ใช้ get_or_create เหมือนเดิม แต่ถ้ามีอยู่แล้ว (not created) ไม่ต้องบวกเพิ่ม
+    cart_item, created = CartItem.objects.get_or_create(
+        user=request.user, 
+        dress=dress,
+        defaults={'quantity': 1} # กำหนดค่าเริ่มต้นเป็น 1
+    )
+    
     if not created:
-        cart_item.quantity += 1
-        cart_item.save()
-        messages.info(request, "เพิ่มจำนวนสินค้าในตะกร้าแล้ว")
+        # ถ้ามีอยู่แล้ว แจ้งเตือนลูกค้าว่าชุดนี้อยู่ในตะกร้าแล้ว
+        messages.info(request, "ชุดนี้อยู่ในตะกร้าของคุณเรียบร้อยแล้ว")
     else:
-        messages.success(request, "เพิ่มสินค้าในตะกร้าสำเร็จ")
+        messages.success(request, "เพิ่มชุดลงในตะกร้าสำเร็จ")
 
     return redirect("dress:dress_detail", dress_id=dress.id)
 
 
-
 def cart_item_count(request):
-    count = CartItem.objects.filter(user=request.user).count() if request.user.is_authenticated else 0
+    if request.user.is_authenticated:
+        # นับจำนวนรายการ (Row) ได้เลย เพราะ 1 รายการคือ 1 ชุดแน่นอน
+        count = CartItem.objects.filter(user=request.user).count()
+    else:
+        count = 0
     return JsonResponse({'count': count})
+
+
 
 # ลบสินค้าหลายรายการจากตะกร้า
 @csrf_exempt
@@ -1658,6 +1688,31 @@ def remove_bulk(request):
         return JsonResponse({"status": "error", "message": "ข้อมูลไม่ถูกต้อง"}, status=400)
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    
+@login_required(login_url="dress:login")
+def update_item_quantity(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        item_id = data.get("item_id")
+        action = data.get("action") # 'plus' หรือ 'minus'
+        
+        item = get_object_or_404(CartItem, id=item_id, user=request.user)
+        
+        if action == 'plus':
+            item.quantity += 1
+        elif action == 'minus' and item.quantity > 1:
+            item.quantity -= 1
+        
+        item.save()
+        
+        # ส่งค่ากลับไปให้ JavaScript อัปเดตหน้าจอทันที
+        return JsonResponse({
+            "status": "ok",
+            "new_quantity": item.quantity,
+            "item_id": item_id
+        })
+    
+
 
 #ย้ายไปยังรายการโปรด
 @csrf_exempt
@@ -1775,7 +1830,6 @@ def notification_page(request):
 
 
 
-
 # ระบบ "การเช่าของฉัน"
 @login_required(login_url="dress:login")
 def rental_list_view(request):
@@ -1795,7 +1849,7 @@ def rental_list_view(request):
         ],
         pickup_date__lte=today,
         return_date__gte=today,
-    ).select_related("dress", "rental_shop").order_by("pickup_date")
+    ).select_related("dress", "rental_shop").order_by("-id")  # ✨ แก้ตรงนี้เป็น -id
 
     # 2) เช่าในอนาคต
     upcoming_rentals = RentalOrder.objects.filter(
@@ -1806,7 +1860,7 @@ def rental_list_view(request):
             RentalOrder.STATUS_SHIPPING,
         ],
         pickup_date__gt=today,
-    ).select_related("dress", "rental_shop").order_by("pickup_date")
+    ).select_related("dress", "rental_shop").order_by("-id")  # ✨ แก้ตรงนี้เป็น -id
 
     # 3) เช่าเสร็จแล้ว
     completed_rentals = RentalOrder.objects.filter(
@@ -1818,7 +1872,7 @@ def rental_list_view(request):
             "completed",                   # กันข้อมูลเก่า
         ],
         return_date__lte=today,
-    ).select_related("dress", "rental_shop").order_by("-return_date")
+    ).select_related("dress", "rental_shop").order_by("-id")  # ✨ แก้ตรงนี้เป็น -id เพื่อให้แพทเทิร์นเหมือนกัน
 
     context = {
         "current_rentals": current_rentals,
@@ -1970,6 +2024,16 @@ def back_office_order_detail(request, store_id, order_id):
     store = get_object_or_404(Shop, id=store_id, owner=request.user)
     order = get_object_or_404(RentalOrder, id=order_id, rental_shop=store)
 
+    # ---------------------------------------------------------
+    # ✨ [เพิ่มใหม่] ค้นหาออเดอร์หลัก (Order) เพื่อดึงข้อมูลที่อยู่จัดส่ง
+    # ---------------------------------------------------------
+    parent_order = Order.objects.filter(
+        user=order.user,
+        shop=store,
+        start_date=order.pickup_date,
+        end_date=order.return_date
+    ).order_by('-created_at').first()
+
     # next (กลับหน้าเดิม) แบบปลอดภัย
     next_url = request.GET.get("next")
     if next_url and not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
@@ -1980,7 +2044,7 @@ def back_office_order_detail(request, store_id, order_id):
     if getattr(order, "pickup_date", None) and getattr(order, "return_date", None):
         try:
             delta = (order.return_date - order.pickup_date)
-            rental_days = max(delta.days, 0)
+            rental_days = max(delta.days + 1, 1)
         except Exception:
             rental_days = None
 
@@ -2002,6 +2066,7 @@ def back_office_order_detail(request, store_id, order_id):
     context = {
         "store": store,
         "order": order,
+        "parent_order": parent_order,
         "next_url": next_url,
         "status_label": status_label,
         "rental_days": rental_days,
@@ -2353,6 +2418,9 @@ def back_office_orders_damaged(request, store_id):
     }
     return render(request, "dress/back_office_orders.html", context)
 
+
+
+
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่กำลังจัดส่ง”
 @login_required(login_url='dress:login')
 @shop_approved_required
@@ -2381,6 +2449,9 @@ def back_office_orders_shipping(request, store_id):
     }
     return render(request, "dress/back_office_orders.html", context)
 
+
+
+
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่ถูกยกเลิก”
 @login_required(login_url='dress:login')
 @shop_approved_required
@@ -2407,6 +2478,10 @@ def back_office_orders_cancelled(request, store_id):
         "active_tab": "cancelled",
     }
     return render(request, "dress/back_office_orders.html", context)
+
+
+
+
 
 # ฟังก์ชันนี้คือ “หน้าหลังร้าน > แท็บออเดอร์ที่เช่าสำเร็จ”
 @login_required(login_url='dress:login')
@@ -2717,8 +2792,8 @@ def back_office_stats(request, store_id):
     
     # แปลง status ภาษาอังกฤษเป็นไทย (Optional)
     status_map = {
-        'pending': 'รอชำระ', 'paid': 'ชำระแล้ว', 'shipping': 'จัดส่ง',
-        'in_rental': 'กำลังเช่า', 'waiting_return': 'รอคืน',
+        'pending': 'รอชำระ', 'paid': 'ชำระแล้ว', 'shipping': 'จัดส่ง','damaged': 'ชำรุด/มีปัญหา',
+        'in_rental': 'กำลังเช่า', 'waiting_return': 'รอคืน','preparing': 'เตรียมจัดส่ง','waiting_payment': 'รอชำระเงิน','renting': 'อยู่ระหว่างเช่า',
         'returned': 'คืนแล้ว', 'completed': 'สำเร็จ', 'cancelled': 'ยกเลิก'
     }
     
@@ -2751,12 +2826,27 @@ def public_store(request, store_id):
     store = get_object_or_404(Shop, id=store_id)
     selected_category = request.GET.get('category', 'ทั้งหมด')
 
-    categories = Category.objects.filter(dress__shop=store).distinct()
+    # ✨ [ปรับปรุง] กรองให้โชว์เฉพาะหมวดหมู่ที่มีชุดพร้อมให้เช่า (ไม่อยู่ในคลัง)
+    categories = Category.objects.filter(
+        dress__shop=store, 
+        dress__is_available=True,
+        dress__is_archived=False
+    ).distinct()
 
+    # ✨ [เพิ่ม is_archived=False] เพื่อซ่อนชุดที่อยู่ในคลัง
     if selected_category != "ทั้งหมด":
-        dresses = Dress.objects.filter(shop=store, categories__name=selected_category, is_available=True)
+        dresses = Dress.objects.filter(
+            shop=store, 
+            categories__name=selected_category, 
+            is_available=True,
+            is_archived=False  # <--- เติมตรงนี้
+        )
     else:
-        dresses = Dress.objects.filter(shop=store, is_available=True)
+        dresses = Dress.objects.filter(
+            shop=store, 
+            is_available=True,
+            is_archived=False  # <--- และตรงนี้
+        )
 
     context = {
         "store": store,
@@ -3056,7 +3146,7 @@ def _calc_shipping_from_tiers(tiers, qty):
 def rent_checkout(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
 
-    # เช็คร้านปิด -> เด้งกลับหน้า dress_detail ให้ modal เด้ง
+    # 1. เช็คร้านปิด
     blocked = _reject_if_shop_closed(
         request,
         dress.shop,
@@ -3066,22 +3156,21 @@ def rent_checkout(request, dress_id):
     if blocked:
         return blocked
 
-    # ---------- เช็คว่าชุดนี้ปิดการเช่าหรือไม่ ----------
+    # 2. เช็คว่าชุดปิดการเช่าหรือไม่
     if not getattr(dress, "is_available", True):
         messages.error(request, "ชุดนี้ถูกปิดการเช่าชั่วคราว ไม่สามารถทำรายการเช่าได้ในขณะนี้")
         return redirect("dress:dress_detail", dress_id=dress.id)
-    # ---------------------------------------------------
 
-    start_s = (request.POST.get("start_date") or request.GET.get("start_date")
-               or request.GET.get("start") or "").strip()
-    end_s   = (request.POST.get("end_date") or request.GET.get("end_date")
-               or request.GET.get("end") or "").strip()
+    # 3. รับค่าวันที่และคำนวณวัน
+    start_s = (request.POST.get("start_date") or request.GET.get("start_date") or "").strip()
+    end_s   = (request.POST.get("end_date") or request.GET.get("end_date") or "").strip()
     days_s  = (request.POST.get("days") or request.GET.get("days") or "").strip()
 
     start_date = _parse_date(start_s)
     end_date   = _parse_date(end_s)
     total_days = int(days_s) if days_s.isdigit() else _days_inclusive(start_date, end_date)
 
+    # 4. คำนวณราคาเช่าและมัดจำ
     pack_prices = []
     if getattr(dress, "price_template", None):
         for it in dress.price_template.items.order_by("day_count"):
@@ -3098,6 +3187,7 @@ def rent_checkout(request, dress_id):
         match = next((p for p in pack_prices if int(p["days"]) == total_days), None)
         rental_fee = float(match["price"]) if match else float(getattr(dress, "daily_price", 0) or 0) * total_days
 
+    # 5. คำนวณค่าส่ง
     shipping_tiers = []
     shipping_clamp_note = None
     rule = getattr(dress.shop, "shipping_rule", None)
@@ -3116,18 +3206,23 @@ def rent_checkout(request, dress_id):
 
     preview_shipping = _calc_shipping_from_tiers(shipping_tiers, 1)
 
+    # 6. ส่วนการบันทึกข้อมูลเมื่อกดยืนยัน (POST)
     if request.method == "POST":
         receive_method = (request.POST.get("receive_method") or "pickup").strip()
-        address        = (request.POST.get("address") or "").strip()
+        
+        # --- [แก้ไขจุดที่ 1] รับค่าจากฟอร์มให้ครบและตั้งชื่อให้เคลียร์ ---
+        input_address   = (request.POST.get("address") or "").strip()
+        input_name      = (request.POST.get("renter_name") or "").strip()
+        input_phone     = (request.POST.get("renter_phone") or "").strip()
+        
         pickup_slot    = (request.POST.get("pickup_slot") or "").strip()
         return_slot    = (request.POST.get("return_slot") or "").strip()
         delivery_slot  = (request.POST.get("delivery_slot") or "").strip()
-        renter_name    = (request.POST.get("renter_name") or "").strip()
-        renter_phone   = (request.POST.get("renter_phone") or "").strip()
 
         shipping_fee = _calc_shipping_from_tiers(shipping_tiers, 1) if receive_method == "delivery" else 0.0
         amount_baht  = float(rental_fee) + float(deposit) + float(shipping_fee)
 
+        # --- [แก้ไขจุดที่ 2] เก็บลง Session โดยใช้ Key ที่ตรงกับฟิลด์ใน Model Order ---
         request.session["checkout"] = {
             "dress_id": dress.id,
             "start_date": start_date.strftime("%Y-%m-%d") if start_date else "",
@@ -3135,13 +3230,14 @@ def rent_checkout(request, dress_id):
             "days": total_days,
 
             "receive_method": receive_method,
-            "address": address,
             "pickup_slot": pickup_slot,
             "return_slot": return_slot,
             "delivery_slot": delivery_slot,
 
-            "renter_name": renter_name,
-            "renter_phone": renter_phone,
+            # ข้อมูลผู้รับ (ใช้ชื่อ Key ให้ตรงกับฟิลด์ใน Order Model จะได้ไม่งง)
+            "recipient_name": input_name, 
+            "phone":          input_phone,
+            "address":        input_address,
 
             "rental_fee": f"{rental_fee:.2f}",
             "deposit":    f"{deposit:.2f}",
@@ -3149,6 +3245,8 @@ def rent_checkout(request, dress_id):
             "amount_baht": f"{amount_baht:.2f}",
         }
         request.session.modified = True
+        
+        # ส่งไปหน้าชำระเงิน
         return redirect("dress:rent_payment", dress_id=dress.id)
 
     ctx = {
@@ -3164,52 +3262,6 @@ def rent_checkout(request, dress_id):
         "preview_shipping_fee": preview_shipping,
     }
     return render(request, "dress/rent_checkout.html", ctx)
-
-
-
-# คำนวณราคาเช่าสำหรับ 1 ชุด
-def _quote_for(dress, start_date, end_date, method="pickup"):
-    days = _days_inclusive(start_date, end_date)
-
-    pack_prices = []
-    if getattr(dress, "price_template", None):
-        for it in dress.price_template.items.order_by("day_count"):
-            pack_prices.append({"days": int(it.day_count), "price": float(it.total_price)})
-    else:
-        daily = float(getattr(dress, "daily_price", 0) or 0)
-        if daily > 0:
-            for d in range(1, 9):
-                pack_prices.append({"days": d, "price": daily * d})
-
-    rental_fee = 0.0
-    if days > 0:
-        match = next((p for p in pack_prices if p["days"] == days), None)
-        rental_fee = float(match["price"]) if match else float(getattr(dress, "daily_price", 0) or 0) * days
-
-    deposit = float(getattr(dress, "deposit", 0) or 0)
-
-    shipping = 0.0
-    if (method or "").strip() == "delivery":
-        rule = getattr(dress.shop, "shipping_rule", None)
-        tiers = []
-        if rule and hasattr(rule, "brackets"):
-            for b in rule.brackets.all().order_by("min_qty"):
-                tiers.append({"min_qty": b.min_qty, "max_qty": b.max_qty, "fee": float(b.fee)})
-        else:
-            tiers = [
-                {"min_qty": 1, "max_qty": 2, "fee": 50},
-                {"min_qty": 3, "max_qty": 5, "fee": 65},
-            ]
-        shipping = _calc_shipping_from_tiers(tiers, 1)
-
-    amount = rental_fee + deposit + shipping
-    return {
-        "days": days,
-        "rental_fee": round(rental_fee, 2),
-        "deposit": round(deposit, 2),
-        "shipping": round(shipping, 2),
-        "amount_baht": round(amount, 2),
-    }
 
 
 # =========================
@@ -3238,53 +3290,86 @@ def rent_payment(request, dress_id):
             return 0.0
 
     sess = request.session.get("checkout") or {}
-
-    # ----------------------------
-    # โหลดข้อมูลจาก session ก่อน (ถ้ามี)
-    # ----------------------------
+    
+    # --- เริ่มต้นดึงข้อมูลจาก Session ---
     if sess and int(sess.get("dress_id", 0)) == dress.id:
         start_date = _parse_date(sess.get("start_date") or "")
         end_date   = _parse_date(sess.get("end_date") or "")
         method     = _norm_method(sess.get("receive_method") or "pickup")
-
         rental_fee = _to_money(sess.get("rental_fee"))
         deposit    = _to_money(sess.get("deposit"))
         shipping   = _to_money(sess.get("shipping"))
         days       = int(sess.get("days") or 0)
-
-        address       = sess.get("address")
+        
+        # ข้อมูลที่อยู่และผู้รับ (ดึงมาจากหน้าที่แล้ว)
+        address         = sess.get("address")
+        recipient_name  = sess.get("recipient_name") # เพิ่มการดึงชื่อ
+        phone           = sess.get("phone")          # เพิ่มการดึงเบอร์
+        
         pickup_slot   = sess.get("pickup_slot")
         return_slot   = sess.get("return_slot")
         delivery_slot = sess.get("delivery_slot")
-
-    # ----------------------------
-    # ถ้าไม่มี session ใช้ค่า query string เพื่อ preview
-    # ----------------------------
     else:
+        # กรณีไม่มี Session (Preview จาก GET)
         start_date = _parse_date((request.GET.get("start_date") or request.GET.get("start") or "").strip())
         end_date   = _parse_date((request.GET.get("end_date") or request.GET.get("end") or "").strip())
         method     = _norm_method(request.GET.get("method") or "pickup")
-
-        q = _quote_for(dress, start_date, end_date, method)
-        days       = int(q.get("days") or 0)
-        rental_fee = _to_money(q.get("rental_fee"))
-        deposit    = _to_money(q.get("deposit"))
-        shipping   = _to_money(q.get("shipping"))
-
-        address       = request.GET.get("address")
+        days       = int(request.GET.get("days") or 0)
+        rental_fee = _to_money(request.GET.get("rental_fee"))
+        deposit    = _to_money(request.GET.get("deposit"))
+        shipping   = _to_money(request.GET.get("shipping"))
+        address    = request.GET.get("address")
+        recipient_name = request.GET.get("recipient_name") # Preview
+        phone      = request.GET.get("phone")          # Preview
         pickup_slot   = request.GET.get("pickup_slot")
         return_slot   = request.GET.get("return_slot")
         delivery_slot = request.GET.get("delivery_slot")
 
-    # ----------------------------
-    # FORCE: พร้อมเพย์เท่านั้น (ตัด pay_at_store ทิ้งทั้งหมด)
-    # ----------------------------
     pay_method = "promptpay"
-
-    # กันข้อมูลเพี้ยน/โดนแก้จาก session: คำนวณยอดใหม่ให้ชัวร์
     if method == "pickup":
         shipping = 0.0
     amount = float(rental_fee) + float(deposit) + float(shipping)
+
+    # -------------------------------------------------------
+    # ⚡️ ส่วนสำคัญที่สุด: การบันทึก Order เมื่อกดยืนยัน (POST)
+    # -------------------------------------------------------
+    if request.method == "POST":
+        from .models import Order # มั่นใจว่า import model มาแล้ว
+        
+        # สร้าง Order ลงฐานข้อมูล
+        order = Order.objects.create(
+            user=request.user,
+            shop=dress.shop,
+            dress=dress,
+            start_date=start_date,
+            end_date=end_date,
+            total_days=days,
+            rental_fee=rental_fee,
+            deposit_fee=deposit,
+            shipping_fee=shipping,
+            total_amount=amount,
+            receive_method=method,
+            
+            # บันทึกที่อยู่และผู้รับลงฐานข้อมูล (นี่คือจุดที่คุณทำหายไป)
+            recipient_name=recipient_name, 
+            phone=phone,
+            address=address,
+            
+            pickup_slot=pickup_slot,
+            return_slot=return_slot,
+            delivery_slot=delivery_slot,
+            payment_method=pay_method,
+            status='pending' # หรือตาม status เริ่มต้นของคุณ
+        )
+        
+        # เมื่อสร้างสำเร็จ ล้าง Session และไปหน้าขอบคุณหรือหน้ารายการสั่งซื้อ
+        if "checkout" in request.session:
+            del request.session["checkout"]
+            
+        messages.success(request, "ทำรายการเช่าสำเร็จเรียบร้อยแล้ว!")
+        return redirect("dress:my_orders") # หรือหน้าที่คุณต้องการไปหลังจ่ายเงิน
+
+    # -------------------------------------------------------
 
     ctx = {
         "dress": dress,
@@ -3298,6 +3383,8 @@ def rent_payment(request, dress_id):
         "shipping": shipping,
         "amount_baht": amount,
         "address": address,
+        "recipient_name": recipient_name,
+        "phone": phone,
         "pickup_slot": pickup_slot,
         "return_slot": return_slot,
         "delivery_slot": delivery_slot,
@@ -3405,52 +3492,45 @@ def create_promptpay_charge(request, dress_id):
 @login_required(login_url="dress:login")
 def rent_success(request, dress_id):
     dress = get_object_or_404(Dress, pk=dress_id)
-
-    # 1. ดึงข้อมูลเหมือนเดิม
     sess = request.session.get("checkout") or {}
-    if sess and int(sess.get("dress_id", 0)) == dress.id:
-        start_date = _parse_date(sess.get("start_date") or "")
-        end_date   = _parse_date(sess.get("end_date") or "")
-        days       = int(sess.get("days") or 0)
-        method     = (sess.get("receive_method") or request.GET.get("method") or "pickup").strip()
-        rental_fee = float(sess.get("rental_fee") or 0)
-        deposit    = float(sess.get("deposit") or 0)
-        shipping   = float(sess.get("shipping") or 0)
-        amount     = float(sess.get("amount_baht") or 0)
-        pickup_slot = sess.get("pickup_slot")
-        return_slot = sess.get("return_slot")
-        order_ref   = request.GET.get("order_ref") or f"ORD-{dress_id}-{timezone.now().strftime('%m-%d')}"
-    else:
-        start_date = _parse_date(request.GET.get("start_date") or request.GET.get("start") or "")
-        end_date   = _parse_date(request.GET.get("end_date")   or request.GET.get("end")   or "")
-        days       = int(request.GET.get("days") or 0)
-        method     = (request.GET.get("method") or "pickup").strip()
-        rental_fee = float(request.GET.get("rental_fee") or 0)
-        deposit    = float(request.GET.get("deposit") or 0)
-        shipping   = float(request.GET.get("shipping") or 0)
-        amount     = float(request.GET.get("amount_baht") or 0)
-        pickup_slot = request.GET.get("pickup_slot")
-        return_slot = request.GET.get("return_slot")
-        order_ref   = request.GET.get("order_ref") or f"ORD-{dress_id}-{timezone.now().strftime('%m-%d')}"
+
+    # 1. พยายามดึงข้อมูลวันจาก Session ก่อน ถ้าไม่มีให้ดึงจาก URL (request.GET)
+    start_date_raw = sess.get("start_date") or request.GET.get("start_date")
+    end_date_raw   = sess.get("end_date") or request.GET.get("end_date")
+
+    # ถ้าไม่มีวันเริ่มต้นหรือสิ้นสุดส่งมาเลย เด้งกลับหน้าชุด
+    if not start_date_raw or not end_date_raw:
+        return redirect("dress:dress_detail", dress_id=dress.id)
+
+    # 2. ดึงข้อมูลทั้งหมด (รองรับทั้งจาก Session และ URL)
+    start_date  = _parse_date(start_date_raw)
+    end_date    = _parse_date(end_date_raw)
+    days        = int(sess.get("days") or request.GET.get("days") or 0)
+    method      = (sess.get("receive_method") or request.GET.get("method") or "pickup").strip()
+    rental_fee  = float(sess.get("rental_fee") or request.GET.get("rental_fee") or 0)
+    deposit     = float(sess.get("deposit") or request.GET.get("deposit") or 0)
+    shipping    = float(sess.get("shipping") or request.GET.get("shipping") or 0)
+    amount      = float(sess.get("amount_baht") or request.GET.get("amount_baht") or 0)
+    
+    # ข้อมูลสำหรับมารับเอง / ส่ง
+    pickup_slot = sess.get("pickup_slot") or request.GET.get("pickup_slot") or ""
+    return_slot = sess.get("return_slot") or request.GET.get("return_slot") or ""
+    
+    # ข้อมูลที่อยู่ผู้รับ
+    recipient_name = sess.get("recipient_name") or request.GET.get("recipient_name") or request.user.get_full_name() or request.user.username
+    phone          = sess.get("phone") or request.GET.get("phone") or "-"
+    address        = sess.get("address") or request.GET.get("address") or "-"
 
     charge_id  = request.GET.get("charge_id")
-    pay_method = request.GET.get("pay_method") or ("promptpay" if charge_id else "pay_at_store")
-
-    # เคลียร์ session checkout ทิ้ง
-    if "checkout" in request.session:
-        try:
-            del request.session["checkout"]
-            request.session.modified = True
-        except Exception:
-            pass
+    pay_method = "promptpay" 
 
     # -----------------------------
-    # ✅ แก้ใหม่: สร้าง Main Order (เพื่อให้ระบบคำนวณเงินทำงาน)
+    # ✅ ส่วนการสร้าง Order 
     # -----------------------------
-    rental_order_obj = None # เอาไว้เก็บตัวลูกที่จะส่งไปหน้าเว็บ
+    rental_order_obj = None 
     
     if start_date and end_date:
-        # 1. เช็กก่อนว่าเคยสร้าง RentalOrder ไปหรือยัง (กัน Refresh ซ้ำ)
+        # เช็คกันสร้างซ้ำจาก charge_id
         existing_rental = None
         if charge_id:
             existing_rental = RentalOrder.objects.filter(omise_charge_id=charge_id).first()
@@ -3458,27 +3538,25 @@ def rent_success(request, dress_id):
         if existing_rental:
             rental_order_obj = existing_rental
         else:
-            # 2. ยังไม่เคยสร้าง -> สร้าง Order ตัวแม่ก่อน! (เพื่อให้สูตร models.py ทำงาน)
-            
-            # แปลง status ให้ตรงกับ Order model
-            order_status = "paid" if pay_method != "pay_at_store" else "pending_payment"
-            
-            # สร้าง Order (Calculation จะทำงานตรงนี้!)
+            # สร้าง Order หลัก
             main_order = Order.objects.create(
                 user=request.user,
                 shop=dress.shop,
                 start_date=start_date,
                 end_date=end_date,
                 days=days,
-                rental_total=Decimal(str(rental_fee)),
-                deposit_total=Decimal(str(deposit)),
-                shipping_fee=Decimal(str(shipping)),
-                status=order_status,
+                shipping_fee=Decimal(str(shipping)), 
+                status="paid", 
+                
+                # ข้อมูลชื่อที่อยู่
+                recipient_name=recipient_name,
+                phone=phone,
+                address=address,
+                
                 omise_charge_id=charge_id or None,
             )
-            print(f"✅ Main Order Created: ID {main_order.id}, Grand Total: {main_order.grand_total}")
 
-            # 3. สร้าง OrderItem (ใส่ไส้ในให้ Order)
+            # สร้าง OrderItem
             OrderItem.objects.create(
                 order=main_order,
                 dress=dress,
@@ -3487,31 +3565,42 @@ def rent_success(request, dress_id):
                 line_total=Decimal(str(rental_fee))
             )
 
-            # 4. แปลงร่างเป็น RentalOrder (ตัวลูก) เพื่อให้ลูกค้าเห็นใน 'My Rentals'
-            # (ใช้ฟังก์ชันเดิมที่คุณมีอยู่แล้วช่วยสร้าง)
+            # แปลงร่างเป็น RentalOrder
             created_rentals = _create_rental_orders_from_order(main_order)
-            
             if created_rentals:
                 rental_order_obj = created_rentals[0]
-                notify_shop_order_new(rental_order_obj)
+                
+                # -------------------------------------------------------------
+                # ✅ ส่วนที่เพิ่มใหม่: บันทึกข้อมูลที่อยู่ลงในออเดอร์ของร้านค้าด้วย
+                # -------------------------------------------------------------
+                for ro in created_rentals:
+                    try:
+                        # ลองเซ็ตค่าให้ฟิลด์ใน RentalOrder เผื่อฐานข้อมูลมีฟิลด์เหล่านี้แยกต่างหาก
+                        ro.recipient_name = recipient_name
+                        ro.phone = phone
+                        ro.address = address
+                        ro.save(update_fields=['recipient_name', 'phone', 'address'])
+                    except Exception as e:
+                        print(f"Note: RentalOrder might not have address fields directly. Error: {e}")
+                # -------------------------------------------------------------
 
-    # ส่งตัวแปรไปหน้าเว็บเหมือนเดิม
+                # แจ้งเตือนร้านค้า
+                try:
+                    notify_shop_order_new(rental_order_obj)
+                except Exception as e:
+                    print(f"Error notifying shop: {e}") 
+
+    # เคลียร์ session ทิ้งหลังจากบันทึกสำเร็จ
+    if "checkout" in request.session:
+        del request.session["checkout"]
+
     ctx = {
+        "order": rental_order_obj,
         "dress": dress,
-        "start_date": start_date,
-        "end_date": end_date,
-        "days": days,
-        "method": method,
-        "pay_method": pay_method,
-        "rental_fee": rental_fee,
-        "deposit": deposit,
-        "shipping": shipping,
+        "recipient_name": recipient_name,
+        "phone": phone,
+        "address": address,
         "amount_baht": amount,
-        "pickup_slot": pickup_slot,
-        "return_slot": return_slot,
-        "order_ref": order_ref or charge_id or "",
-        "charge_id": charge_id or "",
-        "order": rental_order_obj, # ส่งตัวลูกไปโชว์
     }
     return render(request, "dress/rent_success.html", ctx)
 
@@ -4653,19 +4742,33 @@ def order_detail(request, order_id: int):
         "items": items,
     })
 
-
 @login_required
 def shop_notifications(request):
+    # 1. สั่ง Update เป็น 'อ่านแล้ว' ทันทีที่กดเข้าหน้านี้ (แก้ปัญหาเลขไม่หาย)
+    Notification.objects.filter(
+        user=request.user,
+        audience="SHOP",
+        is_read=False
+    ).update(is_read=True)
+
+    # 2. ดึงข้อมูลแจ้งเตือนมาแสดงผล
     notifications = Notification.objects.filter(
         user=request.user,
         audience="SHOP",
     ).order_by("-created_at")
 
-    # ถ้าคุณมี store/store_id ก็ส่งไปเหมือนเดิม
+    # 3. แปลงภาษาจาก Technical เป็นภาษาไทย (Logic เดิมของคุณ)
+    for n in notifications:
+        if n.message:
+            for eng_status, thai_label in STATUS_LABELS.items():
+                if eng_status in n.message:
+                    n.message = n.message.replace(eng_status, thai_label)
+
+    # 4. ส่งข้อมูลไปที่หน้า HTML
     ctx = {
         "notifications": notifications,
-        # "store": store,
-        # "store_id": store_id,
+        # บรรทัดนี้สำคัญ: ส่งค่า 0 ไปเพื่อบอกหน้าเว็บว่า "อ่านหมดแล้วนะ" เลขจะได้หายไปทันที
+        "unread_notifications_count": 0, 
     }
     return render(request, "dress/shop_notifications.html", ctx)
 

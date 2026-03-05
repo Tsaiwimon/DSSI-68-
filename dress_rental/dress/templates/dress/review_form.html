@@ -10,7 +10,7 @@
 <body class="bg-gray-50">
 
   <!-- Header -->
-  <div class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-100 shadow-sm p-9 flex justify-between items-center">
+  <div style="background: linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.4)), linear-gradient(to right, #FFE88D 0%, #7AAAC0 36%, #93DBFC 61%, #E5A6D3 90%, #527281 100%);" class="shadow-sm p-9 flex justify-between items-center">
     <h1 class="text-lg font-semibold text-gray-800">เขียนรีวิวสำหรับ {{ dress.name }}</h1>
     <button type="button"
         onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href='{% url 'dress:review_list' dress.id %}'; }"

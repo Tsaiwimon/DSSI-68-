@@ -18,7 +18,7 @@
 
 <body class="bg-gray-50 text-gray-800">
 
-  <header class="bg-gradient-to-r from-pink-200 via-yellow-100 to-blue-200 shadow w-full">
+    <header style="background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.4)), linear-gradient(to right, #FFE88D 0%, #7AAAC0 36%, #93DBFC 61%, #E5A6D3 90%, #527281 100%);" class="shadow-lg w-full sticky top-0 z-30">
     <div class="flex items-center justify-between px-6 py-8 md:px-10 md:py-10">
       <div class="flex items-center space-x-3">
         <h1 class="text-2xl font-bold text-gray-900">การเงินหลังร้าน</h1>
@@ -112,20 +112,10 @@
         <div class="mt-4 pt-3 border-t border-white/20 flex justify-between items-center">
           <span class="text-xs text-green-100">พร้อมถอน</span>
           
-          {% if wallet_balance > 0 %}
-            <form method="POST" onsubmit="return confirm('ยืนยันการแจ้งถอนเงินทั้งหมด?');">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="withdraw_all">
-                <button type="submit"
-                  class="text-xs bg-white text-green-600 px-3 py-1 rounded font-bold hover:bg-green-50 transition cursor-pointer shadow">
-                  แจ้งถอนเงิน
-                </button>
-            </form>
-          {% else %}
-            <button disabled class="text-xs bg-gray-200 text-gray-400 px-3 py-1 rounded font-bold cursor-not-allowed">
-                แจ้งถอนเงิน
-            </button>
-          {% endif %}
+          <button disabled 
+            class="text-xs bg-white/20 text-white/60 px-3 py-1 rounded font-bold cursor-not-allowed shadow-none border border-white/10">
+            แจ้งถอนเงิน (เร็วๆ นี้)
+          </button>
         </div>
       </div>
     </section>

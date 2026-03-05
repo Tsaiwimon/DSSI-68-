@@ -7,11 +7,15 @@
   <title>สมัครสมาชิก</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="min-h-screen flex items-center justify-center bg-gradient-to-b from-yellow-100 via-blue-100 to-pink-200 px-3 py-6">
+<body style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.4)), linear-gradient(to bottom, #FFE88D 0%, #7AAAC0 36%, #93DBFC 61%, #E5A6D3 90%, #527281 100%);">  
 
   <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg w-full max-w-lg h-auto">
     <h2 class="text-2xl font-bold text-center mb-1">สมัครสมาชิก</h2>
     <p class="text-center text-gray-600 mb-5 text-sm">สร้างบัญชีใหม่เพื่อเริ่มต้นการใช้งาน</p>
+
+    <div id="js-error-box" class="hidden mb-4 p-2 bg-red-50 rounded-lg">
+      <p id="js-error-text" class="text-xs text-center text-red-500 font-bold"></p>
+    </div>
 
     {% if messages %}
       <div class="mb-4">
@@ -23,42 +27,42 @@
       </div>
     {% endif %}
 
-    <form method="POST" action="{% url 'dress:signup' %}" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <form id="signupForm" method="POST" action="{% url 'dress:signup' %}" class="grid grid-cols-1 sm:grid-cols-2 gap-4" novalidate>
       {% csrf_token %}
 
       <div class="sm:col-span-2">
         <label class="block text-gray-700 text-xs font-bold mb-1">ชื่อผู้ใช้ (Username)</label>
-        <input type="text" name="username" required
+        <input type="text" name="username" id="username" required
                class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
       <div>
         <label class="block text-gray-700 text-xs font-bold mb-1">ชื่อ</label>
-        <input type="text" name="first_name" required
+        <input type="text" name="first_name" id="first_name" required
                class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
       <div>
         <label class="block text-gray-700 text-xs font-bold mb-1">นามสกุล</label>
-        <input type="text" name="last_name" required
+        <input type="text" name="last_name" id="last_name" required
                class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
       <div class="sm:col-span-2">
         <label class="block text-gray-700 text-xs font-bold mb-1">อีเมล</label>
-        <input type="email" name="email" required
+        <input type="email" name="email" id="email" required
                class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
       <div>
         <label class="block text-gray-700 text-xs font-bold mb-1">เบอร์ติดต่อ</label>
-        <input type="text" name="phone" required
+        <input type="text" name="phone" id="phone" required
                class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
       <div>
         <label class="block text-gray-700 text-xs font-bold mb-1">เพศ</label>
-        <select name="gender" class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm bg-white">
+        <select name="gender" id="gender" class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm bg-white">
           <option value="male">ชาย</option>
           <option value="female">หญิง</option>
         </select>
@@ -66,13 +70,13 @@
 
       <div>
         <label class="block text-gray-700 text-xs font-bold mb-1">รหัสผ่าน</label>
-        <input type="password" name="password" required
+        <input type="password" name="password" id="password" required
                class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
       <div>
         <label class="block text-gray-700 text-xs font-bold mb-1">ยืนยันรหัสผ่าน</label>
-        <input type="password" name="confirm_password" required
+        <input type="password" name="confirm_password" id="confirm_password" required
                class="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm">
       </div>
 
@@ -89,6 +93,47 @@
       <a href="{% url 'dress:login' %}" class="text-black font-bold hover:underline">เข้าสู่ระบบ</a>
     </p>
   </div>
+
+  <script>
+    const signupForm = document.getElementById('signupForm');
+    const errorBox = document.getElementById('js-error-box');
+    const errorText = document.getElementById('js-error-text');
+
+    signupForm.addEventListener('submit', function(e) {
+      const inputs = signupForm.querySelectorAll('input[required]');
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm_password').value;
+      let isValid = true;
+      let message = "";
+
+      // 1. เช็คว่ากรอกครบทุกช่องไหม
+      inputs.forEach(input => {
+        if (!input.value.trim()) {
+          isValid = false;
+          input.classList.add('border-red-500');
+          message = "กรุณากรอกข้อมูลให้ครบถ้วน";
+        } else {
+          input.classList.remove('border-red-500');
+        }
+      });
+
+      // 2. เช็คว่ารหัสผ่านตรงกันไหม (ถ้ากรอกครบแล้ว)
+      if (isValid && password !== confirmPassword) {
+        isValid = false;
+        document.getElementById('password').classList.add('border-red-500');
+        document.getElementById('confirm_password').classList.add('border-red-500');
+        message = "รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน";
+      }
+
+      // ถ้ามีอะไรผิดพลาด
+      if (!isValid) {
+        e.preventDefault(); // ระงับการส่งฟอร์ม
+        errorText.innerText = message;
+        errorBox.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  </script>
 
 </body>
 </html>
