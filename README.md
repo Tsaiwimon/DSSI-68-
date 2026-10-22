@@ -138,7 +138,7 @@
 <!-- วิธีใช้: นำรูป ER Diagram ตั้งชื่อว่า er_diagram.png ไปใส่ในโฟลเดอร์ screenshots/ (ถ้าไม่มีรูปนี้ ลบบรรทัดด้านล่างออกได้) -->
 <!-- ================================================================= -->
 
-![ER Diagram โครงสร้างฐานข้อมูล](https://drive.google.com/file/d/1AqfLqz6-9v2YMqNIQTsBUWEE6NvgZlRU/view?usp=sharing)
+
 
 ### 5.2 ตรรกะการคำนวณรายได้ (Revenue Logic)
 
@@ -168,7 +168,9 @@ VAT ของค่าคอมฯ     = ค่าคอมมิชชัน ×
 <!-- วิธีใช้: นำรูปหน้าการเงินร้านค้า ตั้งชื่อว่า shop_finance.png ไปใส่ในโฟลเดอร์ screenshots/ -->
 <!-- ================================================================= -->
 
-![รายละเอียดการคำนวณรายรับ (Income Breakdown)](screenshots/shop_finance_breakdown.png)
+| รายละเอียดการคำนวณรายรับ (Income Breakdown) |
+| :---: |
+| ![รายละเอียดการคำนวณรายรับ](screenshots/shop_finance_breakdown.png) |
 
 ### 5.3 แดชบอร์ดและรายงาน
 
