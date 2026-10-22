@@ -9,6 +9,8 @@
 ![Omise](https://img.shields.io/badge/Payment-Omise%20PromptPay-1A56DB)
 ![Replicate](https://img.shields.io/badge/AI-IDM--VTON%20(Replicate)-000000)
 
+https://youtu.be/ed0zWFyF9-c?si=Vdpe5__RAB00J02m
+
 ---
 
 ## สารบัญ
