@@ -14,9 +14,9 @@
 <!-- วิธีใช้: แก้ลิงก์ YouTube ด้านล่าง และนำรูปหน้าแรกตั้งชื่อว่า home_marketplace.png ไปใส่ในโฟลเดอร์ screenshots/ -->
 <!-- ================================================================= -->
 
-[![Watch Demo Video](https://youtu.be/ed0zWFyF9-c?si=Vdpe5__RAB00J02m)
+[![Watch Demo Video](https://youtu.be/ed0zWFyF9-c?si=0PK-CZyhcZ7CJ001)
 
-![หน้าแรกของแพลตฟอร์มเช่าชุด](Screenshot 2026-10-23 005240)
+![หน้าแรกของแพลตฟอร์มเช่าชุด](screenshots/home_marketplace.png)
 
 ---
 
