@@ -110,7 +110,9 @@
 <!-- วิธีใช้: นำรูปหน้า AI ลองชุด ตั้งชื่อว่า ai_try_on.png ไปใส่ในโฟลเดอร์ screenshots/ -->
 <!-- ================================================================= -->
 
-![ตัวอย่างการใช้งาน AI Virtual Try-On](screenshots/ai_try_on.png)
+| อัปโหลดรูปคนและชุด (Input) | ผลลัพธ์จาก AI (Virtual Try-On) |
+| :---: | :---: |
+| ![รูปต้นฉบับ](screenshots/ai_try_on_1.png) | ![ผลลัพธ์ AI](screenshots/ai_try_on_2.png) |
 
 ---
 
@@ -136,7 +138,7 @@
 <!-- วิธีใช้: นำรูป ER Diagram ตั้งชื่อว่า er_diagram.png ไปใส่ในโฟลเดอร์ screenshots/ (ถ้าไม่มีรูปนี้ ลบบรรทัดด้านล่างออกได้) -->
 <!-- ================================================================= -->
 
-![ER Diagram โครงสร้างฐานข้อมูล](screenshots/er_diagram.png)
+![ER Diagram โครงสร้างฐานข้อมูล](https://drive.google.com/file/d/1AqfLqz6-9v2YMqNIQTsBUWEE6NvgZlRU/view?usp=sharing)
 
 ### 5.2 ตรรกะการคำนวณรายได้ (Revenue Logic)
 
@@ -166,7 +168,8 @@ VAT ของค่าคอมฯ     = ค่าคอมมิชชัน ×
 <!-- วิธีใช้: นำรูปหน้าการเงินร้านค้า ตั้งชื่อว่า shop_finance.png ไปใส่ในโฟลเดอร์ screenshots/ -->
 <!-- ================================================================= -->
 
-![หน้าการเงินและธุรกรรมของร้านค้า](screenshots/shop_finance.png)
+
+| ![หน้าสรุปการเงินร้านค้า](screenshots/shop_finance_summary.jpg) | ![หน้ารายละเอียดธุรกรรม](screenshots/shop_finance_breakdown.png) |
 
 ### 5.3 แดชบอร์ดและรายงาน
 
