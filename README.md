@@ -170,7 +170,7 @@ VAT ของค่าคอมฯ     = ค่าคอมมิชชัน ×
 
 | สรุปรายได้และเงื่อนไขกระเป๋าเงินร้านค้า | รายละเอียดการคำนวณรายรับ (Income Breakdown) ในแต่ละออเดอร์ |
 | :---: | :---: |
-| ![หน้าสรุปการเงินร้านค้า](screenshots/shop_finance_summary.jpg) | ![หน้ารายละเอียดธุรกรรม](screenshots/shop_finance_breakdown.png) |
+![รายละเอียดการคำนวณรายรับ (Income Breakdown)](screenshots/shop_finance_breakdown.png)
 
 ### 5.3 แดชบอร์ดและรายงาน
 
