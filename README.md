@@ -14,7 +14,7 @@
 <!-- วิธีใช้: แก้ลิงก์ YouTube ด้านล่าง และนำรูปหน้าแรกตั้งชื่อว่า home_marketplace.png ไปใส่ในโฟลเดอร์ screenshots/ -->
 <!-- ================================================================= -->
 
-[![Watch Demo Video](https://youtu.be/ed0zWFyF9-c?si=0PK-CZyhcZ7CJ001)
+### 🎥 [คลิกที่นี่เพื่อรับชมวิดีโอสาธิตการใช้งานระบบ (System Demo)](https://youtu.be/ed0zWFyF9-c?si=MKdzp_og-Gn-qzBo)
 
 ![หน้าแรกของแพลตฟอร์มเช่าชุด](screenshots/home_marketplace.png)
 
